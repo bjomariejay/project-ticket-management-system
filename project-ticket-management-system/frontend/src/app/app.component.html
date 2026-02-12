@@ -130,16 +130,28 @@
                     {{ channelsCollapsed ? '▶' : '▼' }}
                   </button>
                 </div>
-                <div class="channel-list compact" *ngIf="!channelsCollapsed">
-                  <button
-                    type="button"
-                    *ngFor="let channel of channels"
-                    (click)="handleChannelChange(channel.id)"
-                    [class.active]="channel.id === selectedChannelId"
-                  >
-                    <strong>{{ channel.ticketPrefix }}</strong>
-                    <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
-                  </button>
+                <div class="channel-list" *ngIf="!channelsCollapsed">
+                  <div class="channel-item" *ngFor="let channel of channels">
+                    <button
+                      type="button"
+                      class="channel-main"
+                      (click)="handleChannelChange(channel.id)"
+                      [class.active]="channel.id === selectedChannelId"
+                    >
+                      <div>
+                        <strong>{{ channel.name }}</strong>
+                        <small>#{{ channel.slug }}</small>
+                      </div>
+                      <span class="channel-number">{{ channel.ticketPrefix }}-{{ channel.nextNumber | number: '2.0-0' }}</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="channel-report"
+                      (click)="handleChannelReportView(channel, $event)"
+                    >
+                      Report of work
+                    </button>
+                  </div>
                 </div>
                 <div class="space-section__actions" *ngIf="!channelsCollapsed">
                   <button type="button" class="link-button" (click)="openCreateChannel()">
@@ -149,6 +161,9 @@
                     + Create ticket
                   </button>
                 </div>
+              </section>
+              <section class="space-section">
+                <p class="muted">Select a channel to browse tickets or open its report-of-work to review ticket starts.</p>
               </section>
               <section class="space-section">
                 <div class="space-section__header">
@@ -180,8 +195,56 @@
 
           </div>
 
-          <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket; else promptSelect">
-            <ng-container *ngIf="selectedTicket; else lockedTemplate">
+          <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket || viewingReportsForChannelId; else promptSelect">
+            <ng-container *ngIf="viewingReportsForChannelId; else rightContent">
+              <section class="card channel-reports">
+                <header>
+                  <div>
+                    <h3>Report of work</h3>
+                    <p>{{ viewingReportsForChannelName }}</p>
+                  </div>
+                  <button type="button" class="ghost" (click)="closeChannelReports()">Close</button>
+                </header>
+                <section *ngIf="channelReportsLoading">
+                  <p class="muted">Loading reports…</p>
+                </section>
+                <section *ngIf="!channelReportsLoading && !channelReportEntries.length">
+                  <p class="muted">No ticket starts recorded yet.</p>
+                </section>
+                <ul *ngIf="!channelReportsLoading && channelReportEntries.length">
+                  <li *ngFor="let entry of channelReportEntries">
+                    <div>
+                      <strong>{{ entry.ticketNumber }}</strong>
+                      <small>{{ entry.createdAt | date: 'short' }}</small>
+                    </div>
+                    <p>{{ entry.ticketTitle }}</p>
+                    <p class="muted">{{ entry.message }}</p>
+                    <small *ngIf="entry.actorName">Started by {{ entry.actorName }}</small>
+                  </li>
+                </ul>
+              </section>
+            </ng-container>
+            <ng-template #rightContent>
+            <ng-container *ngIf="selectedLog; else ticketView">
+              <section class="card report-detail report-focus">
+                <header>
+                  <div>
+                    <h3>Report details</h3>
+                    <p>{{ selectedLog?.message }}</p>
+                  </div>
+                  <button type="button" class="ghost" (click)="clearSelectedLog()">Back to ticket</button>
+                </header>
+                <p class="muted">
+                  {{ selectedLog?.createdAt | date: 'fullDate' }} at
+                  {{ selectedLog?.createdAt | date: 'shortTime' }}
+                </p>
+                <p *ngIf="selectedLog?.actorName">Recorded by {{ selectedLog?.actorName }}</p>
+                <p *ngIf="selectedTicket">Ticket {{ selectedTicket.ticketNumber }}</p>
+              </section>
+            </ng-container>
+            </ng-template>
+            <ng-template #ticketView>
+              <ng-container *ngIf="selectedTicket; else lockedTemplate">
               <section class="card ticket-detail">
                 <header>
                   <div>
@@ -352,34 +415,8 @@
                 </div>
                 <p class="muted" *ngIf="!isTicketMember">Join the ticket to start collaborating.</p>
               </section>
-
-              <section class="card report-work">
-                <header>
-                  <h3>Report of work</h3>
-                  <span class="muted">{{ reportOfWork.length }} entries</span>
-                </header>
-                <ul>
-                  <li
-                    *ngFor="let log of reportOfWork"
-                    (click)="viewLogDetails(log)"
-                    [class.active]="selectedLog?.id === log.id"
-                  >
-                    <span>{{ log.createdAt | date: 'short' }}</span>
-                    <p>{{ log.message }}</p>
-                    <small *ngIf="log.actorName">- {{ log.actorName }}</small>
-                  </li>
-                </ul>
-                <div class="log-detail" *ngIf="selectedLog">
-                  <h4>Log details</h4>
-                  <p>{{ selectedLog.message }}</p>
-                  <p class="muted">
-                    {{ selectedLog.createdAt | date: 'fullDate' }} at
-                    {{ selectedLog.createdAt | date: 'shortTime' }}
-                  </p>
-                  <small *ngIf="selectedLog.actorName">Recorded by {{ selectedLog.actorName }}</small>
-                </div>
-              </section>
             </ng-container>
+            </ng-template>
           </div>
           <ng-template #lockedTemplate>
             <section class="card locked-card" *ngIf="lockedTicket">

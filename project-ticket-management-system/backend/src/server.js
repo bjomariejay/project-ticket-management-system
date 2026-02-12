@@ -337,6 +337,39 @@ app.post(
 );
 
 app.get(
+  '/api/channels/:channelId/reports',
+  asyncHandler(async (req, res) => {
+    const { channelId } = req.params;
+    const { rows } = await query(
+      `SELECT tl.id,
+              tl.message,
+              tl.created_at,
+              u.display_name AS actor_name,
+              t.ticket_number,
+              t.title
+         FROM ticket_logs tl
+         JOIN tickets t ON tl.ticket_id = t.id
+         LEFT JOIN users u ON tl.created_by = u.id
+        WHERE t.channel_id = $1
+          AND LOWER(tl.message) LIKE '%start%'
+        ORDER BY tl.created_at DESC
+        LIMIT 200`,
+      [channelId]
+    );
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        message: row.message,
+        createdAt: row.created_at,
+        actorName: row.actor_name,
+        ticketNumber: row.ticket_number,
+        ticketTitle: row.title,
+      }))
+    );
+  })
+);
+
+app.get(
   '/api/tickets',
   asyncHandler(async (req, res) => {
     const { channelId, creatorId, assigneeId } = req.query;

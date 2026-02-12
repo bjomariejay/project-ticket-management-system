@@ -92,6 +92,15 @@ export interface DmMessage {
   recipientName: string;
 }
 
+export interface ChannelReportEntry {
+  id: string;
+  message: string;
+  createdAt: string;
+  actorName?: string | null;
+  ticketNumber: string;
+  ticketTitle: string;
+}
+
 export interface DashboardEntry {
   id: string;
   displayName: string;
@@ -181,6 +190,10 @@ export class ApiService {
 
   assignTicket(ticketId: string, assigneeId: string, actorId: string) {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/assign`, { assigneeId, actorId });
+  }
+
+  getChannelReports(channelId: string) {
+    return this.http.get<ChannelReportEntry[]>(`${this.baseUrl}/channels/${channelId}/reports`);
   }
 
   archiveTicket(ticketId: string, actorId: string) {

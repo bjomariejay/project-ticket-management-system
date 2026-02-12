@@ -5,6 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   ApiService,
   Channel,
+  ChannelReportEntry,
   DashboardEntry,
   DmMessage,
   NotificationItem,
@@ -121,6 +122,10 @@ export class AppComponent implements OnInit {
   private mentionReplaceRange: { start: number; end: number } | null = null;
   private messageCursorIndex = 0;
   private mentionHideTimeout: number | null = null;
+  channelReportEntries: ChannelReportEntry[] = [];
+  viewingReportsForChannelId = '';
+  viewingReportsForChannelName = '';
+  channelReportsLoading = false;
 
   constructor(private readonly api: ApiService) {}
 
@@ -555,6 +560,38 @@ export class AppComponent implements OnInit {
     this.selectedLog = log;
   }
 
+  clearSelectedLog() {
+    this.selectedLog = null;
+  }
+
+  closeChannelReports() {
+    this.channelReportEntries = [];
+    this.viewingReportsForChannelId = '';
+    this.viewingReportsForChannelName = '';
+    this.channelReportsLoading = false;
+  }
+
+  async handleChannelReportView(channel: Channel, event?: Event) {
+    event?.stopPropagation();
+    event?.preventDefault();
+    this.channelReportsLoading = true;
+    try {
+      this.viewingReportsForChannelId = channel.id;
+      this.viewingReportsForChannelName = channel.name;
+      this.selectedChannelId = channel.id;
+      this.createTicketModel.channelId = channel.id;
+      this.channelReportEntries = await firstValueFrom(this.api.getChannelReports(channel.id));
+      this.selectedTicket = null;
+      this.lockedTicket = null;
+      this.selectedLog = null;
+    } catch (error) {
+      console.error(error);
+      this.closeChannelReports();
+    } finally {
+      this.channelReportsLoading = false;
+    }
+  }
+
   async loadNotifications() {
     if (!this.selectedUserId) return;
     this.notifications = await firstValueFrom(this.api.getNotifications(this.selectedUserId));
@@ -567,6 +604,7 @@ export class AppComponent implements OnInit {
 
   async selectTicket(ticketId: string) {
     this.lockedTicket = null;
+    this.closeChannelReports();
     try {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
       this.messageDraft = '';
@@ -862,6 +900,7 @@ export class AppComponent implements OnInit {
     this.selectedTicket = null;
     this.lockedTicket = null;
     this.syncTicketSettings(null);
+    this.closeChannelReports();
     void this.loadTickets();
   }
 
@@ -910,11 +949,4 @@ export class AppComponent implements OnInit {
     return this.workspaceLabel;
   }
 
-  get reportOfWork() {
-    if (!this.selectedTicket?.logs) return [];
-    const startLogs = this.selectedTicket.logs.filter((log) =>
-      /start/i.test(log.message)
-    );
-    return startLogs.length ? startLogs : [];
-  }
 }
