@@ -117,42 +117,50 @@
       <section class="main__view home-view" *ngIf="activeTab === 'home'">
         <div class="home-layout">
           <div class="home-layout__left">
-            <article class="card home-card channels">
+            <article class="card home-card workspace-board">
               <header>
-                <h3>Channels</h3>
-                <span class="muted">{{ channels.length }} spaces</span>
+                <h3>Workspace board</h3>
+                <span class="muted">Channels & tickets</span>
               </header>
-              <div class="channel-list">
-                <button
-                  type="button"
-                  *ngFor="let channel of channels"
-                  (click)="handleChannelChange(channel.id)"
-                  [class.active]="channel.id === selectedChannelId"
-                >
-                  <div>
-                    <strong>#{{ channel.slug }}</strong>
-                    <small>{{ channel.name }}</small>
-                  </div>
-                  <span class="muted">Next {{ channel.ticketPrefix }}-{{ channel.nextNumber }}</span>
+              <section class="space-section">
+                <div class="space-section__header">
+                  <h4>Channels</h4>
+                  <span class="muted">{{ channels.length }} active</span>
+                </div>
+                <div class="channel-list compact">
+                  <button
+                    type="button"
+                    *ngFor="let channel of channels"
+                    (click)="handleChannelChange(channel.id)"
+                    [class.active]="channel.id === selectedChannelId"
+                  >
+                    <strong>{{ channel.ticketPrefix }}</strong>
+                    <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
+                  </button>
+                </div>
+                <button type="button" class="link-button" (click)="openCreateChannel()">
+                  + Create channel
                 </button>
-              </div>
-            </article>
-
-            <article class="card home-card" *ngFor="let category of ticketsByCategory">
-              <header>
-                <h3>{{ category.label }}</h3>
-                <span class="muted">{{ category.items.length }} tickets</span>
-              </header>
-              <ul class="category-list">
-                <li *ngFor="let ticket of category.items | slice:0:5" (click)="selectTicket(ticket.id)">
-                  <div>
-                    <strong>{{ ticket.ticketNumber }}</strong>
-                    <p>{{ ticket.title }}</p>
-                  </div>
-                  <small>{{ ticket.updatedAt | date: 'shortDate' }}</small>
-                </li>
-                <li *ngIf="!category.items.length" class="muted">No tickets yet.</li>
-              </ul>
+              </section>
+              <section class="space-section">
+                <div class="space-section__header">
+                  <h4>Tickets by status</h4>
+                  <span class="muted">{{ tickets.length }} total</span>
+                </div>
+                <div class="ticket-category" *ngFor="let category of ticketsByCategory">
+                  <header>
+                    <strong>{{ category.label }}</strong>
+                    <small>{{ category.items.length }}</small>
+                  </header>
+                  <ul class="category-list compact">
+                    <li *ngFor="let ticket of category.items | slice:0:6" (click)="selectTicket(ticket.id)">
+                      <strong>{{ ticket.ticketNumber }}</strong>
+                      <small>{{ ticket.updatedAt | date: 'shortDate' }}</small>
+                    </li>
+                    <li *ngIf="!category.items.length" class="muted">No tickets yet.</li>
+                  </ul>
+                </div>
+              </section>
             </article>
 
             <article class="card home-card create-ticket">
@@ -160,51 +168,9 @@
                 <h3>Create ticket</h3>
                 <span class="muted">Channel {{ channelLabel }}</span>
               </header>
-              <form (ngSubmit)="handleCreateTicket()">
-                <label>
-                  Title
-                  <input type="text" [(ngModel)]="createTicketModel.title" name="title" required />
-                </label>
-                <label>
-                  Description
-                  <textarea rows="2" [(ngModel)]="createTicketModel.description" name="description"></textarea>
-                </label>
-                <label>
-                  Estimated hours
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.5"
-                    [(ngModel)]="createTicketModel.estimatedHours"
-                    name="estimatedHours"
-                  />
-                </label>
-                <label>
-                  Channel
-                  <select [(ngModel)]="createTicketModel.channelId" name="channel">
-                    <option *ngFor="let channel of channels" [value]="channel.id">
-                      #{{ channel.slug }} ({{ channel.ticketPrefix }})
-                    </option>
-                  </select>
-                </label>
-                <label>
-                  Privacy
-                  <select [(ngModel)]="createTicketModel.privacy" name="privacy">
-                    <option value="public">Public — everyone can view</option>
-                    <option value="private">Private — invited only</option>
-                  </select>
-                </label>
-                <label>
-                  Share with teammates
-                  <select multiple name="invitees" [(ngModel)]="createTicketModel.inviteeIds" size="4">
-                    <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
-                      {{ user.displayName }}
-                    </option>
-                  </select>
-                  <small class="hint">Hold Ctrl/Cmd for multiple.</small>
-                </label>
-                <button type="submit">Create</button>
-              </form>
+              <button type="button" class="link-button" (click)="openCreateTicket()">
+                + New ticket
+              </button>
             </article>
           </div>
 
@@ -223,22 +189,53 @@
                     </span>
                   </div>
                 </header>
-                <p>{{ selectedTicket.description || 'No description provided.' }}</p>
-                <div class="detail__meta">
-                  <div>
-                    <span class="muted">Assignee</span>
-                    <strong>{{ getUserName(selectedTicket.assigneeId) }}</strong>
-                  </div>
-                  <div>
-                    <span class="muted">Est. Hours</span>
-                    <strong>{{ selectedTicket.estimatedHours || '-' }}</strong>
-                  </div>
-                  <div>
-                    <span class="muted">Created</span>
-                    <strong>{{ selectedTicket.createdAt | date: 'medium' }}</strong>
+              <p>{{ selectedTicket.description || 'No description provided.' }}</p>
+              <div class="detail__meta">
+                <div>
+                  <span class="muted">Assignee</span>
+                  <strong>{{ getUserName(selectedTicket.assigneeId) }}</strong>
+                </div>
+                <div>
+                  <span class="muted">Est. Hours</span>
+                  <strong>{{ selectedTicket.estimatedHours || '-' }}</strong>
+                </div>
+                <div>
+                  <span class="muted">Created</span>
+                  <strong>{{ selectedTicket.createdAt | date: 'medium' }}</strong>
+                </div>
+              </div>
+              <div class="ticket-settings-toggle" *ngIf="isTicketMember">
+                <button type="button" (click)="toggleTicketSettings()">
+                  {{ showTicketSettings ? 'Hide settings' : 'Show settings' }}
+                </button>
+              </div>
+              <div class="ticket-settings" *ngIf="showTicketSettings && isTicketMember">
+                <div class="status-select">
+                  <span class="muted">Status</span>
+                  <select [(ngModel)]="ticketSettings.status" (change)="handleStatusChange(ticketSettings.status)">
+                    <option *ngFor="let option of ticketStatusOptions" [value]="option.value">{{ option.label }}</option>
+                  </select>
+                </div>
+                <div class="priority-toggle">
+                  <span class="muted">Priority</span>
+                  <div class="priority-toggle__buttons">
+                    <button
+                      type="button"
+                      [class.active]="ticketSettings.priority === 'normal'"
+                      (click)="handlePriorityChange('normal')"
+                    >
+                      Normal
+                    </button>
+                    <button
+                      type="button"
+                      [class.active]="ticketSettings.priority === 'priority'"
+                      (click)="handlePriorityChange('priority')"
+                    >
+                      Priority
+                    </button>
                   </div>
                 </div>
-                <div class="privacy-toggle" *ngIf="isTicketMember">
+                <div class="privacy-toggle">
                   <span class="muted">Privacy</span>
                   <div class="privacy-toggle__buttons">
                     <button
@@ -257,6 +254,19 @@
                     </button>
                   </div>
                 </div>
+                <div class="estimate-edit">
+                  <span class="muted">Estimated hours</span>
+                  <div class="estimate-edit__controls">
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      name="estimate"
+                      [(ngModel)]="ticketSettings.estimatedHours"
+                    />
+                    <button type="button" (click)="handleEstimatedHoursSave()">Save</button>
+                  </div>
+                </div>
                 <div class="assign-select">
                   <span class="muted">Assign someone</span>
                   <select (change)="handleAssignSelect($event)" [disabled]="!isTicketMember">
@@ -266,7 +276,7 @@
                     </option>
                   </select>
                 </div>
-                <div class="invite-select" *ngIf="isTicketMember">
+                <div class="invite-select">
                   <span class="muted">Invite teammate</span>
                   <select (change)="handleInviteSelect($event)">
                     <option value="">Select teammate</option>
@@ -284,6 +294,7 @@
                   </button>
                   <button type="button" class="ghost" (click)="handleArchiveTicket()">Archive</button>
                 </div>
+              </div>
               </section>
 
               <section class="card ticket-thread">
@@ -321,12 +332,25 @@
                   <span class="muted">{{ reportOfWork.length }} entries</span>
                 </header>
                 <ul>
-                  <li *ngFor="let log of reportOfWork">
+                  <li
+                    *ngFor="let log of reportOfWork"
+                    (click)="viewLogDetails(log)"
+                    [class.active]="selectedLog?.id === log.id"
+                  >
                     <span>{{ log.createdAt | date: 'short' }}</span>
                     <p>{{ log.message }}</p>
                     <small *ngIf="log.actorName">- {{ log.actorName }}</small>
                   </li>
                 </ul>
+                <div class="log-detail" *ngIf="selectedLog">
+                  <h4>Log details</h4>
+                  <p>{{ selectedLog.message }}</p>
+                  <p class="muted">
+                    {{ selectedLog.createdAt | date: 'fullDate' }} at
+                    {{ selectedLog.createdAt | date: 'shortTime' }}
+                  </p>
+                  <small *ngIf="selectedLog.actorName">Recorded by {{ selectedLog.actorName }}</small>
+                </div>
               </section>
             </ng-container>
           </div>
@@ -487,3 +511,98 @@
     </section>
   </div>
 </ng-template>
+
+<div class="modal-backdrop" *ngIf="isCreateChannelOpen" (click)="closeCreateChannel()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <h3>Create channel</h3>
+      <button type="button" (click)="closeCreateChannel()">✕</button>
+    </header>
+    <form (ngSubmit)="handleCreateChannel()">
+      <label>
+        Name
+        <input type="text" name="channelName" [(ngModel)]="createChannelModel.name" required />
+      </label>
+      <label>
+        Slug
+        <input type="text" name="channelSlug" [(ngModel)]="createChannelModel.slug" placeholder="auto" />
+      </label>
+      <label>
+        Ticket prefix
+        <input type="text" name="channelPrefix" [(ngModel)]="createChannelModel.ticketPrefix" required />
+      </label>
+      <label>
+        Description
+        <textarea name="channelDescription" rows="2" [(ngModel)]="createChannelModel.description"></textarea>
+      </label>
+      <footer>
+        <button type="button" class="ghost" (click)="closeCreateChannel()">Cancel</button>
+        <button type="submit">Create channel</button>
+      </footer>
+    </form>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="isCreateTicketOpen" (click)="closeCreateTicket()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <h3>Create ticket</h3>
+      <button type="button" (click)="closeCreateTicket()">✕</button>
+    </header>
+    <form (ngSubmit)="handleCreateTicket()">
+      <label>
+        Title
+        <input type="text" [(ngModel)]="createTicketModel.title" name="title" required />
+      </label>
+      <label>
+        Description
+        <textarea rows="2" [(ngModel)]="createTicketModel.description" name="description"></textarea>
+      </label>
+      <label>
+        Estimated hours
+        <input
+          type="number"
+          min="1"
+          step="0.5"
+          [(ngModel)]="createTicketModel.estimatedHours"
+          name="estimatedHours"
+        />
+      </label>
+      <label>
+        Channel
+        <select [(ngModel)]="createTicketModel.channelId" name="channel">
+          <option *ngFor="let channel of channels" [value]="channel.id">
+            #{{ channel.slug }} ({{ channel.ticketPrefix }})
+          </option>
+        </select>
+      </label>
+      <label>
+        Privacy
+        <select [(ngModel)]="createTicketModel.privacy" name="privacy">
+          <option value="public">Public — everyone can view</option>
+          <option value="private">Private — invited only</option>
+        </select>
+      </label>
+      <label>
+        Priority
+        <select [(ngModel)]="createTicketModel.priority" name="priority">
+          <option value="normal">Normal</option>
+          <option value="priority">Priority</option>
+        </select>
+      </label>
+      <label>
+        Share with teammates
+        <select multiple name="invitees" [(ngModel)]="createTicketModel.inviteeIds" size="4">
+          <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
+            {{ user.displayName }}
+          </option>
+        </select>
+        <small class="hint">Hold Ctrl/Cmd for multiple.</small>
+      </label>
+      <footer>
+        <button type="button" class="ghost" (click)="closeCreateTicket()">Cancel</button>
+        <button type="submit">Create ticket</button>
+      </footer>
+    </form>
+  </section>
+</div>

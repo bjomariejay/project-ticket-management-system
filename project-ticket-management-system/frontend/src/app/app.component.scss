@@ -235,14 +235,18 @@
 
 .channel-list {
   display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.channel-list.compact button {
+  width: calc(50% - 0.2rem);
 }
 
 .channel-list button {
   border: 1px solid transparent;
-  border-radius: 0.75rem;
-  padding: 0.6rem 0.8rem;
+  border-radius: 0.65rem;
+  padding: 0.4rem 0.6rem;
   background: rgba(255, 255, 255, 0.05);
   color: inherit;
   display: flex;
@@ -251,9 +255,72 @@
   cursor: pointer;
 }
 
+.channel-number {
+  font-weight: 600;
+}
+
 .channel-list button.active {
   border-color: rgba(161, 130, 255, 0.8);
   background: rgba(161, 130, 255, 0.12);
+}
+
+.workspace-board {
+  gap: 0.5rem;
+}
+
+.space-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.space-section:first-of-type {
+  margin-top: 0;
+}
+
+.space-section__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.channel-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.channel-form input,
+.channel-form textarea,
+.channel-form select {
+  border-radius: 0.6rem;
+  border: 1px solid #dfe3ef;
+  padding: 0.45rem 0.6rem;
+}
+
+.channel-form button {
+  align-self: flex-start;
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.45rem 1rem;
+  background: #611f69;
+  color: #fff;
+}
+
+.ticket-category {
+  border: 1px solid #e4e7f2;
+  border-radius: 0.9rem;
+  padding: 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ticket-category header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .category-list {
@@ -262,7 +329,12 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.4rem;
+}
+
+.category-list.compact li {
+  border-radius: 0.6rem;
+  padding: 0.35rem 0.6rem;
 }
 
 .category-list li {
@@ -476,6 +548,65 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   gap: 0.8rem;
+}
+
+.status-select,
+.estimate-edit,
+.priority-toggle,
+.invite-select,
+.privacy-toggle,
+.assign-select {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.status-select select,
+.estimate-edit input,
+.assign-select select,
+.invite-select select,
+.privacy-toggle select {
+  border-radius: 0.7rem;
+  border: 1px solid #dfe3ef;
+  padding: 0.5rem 0.7rem;
+}
+
+.priority-toggle__buttons,
+.privacy-toggle__buttons {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.priority-toggle__buttons button,
+.privacy-toggle__buttons button {
+  flex: 1;
+  border-radius: 0.7rem;
+  border: 1px solid #dfe3ef;
+  background: #fff;
+  padding: 0.4rem 0.6rem;
+  cursor: pointer;
+}
+
+.priority-toggle__buttons button.active,
+.privacy-toggle__buttons button.active {
+  background: rgba(97, 31, 105, 0.1);
+  border-color: #611f69;
+  color: #611f69;
+}
+
+.estimate-edit__controls {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.estimate-edit__controls button {
+  border: none;
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.9rem;
+  background: #611f69;
+  color: #fff;
 }
 
 .ticket-flags {
@@ -839,4 +970,83 @@
   .home-layout {
     grid-template-columns: 1fr;
   }
+}
+.link-button {
+  border: 1px dashed rgba(97, 31, 105, 0.4);
+  background: rgba(97, 31, 105, 0.1);
+  color: #611f69;
+  border-radius: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 16, 27, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  padding: 1rem;
+}
+
+.modal {
+  width: min(480px, 100%);
+  background: #fff;
+  border-radius: 1rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modal header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal header button {
+  border: none;
+  background: transparent;
+  font-size: 1.2rem;
+  cursor: pointer;
+}
+
+.modal form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.modal input,
+.modal select,
+.modal textarea {
+  border-radius: 0.7rem;
+  border: 1px solid #dfe3ef;
+  padding: 0.5rem 0.7rem;
+}
+
+.modal footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.modal footer button {
+  border-radius: 0.7rem;
+  padding: 0.45rem 1rem;
+  border: none;
+}
+
+.modal footer button.ghost {
+  background: #f4f5fb;
+  color: #4c5165;
+}
+
+.modal footer button:not(.ghost) {
+  background: #611f69;
+  color: #fff;
 }

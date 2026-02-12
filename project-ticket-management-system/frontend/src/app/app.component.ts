@@ -11,6 +11,8 @@ import {
   Ticket,
   TicketDetail,
   TicketPrivacy,
+  TicketPriority,
+  TicketLog,
   User,
 } from './api.service';
 
@@ -52,6 +54,13 @@ export class AppComponent implements OnInit {
     estimatedHours: 1,
     privacy: 'public' as TicketPrivacy,
     inviteeIds: [] as string[],
+    priority: 'normal' as TicketPriority,
+  };
+  createChannelModel = {
+    name: '',
+    slug: '',
+    ticketPrefix: '',
+    description: '',
   };
   dmForm = {
     recipientId: '',
@@ -88,6 +97,20 @@ export class AppComponent implements OnInit {
     { value: 'all', label: 'All time' },
     { value: 'custom', label: 'Custom range' },
   ] as const;
+  readonly ticketStatusOptions = [
+    { value: 'open', label: 'Open' },
+    { value: 'in_progress', label: 'In progress' },
+    { value: 'archived', label: 'Archived' },
+  ];
+  ticketSettings = {
+    status: 'open',
+    priority: 'normal' as TicketPriority,
+    estimatedHours: null as number | null | '',
+  };
+  showTicketSettings = false;
+  selectedLog: TicketLog | null = null;
+  isCreateChannelOpen = false;
+  isCreateTicketOpen = false;
 
   constructor(private readonly api: ApiService) {}
 
@@ -174,12 +197,22 @@ export class AppComponent implements OnInit {
       estimatedHours: 1,
       privacy: 'public',
       inviteeIds: [],
+      priority: 'normal',
     };
     this.dmForm = {
       recipientId: '',
       body: '',
     };
     this.feedback = '';
+    this.ticketSettings = {
+      status: 'open',
+      priority: 'normal',
+      estimatedHours: null,
+    };
+    this.isCreateChannelOpen = false;
+    this.isCreateTicketOpen = false;
+    this.showTicketSettings = false;
+    this.selectedLog = null;
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
       this.selectedChannelId = '';
@@ -387,6 +420,127 @@ export class AppComponent implements OnInit {
     return { startDate: start, endDate: end };
   }
 
+  private syncTicketSettings(ticket: TicketDetail | null) {
+    if (!ticket) {
+      this.ticketSettings = {
+        status: 'open',
+        priority: 'normal',
+        estimatedHours: null,
+      };
+      return;
+    }
+    this.ticketSettings = {
+      status: ticket.status,
+      priority: (ticket.priority as TicketPriority) || 'normal',
+      estimatedHours: ticket.estimatedHours == null ? null : Number(ticket.estimatedHours),
+    };
+  }
+
+  private slugify(value: string) {
+    return value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '')
+      .substring(0, 64);
+  }
+
+  async handleCreateChannel() {
+    if (!this.createChannelModel.name || !this.createChannelModel.ticketPrefix) {
+      this.feedback = 'Channel name and prefix are required.';
+      return;
+    }
+    const slug = this.slugify(this.createChannelModel.slug || this.createChannelModel.name);
+    if (!slug) {
+      this.feedback = 'Unable to generate a valid channel slug.';
+      return;
+    }
+    try {
+      const response: any = await firstValueFrom(
+        this.api.createChannel({
+          name: this.createChannelModel.name.trim(),
+          slug,
+          ticketPrefix: this.createChannelModel.ticketPrefix.trim(),
+          description: this.createChannelModel.description.trim() || undefined,
+        })
+      );
+      this.createChannelModel = {
+        name: '',
+        slug: '',
+        ticketPrefix: '',
+        description: '',
+      };
+      await this.loadChannels();
+      if (response?.id) {
+        this.selectedChannelId = response.id;
+        this.createTicketModel.channelId = response.id;
+        await this.loadTickets();
+      }
+      this.feedback = 'Channel created.';
+    } catch (error: any) {
+      console.error(error);
+      this.feedback = error?.error?.message || 'Channel creation failed.';
+    }
+  }
+
+  private async updateTicketSettings(partial: {
+    status?: string;
+    priority?: TicketPriority;
+    estimatedHours?: number | null;
+  }) {
+    if (!this.selectedTicket || !this.selectedUserId) return;
+    await firstValueFrom(
+      this.api.updateTicketSettings(this.selectedTicket.id, {
+        actorId: this.selectedUserId,
+        ...partial,
+      })
+    );
+    await this.refreshTicketDetail(this.selectedTicket.id);
+    await this.loadTickets();
+  }
+
+  async handleStatusChange(newStatus: string) {
+    if (!this.selectedTicket || newStatus === this.selectedTicket.status) return;
+    this.ticketSettings.status = newStatus as any;
+    await this.updateTicketSettings({ status: newStatus });
+  }
+
+  async handlePriorityChange(priority: TicketPriority) {
+    if (!this.selectedTicket || priority === this.selectedTicket.priority) return;
+    this.ticketSettings.priority = priority;
+    await this.updateTicketSettings({ priority });
+  }
+
+  async handleEstimatedHoursSave() {
+    if (!this.selectedTicket) return;
+    const raw = this.ticketSettings.estimatedHours;
+    const hours = raw === null || raw === undefined || raw === '' ? null : Number(raw);
+    await this.updateTicketSettings({ estimatedHours: hours });
+  }
+
+  openCreateChannel() {
+    this.isCreateChannelOpen = true;
+  }
+
+  closeCreateChannel() {
+    this.isCreateChannelOpen = false;
+  }
+
+  openCreateTicket() {
+    this.isCreateTicketOpen = true;
+  }
+
+  closeCreateTicket() {
+    this.isCreateTicketOpen = false;
+  }
+
+  toggleTicketSettings() {
+    this.showTicketSettings = !this.showTicketSettings;
+  }
+
+  viewLogDetails(log: TicketLog) {
+    this.selectedLog = log;
+  }
+
   async loadNotifications() {
     if (!this.selectedUserId) return;
     this.notifications = await firstValueFrom(this.api.getNotifications(this.selectedUserId));
@@ -403,10 +557,16 @@ export class AppComponent implements OnInit {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
       this.messageDraft = '';
       this.lockedTicket = null;
+      this.syncTicketSettings(this.selectedTicket);
+      this.selectedLog = null;
+      this.showTicketSettings = false;
     } catch (error: any) {
       if (error?.status === 403 && error?.error?.ticket) {
         this.selectedTicket = null;
         this.lockedTicket = error.error.ticket;
+        this.syncTicketSettings(null);
+        this.selectedLog = null;
+        this.showTicketSettings = false;
       } else {
         console.error(error);
       }
@@ -419,10 +579,16 @@ export class AppComponent implements OnInit {
     try {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(targetId));
       this.lockedTicket = null;
+      this.syncTicketSettings(this.selectedTicket);
+      this.selectedLog = null;
+      this.showTicketSettings = false;
     } catch (error: any) {
       if (error?.status === 403 && error?.error?.ticket) {
         this.selectedTicket = null;
         this.lockedTicket = error.error.ticket;
+        this.syncTicketSettings(null);
+        this.selectedLog = null;
+        this.showTicketSettings = false;
       } else {
         console.error(error);
       }
@@ -437,6 +603,7 @@ export class AppComponent implements OnInit {
     try {
       const selectedChannel = this.createTicketModel.channelId;
       const selectedPrivacy = this.createTicketModel.privacy;
+      const selectedPriority = this.createTicketModel.priority;
       const ticket = await firstValueFrom(
         this.api.createTicket({
           title: this.createTicketModel.title,
@@ -446,6 +613,7 @@ export class AppComponent implements OnInit {
           estimatedHours: this.createTicketModel.estimatedHours,
           privacy: this.createTicketModel.privacy,
           additionalMemberIds: this.createTicketModel.inviteeIds,
+          priority: this.createTicketModel.priority,
         })
       );
       this.createTicketModel = {
@@ -455,6 +623,7 @@ export class AppComponent implements OnInit {
         estimatedHours: 1,
         privacy: selectedPrivacy,
         inviteeIds: [],
+        priority: selectedPriority,
       };
       await this.loadTickets();
       await this.selectTicket(ticket.id);
@@ -597,6 +766,7 @@ export class AppComponent implements OnInit {
     this.createTicketModel.channelId = channelId;
     this.selectedTicket = null;
     this.lockedTicket = null;
+    this.syncTicketSettings(null);
     void this.loadTickets();
   }
 
@@ -635,6 +805,10 @@ export class AppComponent implements OnInit {
   }
 
   get reportOfWork() {
-    return this.selectedTicket?.logs ?? [];
+    if (!this.selectedTicket?.logs) return [];
+    const startLogs = this.selectedTicket.logs.filter((log) =>
+      /start/i.test(log.message)
+    );
+    return startLogs.length ? startLogs : [];
   }
 }

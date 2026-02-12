@@ -33,6 +33,13 @@ const base64UrlDecode = (value) => {
   return Buffer.from(normalized, 'base64');
 };
 
+const slugify = (value = '') =>
+  value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .substring(0, 64);
+
 const hashPassword = (password) => {
   const salt = crypto.randomBytes(16).toString('hex');
   const derivedHash = crypto.scryptSync(password, salt, 64).toString('hex');
@@ -124,6 +131,7 @@ const mapTicket = (row, viewerIsMember = true) => {
     closedAt: row.closed_at,
     archivedAt: row.archived_at,
     privacy,
+    priority: row.priority || 'normal',
     isLocked,
     viewerIsMember,
     createdAt: row.created_at,
@@ -280,6 +288,54 @@ app.get(
   })
 );
 
+app.post(
+  '/api/channels',
+  asyncHandler(async (req, res) => {
+    const { name, slug, ticketPrefix, description } = req.body;
+    if (!name || !ticketPrefix) {
+      return res.status(400).json({ message: 'name and ticketPrefix are required' });
+    }
+    const normalizedSlug = slugify(slug || name);
+    if (!normalizedSlug) {
+      return res.status(400).json({ message: 'Invalid slug' });
+    }
+    const prefix = String(ticketPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+    if (!prefix) {
+      return res.status(400).json({ message: 'Invalid ticket prefix' });
+    }
+
+    const channelId = uuidv4();
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query(
+        'INSERT INTO channels (id, name, slug, ticket_prefix, description) VALUES ($1, $2, $3, $4, $5)',
+        [channelId, name.trim(), normalizedSlug, prefix, description || null]
+      );
+      await client.query('INSERT INTO channel_sequences (channel_id, last_value) VALUES ($1, 0) ON CONFLICT (channel_id) DO NOTHING', [
+        channelId,
+      ]);
+      await client.query('COMMIT');
+      res.status(201).json({
+        id: channelId,
+        name: name.trim(),
+        slug: normalizedSlug,
+        ticketPrefix: prefix,
+        description: description || null,
+        nextNumber: 1,
+      });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      if (error.code === '23505') {
+        return res.status(409).json({ message: 'Channel slug or prefix already exists' });
+      }
+      throw error;
+    } finally {
+      client.release();
+    }
+  })
+);
+
 app.get(
   '/api/tickets',
   asyncHandler(async (req, res) => {
@@ -392,6 +448,9 @@ app.post(
     const privacyValue = (req.body.privacy || 'public').toLowerCase();
     const allowedPrivacy = ['public', 'private'];
     const privacy = allowedPrivacy.includes(privacyValue) ? privacyValue : 'public';
+    const priorityValue = (req.body.priority || 'normal').toLowerCase();
+    const allowedPriorities = ['normal', 'priority'];
+    const priority = allowedPriorities.includes(priorityValue) ? priorityValue : 'normal';
     const additionalMemberIds = Array.isArray(req.body.additionalMemberIds)
       ? Array.from(new Set(req.body.additionalMemberIds)).filter((id) => id && id !== creatorId)
       : [];
@@ -421,8 +480,8 @@ app.post(
 
       const insertTicket = await client.query(
         `INSERT INTO tickets (
-          id, ticket_number, title, description, channel_id, creator_id, estimated_hours, privacy
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+          id, ticket_number, title, description, channel_id, creator_id, estimated_hours, privacy, priority
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
         [
           ticketId,
           ticketNumber,
@@ -432,6 +491,7 @@ app.post(
           creatorId,
           estimatedHours || null,
           privacy,
+          priority,
         ]
       );
 
@@ -538,6 +598,97 @@ app.post(
       await client.query('ROLLBACK');
       console.error('Join ticket failed', error);
       res.status(500).json({ message: 'Unable to join ticket' });
+    } finally {
+      client.release();
+    }
+  })
+);
+
+app.post(
+  '/api/tickets/:ticketId/settings',
+  asyncHandler(async (req, res) => {
+    const { ticketId } = req.params;
+    const { actorId, status, priority, estimatedHours } = req.body;
+    if (!actorId) {
+      return res.status(400).json({ message: 'actorId is required' });
+    }
+    const [actor, ticketResult] = await Promise.all([
+      fetchUser(actorId),
+      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+    ]);
+    if (!actor) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (!ticketResult.rows.length) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    const ticket = ticketResult.rows[0];
+    const isMember = await ensureTicketMember(ticketId, actorId);
+    if (!isMember) {
+      return res.status(403).json({ message: 'Only members can update ticket details.' });
+    }
+
+    const updates = [];
+    const params = [];
+    const changeMessages = [];
+    const allowedStatuses = ['open', 'in_progress', 'archived'];
+    const allowedPriorities = ['normal', 'priority'];
+
+    if (status && status !== ticket.status) {
+      const normalizedStatus = String(status).toLowerCase();
+      if (!allowedStatuses.includes(normalizedStatus)) {
+        return res.status(400).json({ message: 'Invalid status value' });
+      }
+      updates.push(`status = $${updates.length + 1}`);
+      params.push(normalizedStatus);
+      if (normalizedStatus === 'archived') {
+        updates.push(`archived_at = $${updates.length + 1}`);
+        params.push(new Date());
+      } else if (ticket.status === 'archived') {
+        updates.push(`archived_at = $${updates.length + 1}`);
+        params.push(null);
+      }
+      changeMessages.push(`${actor.display_name} set status to ${normalizedStatus}`);
+    }
+
+    if (priority && priority !== ticket.priority) {
+      const normalizedPriority = String(priority).toLowerCase();
+      if (!allowedPriorities.includes(normalizedPriority)) {
+        return res.status(400).json({ message: 'Invalid priority value' });
+      }
+      updates.push(`priority = $${updates.length + 1}`);
+      params.push(normalizedPriority);
+      changeMessages.push(`${actor.display_name} marked ticket as ${normalizedPriority}`);
+    }
+
+    if (Number.isFinite(estimatedHours)) {
+      const hoursValue = Number(estimatedHours);
+      updates.push(`estimated_hours = $${updates.length + 1}`);
+      params.push(hoursValue >= 0 ? hoursValue : null);
+      changeMessages.push(`${actor.display_name} updated estimate to ${hoursValue >= 0 ? hoursValue : 'unset'}`);
+    }
+
+    if (!updates.length) {
+      return res.json({ message: 'No changes applied' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      const setClause = updates.join(', ');
+      const ticketIdParamIndex = params.length + 1;
+      const updateQuery = `UPDATE tickets SET ${setClause}, updated_at = now() WHERE id = $${ticketIdParamIndex} RETURNING *`;
+      params.push(ticketId);
+      const updatedTicket = await client.query(updateQuery, params);
+      for (const message of changeMessages) {
+        await appendLog(client, ticketId, actorId, message);
+      }
+      await client.query('COMMIT');
+      res.json(mapTicket(updatedTicket.rows[0], true));
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Ticket update failed', error);
+      res.status(500).json({ message: 'Unable to update ticket' });
     } finally {
       client.release();
     }

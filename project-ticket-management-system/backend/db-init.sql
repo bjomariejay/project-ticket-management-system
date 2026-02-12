@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   closed_at TIMESTAMP WITH TIME ZONE,
   archived_at TIMESTAMP WITH TIME ZONE,
   privacy TEXT NOT NULL DEFAULT 'public',
+  priority TEXT NOT NULL DEFAULT 'normal',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
