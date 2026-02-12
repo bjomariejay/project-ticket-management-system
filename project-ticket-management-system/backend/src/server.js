@@ -106,23 +106,30 @@ app.use(
 );
 app.use(express.json({ limit: '2mb' }));
 
-const mapTicket = (row) => ({
-  id: row.id,
-  ticketNumber: row.ticket_number,
-  title: row.title,
-  description: row.description,
-  status: row.status,
-  channelId: row.channel_id,
-  creatorId: row.creator_id,
-  assigneeId: row.assignee_id,
-  estimatedHours: row.estimated_hours == null ? null : Number(row.estimated_hours),
-  actualHours: row.actual_hours == null ? null : Number(row.actual_hours),
-  startedAt: row.started_at,
-  closedAt: row.closed_at,
-  archivedAt: row.archived_at,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-});
+const mapTicket = (row, viewerIsMember = true) => {
+  const privacy = row.privacy || 'public';
+  const isLocked = privacy === 'private' && !viewerIsMember;
+  return {
+    id: row.id,
+    ticketNumber: row.ticket_number,
+    title: row.title,
+    description: row.description,
+    status: row.status,
+    channelId: row.channel_id,
+    creatorId: row.creator_id,
+    assigneeId: row.assignee_id,
+    estimatedHours: row.estimated_hours == null ? null : Number(row.estimated_hours),
+    actualHours: row.actual_hours == null ? null : Number(row.actual_hours),
+    startedAt: row.started_at,
+    closedAt: row.closed_at,
+    archivedAt: row.archived_at,
+    privacy,
+    isLocked,
+    viewerIsMember,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+};
 
 const fetchUser = async (userId) => {
   const { rows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
@@ -282,23 +289,35 @@ app.get(
 
     if (channelId) {
       params.push(channelId);
-      conditions.push(`channel_id = $${params.length}`);
+      conditions.push(`t.channel_id = $${params.length}`);
     }
     if (creatorId) {
       params.push(creatorId);
-      conditions.push(`creator_id = $${params.length}`);
+      conditions.push(`t.creator_id = $${params.length}`);
     }
     if (assigneeId) {
       params.push(assigneeId);
-      conditions.push(`assignee_id = $${params.length}`);
+      conditions.push(`t.assignee_id = $${params.length}`);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const viewerId = req.user?.userId || null;
+    const viewerParamIndex = params.push(viewerId);
     const { rows } = await query(
-      `SELECT * FROM tickets ${whereClause} ORDER BY created_at DESC LIMIT 100`,
+      `SELECT t.*,
+        CASE
+          WHEN $${viewerParamIndex}::uuid IS NULL THEN false
+          ELSE EXISTS (
+            SELECT 1 FROM ticket_members tm WHERE tm.ticket_id = t.id AND tm.user_id = $${viewerParamIndex}
+          )
+        END AS viewer_is_member
+       FROM tickets t
+       ${whereClause}
+       ORDER BY t.created_at DESC
+       LIMIT 100`,
       params
     );
-    res.json(rows.map(mapTicket));
+    res.json(rows.map((row) => mapTicket(row, row.viewer_is_member)));
   })
 );
 
@@ -310,7 +329,21 @@ app.get(
     if (!rows.length) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    const ticket = mapTicket(rows[0]);
+    const ticketRow = rows[0];
+    const viewerId = req.user?.userId || null;
+    const isMember = viewerId ? await ensureTicketMember(ticketId, viewerId) : false;
+    if (ticketRow.privacy === 'private' && !isMember) {
+      return res.status(403).json({
+        message: 'Join this private ticket to view details.',
+        ticket: {
+          id: ticketRow.id,
+          ticketNumber: ticketRow.ticket_number,
+          title: ticketRow.title,
+          privacy: ticketRow.privacy,
+        },
+      });
+    }
+    const ticket = mapTicket(ticketRow, isMember);
     const [membersResult, logsResult, messagesResult] = await Promise.all([
       query(
         `SELECT tm.user_id AS "userId", u.display_name AS "displayName", u.handle, tm.role, tm.joined_at AS "joinedAt"
@@ -356,6 +389,12 @@ app.post(
     if (!title || !channelId || !creatorId) {
       return res.status(400).json({ message: 'title, channelId and creatorId are required' });
     }
+    const privacyValue = (req.body.privacy || 'public').toLowerCase();
+    const allowedPrivacy = ['public', 'private'];
+    const privacy = allowedPrivacy.includes(privacyValue) ? privacyValue : 'public';
+    const additionalMemberIds = Array.isArray(req.body.additionalMemberIds)
+      ? Array.from(new Set(req.body.additionalMemberIds)).filter((id) => id && id !== creatorId)
+      : [];
 
     const channel = await fetchChannel(channelId);
     if (!channel) {
@@ -382,8 +421,8 @@ app.post(
 
       const insertTicket = await client.query(
         `INSERT INTO tickets (
-          id, ticket_number, title, description, channel_id, creator_id, estimated_hours
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+          id, ticket_number, title, description, channel_id, creator_id, estimated_hours, privacy
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
         [
           ticketId,
           ticketNumber,
@@ -392,6 +431,7 @@ app.post(
           channelId,
           creatorId,
           estimatedHours || null,
+          privacy,
         ]
       );
 
@@ -399,6 +439,22 @@ app.post(
         'INSERT INTO ticket_members (ticket_id, user_id, role) VALUES ($1, $2, $3)',
         [ticketId, creatorId, 'owner']
       );
+
+      for (const memberId of additionalMemberIds) {
+        const teammate = await fetchUser(memberId);
+        if (!teammate) continue;
+        const memberCheck = await client.query(
+          'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
+          [ticketId, memberId]
+        );
+        if (memberCheck.rowCount) continue;
+        await client.query('INSERT INTO ticket_members (ticket_id, user_id, role) VALUES ($1, $2, $3)', [
+          ticketId,
+          memberId,
+          'participant',
+        ]);
+        await appendLog(client, ticketId, creatorId, `${teammate.display_name} was invited to the ticket`);
+      }
 
       await appendLog(
         client,
@@ -408,7 +464,7 @@ app.post(
       );
 
       await client.query('COMMIT');
-      res.status(201).json(mapTicket(insertTicket.rows[0]));
+      res.status(201).json(mapTicket(insertTicket.rows[0], true));
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Ticket creation failed', error);
@@ -423,23 +479,38 @@ app.post(
   '/api/tickets/:ticketId/join',
   asyncHandler(async (req, res) => {
     const { ticketId } = req.params;
-    const { userId } = req.body;
-    if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
+    const actorId = req.body.actorId || req.user?.userId;
+    const targetUserId = req.body.userId || actorId;
+    if (!actorId || !targetUserId) {
+      return res.status(400).json({ message: 'actorId or user context is required' });
     }
 
-    const [ticketResult, user] = await Promise.all([
-      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
-      fetchUser(userId),
-    ]);
-    if (!ticketResult.rows.length) {
+    const { rows: ticketRows } = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
+    if (!ticketRows.length) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    if (!user) {
+    const ticket = ticketRows[0];
+
+    const [actor, targetUser] = await Promise.all([
+      fetchUser(actorId),
+      actorId === targetUserId ? Promise.resolve(null) : fetchUser(targetUserId),
+    ]);
+    const resolvedTarget = actorId === targetUserId ? actor : targetUser;
+    if (!actor || !resolvedTarget) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    const alreadyMember = await ensureTicketMember(ticketId, userId);
+    const actorIsMember = await ensureTicketMember(ticketId, actorId);
+    if (targetUserId !== actorId && !actorIsMember) {
+      return res.status(403).json({ message: 'Only ticket members can invite others.' });
+    }
+    if (ticket.privacy === 'private' && !actorIsMember && actorId === targetUserId) {
+      return res
+        .status(403)
+        .json({ message: 'This ticket is private. Ask an existing member to invite you.' });
+    }
+
+    const alreadyMember = await ensureTicketMember(ticketId, targetUserId);
     if (alreadyMember) {
       return res.json({ message: 'Already part of ticket' });
     }
@@ -449,15 +520,81 @@ app.post(
       await client.query('BEGIN');
       await client.query('INSERT INTO ticket_members (ticket_id, user_id) VALUES ($1, $2)', [
         ticketId,
-        userId,
+        targetUserId,
       ]);
-      await appendLog(client, ticketId, userId, `${user.display_name} joined the ticket`);
+      if (targetUserId === actorId) {
+        await appendLog(client, ticketId, actorId, `${actor.display_name} joined the ticket`);
+      } else {
+        await appendLog(
+          client,
+          ticketId,
+          actorId,
+          `${actor.display_name} invited ${resolvedTarget.display_name} to the ticket`
+        );
+      }
       await client.query('COMMIT');
       res.json({ message: 'Joined ticket' });
     } catch (error) {
       await client.query('ROLLBACK');
       console.error('Join ticket failed', error);
       res.status(500).json({ message: 'Unable to join ticket' });
+    } finally {
+      client.release();
+    }
+  })
+);
+
+app.post(
+  '/api/tickets/:ticketId/privacy',
+  asyncHandler(async (req, res) => {
+    const { ticketId } = req.params;
+    const requestedPrivacy = (req.body.privacy || '').toLowerCase();
+    const allowedPrivacy = ['public', 'private'];
+    if (!allowedPrivacy.includes(requestedPrivacy)) {
+      return res.status(400).json({ message: 'privacy must be public or private' });
+    }
+    const actorId = req.body.actorId || req.user?.userId;
+    if (!actorId) {
+      return res.status(400).json({ message: 'actorId is required' });
+    }
+
+    const [ticketResult, actor] = await Promise.all([
+      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+      fetchUser(actorId),
+    ]);
+    if (!ticketResult.rows.length) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    if (!actor) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    const isMember = await ensureTicketMember(ticketId, actorId);
+    if (!isMember) {
+      return res.status(403).json({ message: 'Only ticket members can update privacy.' });
+    }
+    const ticket = ticketResult.rows[0];
+    if (ticket.privacy === requestedPrivacy) {
+      return res.json({ message: `Ticket already ${requestedPrivacy}` });
+    }
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE tickets SET privacy = $1, updated_at = now() WHERE id = $2', [
+        requestedPrivacy,
+        ticketId,
+      ]);
+      await appendLog(
+        client,
+        ticketId,
+        actorId,
+        `${actor.display_name} set ticket privacy to ${requestedPrivacy}`
+      );
+      await client.query('COMMIT');
+      res.json({ message: 'Privacy updated' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Privacy update failed', error);
+      res.status(500).json({ message: 'Unable to update privacy' });
     } finally {
       client.release();
     }
@@ -493,6 +630,17 @@ app.post(
         assigneeId,
         ticketId,
       ]);
+      const memberCheck = await client.query(
+        'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
+        [ticketId, assigneeId]
+      );
+      if (!memberCheck.rowCount) {
+        await client.query('INSERT INTO ticket_members (ticket_id, user_id, role) VALUES ($1, $2, $3)', [
+          ticketId,
+          assigneeId,
+          'participant',
+        ]);
+      }
       await appendLog(
         client,
         ticketId,

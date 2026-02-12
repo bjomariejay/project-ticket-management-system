@@ -10,6 +10,7 @@ import {
   NotificationItem,
   Ticket,
   TicketDetail,
+  TicketPrivacy,
   User,
 } from './api.service';
 
@@ -18,7 +19,7 @@ import {
   standalone: true,
   imports: [CommonModule, FormsModule],
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
   title = 'Project and Ticket Management System';
@@ -33,6 +34,7 @@ export class AppComponent implements OnInit {
   selectedUserId = '';
   selectedChannelId = '';
   selectedTicket: TicketDetail | null = null;
+  lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null = null;
   activeTab: 'home' | 'dms' | 'activity' = 'home';
 
   ticketSearch = '';
@@ -42,10 +44,15 @@ export class AppComponent implements OnInit {
     description: '',
     channelId: '',
     estimatedHours: 1,
+    privacy: 'public' as TicketPrivacy,
+    inviteeIds: [] as string[],
   };
   dmForm = {
     recipientId: '',
     body: '',
+  };
+  inviteForm = {
+    userId: '',
   };
 
   isLoadingTickets = false;
@@ -84,9 +91,8 @@ export class AppComponent implements OnInit {
   private async bootstrapWorkspace() {
     if (!this.isAuthenticated) return;
     await Promise.all([this.loadUsers(), this.loadChannels()]);
-    if (!this.selectedUserId && this.users.length) {
-      const fallbackUser = this.sessionUser || this.users[0];
-      this.selectedUserId = fallbackUser.id;
+    if (!this.selectedUserId && this.sessionUser) {
+      this.selectedUserId = this.sessionUser.id;
     }
     if (this.channels.length) {
       this.selectedChannelId = this.channels[0].id;
@@ -143,6 +149,7 @@ export class AppComponent implements OnInit {
     this.notifications = [];
     this.dms = [];
     this.selectedTicket = null;
+    this.lockedTicket = null;
     this.activeTab = 'home';
     this.ticketSearch = '';
     this.messageDraft = '';
@@ -151,6 +158,8 @@ export class AppComponent implements OnInit {
       description: '',
       channelId: '',
       estimatedHours: 1,
+      privacy: 'public',
+      inviteeIds: [],
     };
     this.dmForm = {
       recipientId: '',
@@ -158,7 +167,7 @@ export class AppComponent implements OnInit {
     };
     this.feedback = '';
     if (clearUserSelection) {
-      this.selectedUserId = '';
+      this.selectedUserId = this.sessionUser?.id || '';
       this.selectedChannelId = '';
     }
   }
@@ -195,6 +204,7 @@ export class AppComponent implements OnInit {
     this.sessionUser = null;
     this.isAuthenticated = false;
     this.resetWorkspaceState(true);
+    this.lockedTicket = null;
   }
 
   switchAuthMode(mode: 'login' | 'register') {
@@ -252,12 +262,21 @@ export class AppComponent implements OnInit {
   }
 
   get isTicketMember(): boolean {
-    if (!this.selectedTicket || !this.selectedUserId) return false;
+    if (!this.selectedUserId) return false;
+    if (!this.selectedTicket) return false;
+    if (typeof this.selectedTicket.viewerIsMember === 'boolean') {
+      return this.selectedTicket.viewerIsMember;
+    }
     return this.selectedTicket.members.some((member) => member.userId === this.selectedUserId);
   }
 
   get canAssign(): boolean {
     return Boolean(this.selectedTicket && this.selectedUserId);
+  }
+
+  isMemberOfSelected(userId: string): boolean {
+    if (!this.selectedTicket) return false;
+    return this.selectedTicket.members.some((member) => member.userId === userId);
   }
 
   getUserName(userId?: string | null): string {
@@ -286,6 +305,12 @@ export class AppComponent implements OnInit {
           this.selectedTicket = null;
         }
       }
+      if (this.lockedTicket) {
+        const stillLockedExists = this.tickets.some((ticket) => ticket.id === this.lockedTicket?.id);
+        if (!stillLockedExists) {
+          this.lockedTicket = null;
+        }
+      }
       if (!this.selectedTicket && this.tickets.length) {
         await this.selectTicket(this.tickets[0].id);
       } else if (this.selectedTicket) {
@@ -311,13 +336,35 @@ export class AppComponent implements OnInit {
   }
 
   async selectTicket(ticketId: string) {
-    this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
-    this.messageDraft = '';
+    this.lockedTicket = null;
+    try {
+      this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
+      this.messageDraft = '';
+      this.lockedTicket = null;
+    } catch (error: any) {
+      if (error?.status === 403 && error?.error?.ticket) {
+        this.selectedTicket = null;
+        this.lockedTicket = error.error.ticket;
+      } else {
+        console.error(error);
+      }
+    }
   }
 
-  async refreshTicketDetail() {
-    if (!this.selectedTicket) return;
-    this.selectedTicket = await firstValueFrom(this.api.getTicket(this.selectedTicket.id));
+  async refreshTicketDetail(ticketId?: string) {
+    const targetId = ticketId || this.selectedTicket?.id || this.lockedTicket?.id;
+    if (!targetId) return;
+    try {
+      this.selectedTicket = await firstValueFrom(this.api.getTicket(targetId));
+      this.lockedTicket = null;
+    } catch (error: any) {
+      if (error?.status === 403 && error?.error?.ticket) {
+        this.selectedTicket = null;
+        this.lockedTicket = error.error.ticket;
+      } else {
+        console.error(error);
+      }
+    }
   }
 
   async handleCreateTicket() {
@@ -327,6 +374,7 @@ export class AppComponent implements OnInit {
     }
     try {
       const selectedChannel = this.createTicketModel.channelId;
+      const selectedPrivacy = this.createTicketModel.privacy;
       const ticket = await firstValueFrom(
         this.api.createTicket({
           title: this.createTicketModel.title,
@@ -334,6 +382,8 @@ export class AppComponent implements OnInit {
           channelId: this.createTicketModel.channelId,
           creatorId: this.selectedUserId,
           estimatedHours: this.createTicketModel.estimatedHours,
+          privacy: this.createTicketModel.privacy,
+          additionalMemberIds: this.createTicketModel.inviteeIds,
         })
       );
       this.createTicketModel = {
@@ -341,6 +391,8 @@ export class AppComponent implements OnInit {
         description: '',
         channelId: selectedChannel,
         estimatedHours: 1,
+        privacy: selectedPrivacy,
+        inviteeIds: [],
       };
       await this.loadTickets();
       await this.selectTicket(ticket.id);
@@ -379,10 +431,24 @@ export class AppComponent implements OnInit {
     this.handlePostMessage('start ticket').catch((error) => console.error(error));
   }
 
-  async handleJoinTicket() {
-    if (!this.selectedTicket || !this.selectedUserId) return;
-    await firstValueFrom(this.api.joinTicket(this.selectedTicket.id, this.selectedUserId));
-    await this.refreshTicketDetail();
+  async handleJoinTicket(targetUserId?: string) {
+    const ticketId = this.selectedTicket?.id || this.lockedTicket?.id;
+    if (!ticketId || !this.selectedUserId) return;
+    const joinUserId = targetUserId || this.selectedUserId;
+    try {
+      await firstValueFrom(
+        this.api.joinTicket(ticketId, {
+          userId: joinUserId,
+          actorId: this.selectedUserId,
+        })
+      );
+      await this.loadTickets();
+      await this.refreshTicketDetail(ticketId);
+      this.feedback = targetUserId ? 'Teammate invited to ticket.' : 'Joined ticket.';
+    } catch (error: any) {
+      console.error(error);
+      this.feedback = error?.error?.message || 'Unable to join ticket.';
+    }
   }
 
   async handleAssignTo(userId: string) {
@@ -398,12 +464,38 @@ export class AppComponent implements OnInit {
     (event.target as HTMLSelectElement).value = '';
   }
 
+  handleInviteSelect(event: Event) {
+    const value = (event.target as HTMLSelectElement).value;
+    if (!value) return;
+    this.handleJoinTicket(value).catch((error) => console.error(error));
+    (event.target as HTMLSelectElement).value = '';
+  }
+
   async handleArchiveTicket() {
     if (!this.selectedTicket || !this.selectedUserId) return;
     const ticketId = this.selectedTicket.id;
     await firstValueFrom(this.api.archiveTicket(ticketId, this.selectedUserId));
     this.selectedTicket = null;
     await this.loadTickets();
+  }
+
+  async handlePrivacyChange(privacy: TicketPrivacy) {
+    if (!this.selectedTicket || !this.selectedUserId) return;
+    if (this.selectedTicket.privacy === privacy) return;
+    try {
+      await firstValueFrom(
+        this.api.updateTicketPrivacy(this.selectedTicket.id, {
+          actorId: this.selectedUserId,
+          privacy,
+        })
+      );
+      await this.refreshTicketDetail(this.selectedTicket.id);
+      await this.loadTickets();
+      this.feedback = `Ticket marked ${privacy}.`;
+    } catch (error: any) {
+      console.error(error);
+      this.feedback = error?.error?.message || 'Unable to update privacy.';
+    }
   }
 
   async handleSendDm() {
@@ -438,12 +530,9 @@ export class AppComponent implements OnInit {
   handleChannelChange(channelId: string) {
     this.selectedChannelId = channelId;
     this.createTicketModel.channelId = channelId;
+    this.selectedTicket = null;
+    this.lockedTicket = null;
     void this.loadTickets();
-  }
-
-  async handleUserChange(userId: string) {
-    this.selectedUserId = userId;
-    await Promise.all([this.loadTickets(), this.loadNotifications(), this.loadDms()]);
   }
 
   get activityUnreadCount(): number {

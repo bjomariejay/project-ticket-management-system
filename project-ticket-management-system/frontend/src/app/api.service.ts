@@ -18,6 +18,8 @@ export interface Channel {
   nextNumber: number;
 }
 
+export type TicketPrivacy = 'public' | 'private';
+
 export interface Ticket {
   id: string;
   ticketNumber: string;
@@ -32,6 +34,9 @@ export interface Ticket {
   startedAt?: string | null;
   closedAt?: string | null;
   archivedAt?: string | null;
+  privacy: TicketPrivacy;
+  isLocked?: boolean;
+  viewerIsMember?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -139,6 +144,8 @@ export class ApiService {
     channelId: string;
     creatorId: string;
     estimatedHours?: number;
+    privacy?: TicketPrivacy;
+    additionalMemberIds?: string[];
   }): Observable<Ticket> {
     return this.http.post<Ticket>(`${this.baseUrl}/tickets`, payload);
   }
@@ -147,8 +154,12 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/messages`, payload);
   }
 
-  joinTicket(ticketId: string, userId: string) {
-    return this.http.post(`${this.baseUrl}/tickets/${ticketId}/join`, { userId });
+  joinTicket(ticketId: string, payload?: { userId?: string; actorId?: string }) {
+    return this.http.post(`${this.baseUrl}/tickets/${ticketId}/join`, payload ?? {});
+  }
+
+  updateTicketPrivacy(ticketId: string, payload: { actorId: string; privacy: TicketPrivacy }) {
+    return this.http.post(`${this.baseUrl}/tickets/${ticketId}/privacy`, payload);
   }
 
   assignTicket(ticketId: string, assigneeId: string, actorId: string) {
