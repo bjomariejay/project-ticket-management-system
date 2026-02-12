@@ -285,6 +285,20 @@
   align-items: center;
 }
 
+.space-section__actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.space-section__actions .link-button {
+  flex: 1;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: auto;
+}
+
 .channel-form {
   display: flex;
   flex-direction: column;
@@ -732,21 +746,69 @@
 .thread__composer {
   display: flex;
   gap: 0.6rem;
+  align-items: flex-start;
 }
 
-.thread__composer textarea {
+.composer-input {
+  position: relative;
   flex: 1;
+}
+
+.composer-input textarea {
+  width: 100%;
   border-radius: 0.8rem;
   border: 1px solid #dfe3ef;
   padding: 0.5rem 0.8rem;
+  font-family: inherit;
+  resize: vertical;
 }
 
-.thread__composer button {
+.thread__composer > button {
   border-radius: 0.8rem;
   border: none;
   background: #611f69;
   color: #fff;
   padding: 0 1.2rem;
+}
+
+.mention-suggestions {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin-top: 0.25rem;
+  background: #fff;
+  border: 1px solid #e2e5f1;
+  border-radius: 0.75rem;
+  box-shadow: 0 12px 24px rgba(26, 24, 60, 0.15);
+  padding: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 5;
+}
+
+.mention-suggestions button {
+  border: none;
+  background: transparent;
+  text-align: left;
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  cursor: pointer;
+}
+
+.mention-suggestions button:hover {
+  background: #f4f5fb;
+}
+
+.mention-suggestions small {
+  color: #6b6f82;
+  font-size: 0.78rem;
 }
 
 .locked-card {

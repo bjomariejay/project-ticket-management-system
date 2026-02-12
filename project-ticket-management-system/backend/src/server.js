@@ -919,6 +919,22 @@ app.post(
       const recipients = await resolveMentionRecipients(client, mentions, userId);
       if (recipients.length) {
         for (const recipient of recipients) {
+          const membership = await client.query(
+            'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
+            [ticketId, recipient.id]
+          );
+          if (!membership.rowCount) {
+            await client.query(
+              'INSERT INTO ticket_members (ticket_id, user_id, role) VALUES ($1, $2, $3)',
+              [ticketId, recipient.id, 'participant']
+            );
+            await appendLog(
+              client,
+              ticketId,
+              userId,
+              `${user.display_name} added ${recipient.display_name} via mention`
+            );
+          }
           await createNotification(
             client,
             recipient.id,

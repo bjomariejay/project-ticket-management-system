@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
@@ -24,6 +24,8 @@ import {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
+  @ViewChild('messageInput') messageInputRef?: ElementRef<HTMLTextAreaElement>;
+
   title = 'Project and Ticket Management System';
   workspaceLabel = 'Mission Control Workspace';
 
@@ -47,6 +49,9 @@ export class AppComponent implements OnInit {
 
   ticketSearch = '';
   messageDraft = '';
+  mentionSuggestions: User[] = [];
+  mentionQuery = '';
+  showMentionSuggestions = false;
   createTicketModel = {
     title: '',
     description: '',
@@ -111,6 +116,9 @@ export class AppComponent implements OnInit {
   selectedLog: TicketLog | null = null;
   isCreateChannelOpen = false;
   isCreateTicketOpen = false;
+  private mentionReplaceRange: { start: number; end: number } | null = null;
+  private messageCursorIndex = 0;
+  private mentionHideTimeout: number | null = null;
 
   constructor(private readonly api: ApiService) {}
 
@@ -190,6 +198,7 @@ export class AppComponent implements OnInit {
     this.activeTab = 'home';
     this.ticketSearch = '';
     this.messageDraft = '';
+    this.resetMentionSuggestions();
     this.createTicketModel = {
       title: '',
       description: '',
@@ -556,6 +565,7 @@ export class AppComponent implements OnInit {
     try {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
       this.messageDraft = '';
+      this.resetMentionSuggestions();
       this.lockedTicket = null;
       this.syncTicketSettings(this.selectedTicket);
       this.selectedLog = null;
@@ -648,6 +658,7 @@ export class AppComponent implements OnInit {
       );
       if (!body) {
         this.messageDraft = '';
+        this.resetMentionSuggestions();
       }
       await this.refreshTicketDetail();
       await this.loadNotifications();
@@ -656,6 +667,85 @@ export class AppComponent implements OnInit {
     } finally {
       this.isPostingMessage = false;
     }
+  }
+
+  handleMessageInput(event: Event) {
+    const target = event.target as HTMLTextAreaElement;
+    this.messageDraft = target.value;
+    const caretPosition = target.selectionStart ?? this.messageDraft.length;
+    this.updateMentionContext(caretPosition);
+  }
+
+  handleMessageFocus() {
+    if (this.mentionHideTimeout) {
+      window.clearTimeout(this.mentionHideTimeout);
+      this.mentionHideTimeout = null;
+    }
+    this.updateMentionContext(this.messageCursorIndex);
+  }
+
+  handleMessageBlur() {
+    this.mentionHideTimeout = window.setTimeout(() => this.resetMentionSuggestions(), 120);
+  }
+
+  handleSelectMention(user: User) {
+    if (!this.mentionReplaceRange) return;
+    const before = this.messageDraft.slice(0, this.mentionReplaceRange.start);
+    const after = this.messageDraft.slice(this.messageCursorIndex);
+    const insertion = `@${user.handle} `;
+    const nextCursor = before.length + insertion.length;
+    this.messageDraft = `${before}${insertion}${after}`;
+    this.messageCursorIndex = nextCursor;
+    this.resetMentionSuggestions();
+    setTimeout(() => {
+      const textarea = this.messageInputRef?.nativeElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+      }
+    });
+  }
+
+  private updateMentionContext(caretIndex: number) {
+    this.messageCursorIndex = caretIndex;
+    const textBeforeCaret = this.messageDraft.slice(0, caretIndex);
+    const mentionMatch = textBeforeCaret.match(/(?:^|\s)@([\w-]*)$/i);
+    if (!mentionMatch) {
+      this.resetMentionSuggestions();
+      return;
+    }
+    const query = mentionMatch[1] || '';
+    const mentionStart = caretIndex - query.length - 1;
+    if (mentionStart < 0) {
+      this.resetMentionSuggestions();
+      return;
+    }
+    this.mentionReplaceRange = { start: mentionStart, end: caretIndex };
+    this.mentionQuery = query.toLowerCase();
+    this.mentionSuggestions = this.buildMentionSuggestions(this.mentionQuery);
+    this.showMentionSuggestions = this.mentionSuggestions.length > 0;
+  }
+
+  private buildMentionSuggestions(query: string): User[] {
+    const normalized = query.trim();
+    return this.users
+      .filter((user) => {
+        if (!normalized) return true;
+        const haystack = `${user.displayName} ${user.handle}`.toLowerCase();
+        return haystack.includes(normalized);
+      })
+      .slice(0, 8);
+  }
+
+  private resetMentionSuggestions() {
+    if (this.mentionHideTimeout) {
+      window.clearTimeout(this.mentionHideTimeout);
+      this.mentionHideTimeout = null;
+    }
+    this.mentionSuggestions = [];
+    this.showMentionSuggestions = false;
+    this.mentionQuery = '';
+    this.mentionReplaceRange = null;
   }
 
   handleStartTicketClick() {

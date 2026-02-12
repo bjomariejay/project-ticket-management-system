@@ -138,9 +138,14 @@
                     <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
                   </button>
                 </div>
-                <button type="button" class="link-button" (click)="openCreateChannel()">
-                  + Create channel
-                </button>
+                <div class="space-section__actions">
+                  <button type="button" class="link-button" (click)="openCreateChannel()">
+                    + Create channel
+                  </button>
+                  <button type="button" class="link-button" (click)="openCreateTicket()">
+                    + Create ticket
+                  </button>
+                </div>
               </section>
               <section class="space-section">
                 <div class="space-section__header">
@@ -163,15 +168,6 @@
               </section>
             </article>
 
-            <article class="card home-card create-ticket">
-              <header>
-                <h3>Create ticket</h3>
-                <span class="muted">Channel {{ channelLabel }}</span>
-              </header>
-              <button type="button" class="link-button" (click)="openCreateTicket()">
-                + New ticket
-              </button>
-            </article>
           </div>
 
           <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket; else promptSelect">
@@ -314,11 +310,32 @@
                   </article>
                 </div>
                 <div class="thread__composer" *ngIf="isTicketMember">
-                  <textarea
-                    rows="2"
-                    placeholder="Type update or @mention a teammate"
-                    [(ngModel)]="messageDraft"
-                  ></textarea>
+                  <div class="composer-input">
+                    <textarea
+                      #messageInput
+                      rows="2"
+                      name="ticketMessage"
+                      placeholder="Type update or @mention a teammate"
+                      [(ngModel)]="messageDraft"
+                      (input)="handleMessageInput($event)"
+                      (focus)="handleMessageFocus()"
+                      (blur)="handleMessageBlur()"
+                    ></textarea>
+                    <div
+                      class="mention-suggestions"
+                      *ngIf="showMentionSuggestions && mentionSuggestions.length"
+                    >
+                      <button
+                        type="button"
+                        *ngFor="let user of mentionSuggestions"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="handleSelectMention(user)"
+                      >
+                        <strong>{{ user.displayName }}</strong>
+                        <small>&#64;{{ user.handle }}</small>
+                      </button>
+                    </div>
+                  </div>
                   <button type="button" (click)="handlePostMessage()" [disabled]="isPostingMessage">
                     {{ isPostingMessage ? 'Posting...' : 'Post' }}
                   </button>
