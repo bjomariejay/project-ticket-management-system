@@ -591,86 +591,27 @@
   gap: 0.8rem;
 }
 
-.ticket-quick-settings {
+
+.ticket-info {
   margin-top: 1.25rem;
   background: #f6f6fb;
   border-radius: 1rem;
   padding: 1rem;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 1rem;
 }
 
-.quick-settings__item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
+.ticket-info p {
+  margin: 0;
+  color: #4c5165;
 }
 
-.ticket-quick-settings .assign-select,
-.ticket-quick-settings .estimate-edit,
-.ticket-quick-settings .priority-toggle {
-  margin-top: 0;
-}
-
-.status-select,
-.estimate-edit,
-.priority-toggle,
-.invite-select,
-.privacy-toggle,
-.assign-select {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.status-select select,
-.estimate-edit input,
-.assign-select select,
-.assign-select input,
-.invite-select select,
-.privacy-toggle select {
-  border-radius: 0.7rem;
-  border: 1px solid #dfe3ef;
-  padding: 0.5rem 0.7rem;
-}
-
-.priority-toggle__buttons,
-.privacy-toggle__buttons {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.priority-toggle__buttons button,
-.privacy-toggle__buttons button {
-  flex: 1;
-  border-radius: 0.7rem;
-  border: 1px solid #dfe3ef;
-  background: #fff;
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-}
-
-.priority-toggle__buttons button.active,
-.privacy-toggle__buttons button.active {
-  background: rgba(97, 31, 105, 0.1);
-  border-color: #611f69;
-  color: #611f69;
-}
-
-.estimate-edit__controls {
-  display: flex;
-  gap: 0.5rem;
-  align-items: center;
-}
-
-.estimate-edit__controls button {
-  border: none;
-  border-radius: 0.6rem;
-  padding: 0.4rem 0.9rem;
-  background: #611f69;
-  color: #fff;
+.ticket-info label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8c90a6;
 }
 
 .ticket-flags {
@@ -692,27 +633,6 @@
   color: #611f69;
 }
 
-.detail__actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.detail__actions button {
-  flex: 1;
-  border-radius: 0.7rem;
-  padding: 0.55rem 0.7rem;
-  border: none;
-  background: #611f69;
-  color: #fff;
-  cursor: pointer;
-}
-
-.detail__actions button.ghost {
-  background: #f6f6fb;
-  color: #5d6273;
-}
-
 .ticket-members {
   margin-top: 1rem;
   display: flex;
@@ -720,9 +640,16 @@
   gap: 0.4rem;
 }
 
+.ticket-members label {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #8c90a6;
+}
+
 .ticket-members ul {
   list-style: none;
-  margin: 0;
+  margin: 0.2rem 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
@@ -739,55 +666,6 @@
 
 .ticket-members small {
   color: #6b6f82;
-}
-
-.assign-select {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.assign-select select,
-.assign-select input {
-  border-radius: 0.7rem;
-  border: 1px solid #dfe3ef;
-  padding: 0.5rem 0.7rem;
-}
-
-.invite-select,
-.privacy-toggle {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.invite-select select,
-.privacy-toggle select {
-  border-radius: 0.7rem;
-  border: 1px solid #dfe3ef;
-  padding: 0.5rem 0.7rem;
-}
-
-.privacy-toggle__buttons {
-  display: flex;
-  gap: 0.6rem;
-}
-
-.privacy-toggle__buttons button {
-  flex: 1;
-  border-radius: 0.7rem;
-  border: 1px solid #dfe3ef;
-  background: #fff;
-  padding: 0.4rem 0.6rem;
-  cursor: pointer;
-}
-
-.privacy-toggle__buttons button.active {
-  background: rgba(97, 31, 105, 0.1);
-  border-color: #611f69;
-  color: #611f69;
 }
 
 .ticket-thread {

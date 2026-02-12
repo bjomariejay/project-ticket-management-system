@@ -269,77 +269,40 @@
                 </header>
               <ng-container *ngIf="isTicketMember; else joinTicketPrompt">
                 <p>{{ selectedTicket.description || 'No description provided.' }}</p>
-                <div class="ticket-quick-settings" *ngIf="isTicketMember">
-                  <div class="quick-settings__item assign-select">
-                    <span class="muted">Assign to ticket</span>
-                    <input
-                      type="text"
-                      name="assignHandle"
-                      placeholder="Type teammate handle or name"
-                      [(ngModel)]="assignInput"
-                      (ngModelChange)="handleAssignInputChange($event)"
-                      [disabled]="!isTicketMember"
-                    />
+                <section class="ticket-info" *ngIf="isTicketMember">
+                  <p>
+                    <label>Assigned to:</label>
+                    <br />
                     <strong>{{ getUserName(selectedTicket.assigneeId) }}</strong>
-                    <small class="hint">Typing a username assigns the ticket automatically.</small>
-                  </div>
-                  <div class="quick-settings__item estimate-edit">
-                    <span class="muted">Estimate time</span>
-                    <div class="estimate-edit__controls">
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.5"
-                        name="estimate"
-                        [(ngModel)]="ticketSettings.estimatedHours"
-                      />
-                      <button type="button" (click)="handleEstimatedHoursSave()">Save</button>
-                    </div>
-                    <strong>{{ selectedTicket.estimatedHours != null ? selectedTicket.estimatedHours : 'Not set' }}</strong>
-                  </div>
-                  <div class="quick-settings__item created-display">
-                    <span class="muted">Created time</span>
+                  </p>
+                  <p>
+                    <label>Estimated time:</label>
+                    <br />
+                    <strong>
+                      {{ selectedTicket.estimatedHours != null ? (selectedTicket.estimatedHours + 'h') : 'Not set' }}
+                    </strong>
+                  </p>
+                  <p>
+                    <label>Created time:</label>
+                    <br />
                     <strong>{{ selectedTicket.createdAt | date: 'medium' }}</strong>
-                  </div>
-                  <div class="quick-settings__item priority-toggle">
-                    <span class="muted">Status</span>
-                    <div class="priority-toggle__buttons">
-                      <button
-                        type="button"
-                        [class.active]="ticketSettings.priority === 'normal'"
-                        (click)="handlePriorityChange('normal')"
-                      >
-                        Normal
-                      </button>
-                      <button
-                        type="button"
-                        [class.active]="ticketSettings.priority === 'priority'"
-                        (click)="handlePriorityChange('priority')"
-                      >
-                        Priority
-                      </button>
-                    </div>
+                  </p>
+                  <p>
+                    <label>Status:</label>
+                    <br />
                     <strong>{{ selectedTicket.priority | titlecase }}</strong>
-                  </div>
-                </div>
-                <div class="ticket-members" *ngIf="selectedTicket?.members?.length">
-                  <span class="muted">Participants</span>
+                  </p>
+                </section>
+                <section class="ticket-members" *ngIf="selectedTicket?.members?.length">
+                  <label>Participants:</label>
+                  <br />
                   <ul>
                     <li *ngFor="let member of selectedTicket.members">
                       <strong>{{ member.displayName }}</strong>
                       <small>&#64;{{ member.handle }}</small>
                     </li>
                   </ul>
-                </div>
-                <div class="detail__actions">
-                  <button type="button" (click)="handleJoinTicket()" [disabled]="isTicketMember">
-                    {{ isTicketMember ? 'Participant' : 'Join ticket' }}
-                  </button>
-                  <button type="button" (click)="handleAssignTo(selectedUserId)" [disabled]="!canAssign">
-                    Assign to me
-                  </button>
-                  <button type="button" class="ghost" (click)="handleArchiveTicket()">Archive</button>
-                </div>
+                </section>
               </ng-container>
               <ng-template #joinTicketPrompt>
                 <div class="join-card">

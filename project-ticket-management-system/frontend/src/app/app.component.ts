@@ -110,7 +110,6 @@ export class AppComponent implements OnInit {
     priority: 'normal' as TicketPriority,
     estimatedHours: null as number | null | '',
   };
-  assignInput = '';
   selectedLog: TicketLog | null = null;
   isCreateChannelOpen = false;
   isCreateTicketOpen = false;
@@ -201,7 +200,6 @@ export class AppComponent implements OnInit {
     this.activeTab = 'home';
     this.ticketSearch = '';
     this.messageDraft = '';
-    this.assignInput = '';
     this.channelsCollapsed = false;
     this.ticketCategoryCollapsed = {};
     this.resetMentionSuggestions();
@@ -594,14 +592,12 @@ export class AppComponent implements OnInit {
       this.lockedTicket = null;
       this.syncTicketSettings(this.selectedTicket);
       this.selectedLog = null;
-      this.assignInput = '';
     } catch (error: any) {
       if (error?.status === 403 && error?.error?.ticket) {
         this.selectedTicket = null;
         this.lockedTicket = error.error.ticket;
         this.syncTicketSettings(null);
         this.selectedLog = null;
-        this.assignInput = '';
       } else {
         console.error(error);
       }
@@ -616,14 +612,12 @@ export class AppComponent implements OnInit {
       this.lockedTicket = null;
       this.syncTicketSettings(this.selectedTicket);
       this.selectedLog = null;
-      this.assignInput = '';
     } catch (error: any) {
       if (error?.status === 403 && error?.error?.ticket) {
         this.selectedTicket = null;
         this.lockedTicket = error.error.ticket;
         this.syncTicketSettings(null);
         this.selectedLog = null;
-        this.assignInput = '';
       } else {
         console.error(error);
       }
@@ -673,6 +667,14 @@ export class AppComponent implements OnInit {
     if (!this.selectedTicket || !this.selectedUserId || !this.isTicketMember) return;
     const payload = body ?? this.messageDraft.trim();
     if (!payload) return;
+    const handledCommand = await this.tryHandleTicketCommand(payload);
+    if (handledCommand) {
+      if (!body) {
+        this.messageDraft = '';
+        this.resetMentionSuggestions();
+      }
+      return;
+    }
     this.isPostingMessage = true;
     try {
       await firstValueFrom(
@@ -751,6 +753,50 @@ export class AppComponent implements OnInit {
     this.showMentionSuggestions = this.mentionSuggestions.length > 0;
   }
 
+  private async tryHandleTicketCommand(payload: string): Promise<boolean> {
+    if (!this.selectedTicket || !this.selectedUserId) return false;
+    const trimmed = payload.trim();
+    if (!trimmed) return false;
+
+    const assignMatch = trimmed.match(/^(?:a\s+)?@([\w.-]+)$/i);
+    if (assignMatch) {
+      const handle = assignMatch[1].toLowerCase();
+      const targetUser = this.users.find((user) => user.handle?.toLowerCase() === handle);
+      if (!targetUser) {
+        this.feedback = `No teammate found for @${handle}.`;
+        return true;
+      }
+      try {
+        await this.handleAssignTo(targetUser.id);
+        this.feedback = `Ticket assigned to ${targetUser.displayName}.`;
+      } catch (error) {
+        console.error(error);
+        this.feedback = 'Unable to assign ticket via command.';
+      }
+      return true;
+    }
+
+    const estimateMatch = trimmed.match(/^e\s+([0-9]+(?:\.[0-9]+)?)$/i);
+    if (estimateMatch) {
+      const hours = Number(estimateMatch[1]);
+      if (Number.isNaN(hours)) {
+        this.feedback = 'Provide a valid number after e for estimated hours.';
+        return true;
+      }
+      try {
+        this.ticketSettings.estimatedHours = hours;
+        await this.updateTicketSettings({ estimatedHours: hours });
+        this.feedback = `Estimated time updated to ${hours}h.`;
+      } catch (error) {
+        console.error(error);
+        this.feedback = 'Unable to update estimate via command.';
+      }
+      return true;
+    }
+
+    return false;
+  }
+
   private buildMentionSuggestions(query: string): User[] {
     const normalized = query.trim();
     return this.users
@@ -801,32 +847,6 @@ export class AppComponent implements OnInit {
     if (!this.selectedTicket || !this.selectedUserId || !userId) return;
     await firstValueFrom(this.api.assignTicket(this.selectedTicket.id, userId, this.selectedUserId));
     await this.refreshTicketDetail();
-  }
-
-  async handleAssignInputChange(value: string) {
-    this.assignInput = value;
-    if (!this.selectedTicket || !this.canAssign || !this.isTicketMember) return;
-    const normalized = value.trim().replace(/^@+/, '').toLowerCase();
-    if (!normalized) return;
-    const match = this.users.find((user) => {
-      const handleMatch = user.handle?.toLowerCase() === normalized;
-      const displayMatch = user.displayName?.toLowerCase() === normalized;
-      return handleMatch || displayMatch;
-    });
-    if (!match) return;
-    if (match.id === this.selectedTicket.assigneeId) {
-      this.assignInput = '';
-      return;
-    }
-    try {
-      await this.handleAssignTo(match.id);
-      this.feedback = `Ticket assigned to ${match.displayName}.`;
-    } catch (error) {
-      console.error(error);
-      this.feedback = 'Unable to assign ticket automatically.';
-    } finally {
-      this.assignInput = '';
-    }
   }
 
   async handleArchiveTicket() {
