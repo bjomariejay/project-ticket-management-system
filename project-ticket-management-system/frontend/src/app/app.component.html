@@ -126,8 +126,11 @@
                 <div class="space-section__header">
                   <h4>Channels</h4>
                   <span class="muted">{{ channels.length }} active</span>
+                  <button type="button" class="collapse-btn" (click)="toggleChannelsCollapsed()">
+                    {{ channelsCollapsed ? '▶' : '▼' }}
+                  </button>
                 </div>
-                <div class="channel-list compact">
+                <div class="channel-list compact" *ngIf="!channelsCollapsed">
                   <button
                     type="button"
                     *ngFor="let channel of channels"
@@ -138,7 +141,7 @@
                     <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
                   </button>
                 </div>
-                <div class="space-section__actions">
+                <div class="space-section__actions" *ngIf="!channelsCollapsed">
                   <button type="button" class="link-button" (click)="openCreateChannel()">
                     + Create channel
                   </button>
@@ -156,8 +159,15 @@
                   <header>
                     <strong>{{ category.label }}</strong>
                     <small>{{ category.items.length }}</small>
+                    <button
+                      type="button"
+                      class="collapse-btn"
+                      (click)="toggleCategoryCollapse(category.key)"
+                    >
+                      {{ category.collapsed ? '▶' : '▼' }}
+                    </button>
                   </header>
-                  <ul class="category-list compact">
+                  <ul class="category-list compact" *ngIf="!category.collapsed">
                     <li *ngFor="let ticket of category.items | slice:0:6" (click)="selectTicket(ticket.id)">
                       <strong>{{ ticket.ticketNumber }}</strong>
                       <small>{{ ticket.updatedAt | date: 'shortDate' }}</small>

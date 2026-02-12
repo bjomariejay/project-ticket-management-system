@@ -283,6 +283,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
 }
 
 .space-section__actions {
@@ -291,12 +292,13 @@
   flex-wrap: wrap;
 }
 
-.space-section__actions .link-button {
-  flex: 1;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  width: auto;
+.collapse-btn {
+  border: none;
+  background: transparent;
+  color: #6b6f82;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 0.1rem 0.25rem;
 }
 
 .channel-form {
@@ -1034,13 +1036,14 @@
   }
 }
 .link-button {
-  border: 1px dashed rgba(97, 31, 105, 0.4);
-  background: rgba(97, 31, 105, 0.1);
-  color: #611f69;
+  border: none;
+  background: #611f69;
+  color: #fff;
   border-radius: 0.6rem;
-  padding: 0.4rem 0.7rem;
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  width: fit-content;
+  font-weight: 600;
+  box-shadow: 0 8px 18px rgba(97, 31, 105, 0.25);
 }
 
 .modal-backdrop {

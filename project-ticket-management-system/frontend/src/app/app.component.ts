@@ -46,6 +46,8 @@ export class AppComponent implements OnInit {
   selectedTicket: TicketDetail | null = null;
   lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null = null;
   activeTab: 'dashboard' | 'home' | 'dms' | 'activity' = 'home';
+  channelsCollapsed = false;
+  ticketCategoryCollapsed: Record<string, boolean> = {};
 
   ticketSearch = '';
   messageDraft = '';
@@ -198,6 +200,8 @@ export class AppComponent implements OnInit {
     this.activeTab = 'home';
     this.ticketSearch = '';
     this.messageDraft = '';
+    this.channelsCollapsed = false;
+    this.ticketCategoryCollapsed = {};
     this.resetMentionSuggestions();
     this.createTicketModel = {
       title: '',
@@ -321,6 +325,7 @@ export class AppComponent implements OnInit {
     return this.ticketCategoryConfig.map((category) => ({
       ...category,
       items: this.tickets.filter((ticket) => ticket.status === category.key),
+      collapsed: this.ticketCategoryCollapsed[category.key] || false,
     }));
   }
 
@@ -858,6 +863,17 @@ export class AppComponent implements OnInit {
     this.lockedTicket = null;
     this.syncTicketSettings(null);
     void this.loadTickets();
+  }
+
+  toggleChannelsCollapsed() {
+    this.channelsCollapsed = !this.channelsCollapsed;
+  }
+
+  toggleCategoryCollapse(key: string) {
+    this.ticketCategoryCollapsed = {
+      ...this.ticketCategoryCollapsed,
+      [key]: !this.ticketCategoryCollapsed[key],
+    };
   }
 
   get activityUnreadCount(): number {
