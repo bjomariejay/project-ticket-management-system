@@ -235,20 +235,16 @@
 
 .channel-list {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.channel-list.compact button {
-  width: calc(50% - 0.2rem);
+  flex-direction: column;
+  gap: 0.45rem;
 }
 
 .channel-list button {
-  border: 1px solid transparent;
-  border-radius: 0.65rem;
-  padding: 0.4rem 0.6rem;
-  background: rgba(255, 255, 255, 0.05);
-  color: inherit;
+  border: 1px solid rgba(97, 31, 105, 0.18);
+  border-radius: 0.6rem;
+  padding: 0.45rem 0.7rem;
+  background: #fff;
+  color: #2c2440;
   display: flex;
   justify-content: space-between;
   align-items: center;
