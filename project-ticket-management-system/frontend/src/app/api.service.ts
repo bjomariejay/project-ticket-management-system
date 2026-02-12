@@ -196,7 +196,12 @@ export class ApiService {
     return this.http.get<DmMessage[]>(`${this.baseUrl}/dms`, { params });
   }
 
-  getDashboard() {
-    return this.http.get<DashboardEntry[]>(`${this.baseUrl}/dashboard/overview`);
+  getDashboard(filters?: { startDate?: string | null; endDate?: string | null }) {
+    let params = new HttpParams();
+    if (filters?.startDate) params = params.set('startDate', filters.startDate);
+    if (filters?.endDate) params = params.set('endDate', filters.endDate);
+    return this.http.get<DashboardEntry[]>(`${this.baseUrl}/dashboard/overview`, {
+      params,
+    });
   }
 }

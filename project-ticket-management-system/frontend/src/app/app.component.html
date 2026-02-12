@@ -1,382 +1,405 @@
 <ng-container *ngIf="isAuthenticated; else loginView">
   <div class="workspace">
     <aside class="workspace__sidebar">
-    <div class="sidebar__brand">
-      <h1>{{ title }}</h1>
-      <p>Slack-inspired mission control</p>
-    </div>
-
-    <div class="sidebar__section sidebar__profile" *ngIf="sessionUser">
-      <p class="profile__name">{{ sessionUser.displayName }}</p>
-      <small class="profile__handle">&#64;{{ sessionUser.handle }}</small>
-    </div>
-
-    <nav class="primary-nav">
-      <button type="button" (click)="switchTab('home')" [class.active]="activeTab === 'home'">
-        <span>Home</span>
-      </button>
-      <button type="button" (click)="switchTab('dms')" [class.active]="activeTab === 'dms'">
-        <span>DMs</span>
-        <small>{{ dms.length }}</small>
-      </button>
-      <button type="button" (click)="switchTab('activity')" [class.active]="activeTab === 'activity'">
-        <span>Activity</span>
-        <small *ngIf="activityUnreadCount">{{ activityUnreadCount }}</small>
-      </button>
-    </nav>
-
-    <div class="sidebar__section">
-      <div class="section-heading">
-        <span>Channels</span>
-        <span class="muted">{{ channels.length }}</span>
+      <div class="sidebar__brand">
+        <p class="project-name">{{ title }}</p>
+        <small class="workspace-name">{{ workspaceLabel }}</small>
       </div>
-      <div class="channels">
-        <button
-          type="button"
-          *ngFor="let channel of channels"
-          (click)="handleChannelChange(channel.id)"
-          [class.active]="channel.id === selectedChannelId"
-        >
-          # {{ channel.slug }}
-          <small>next {{ channel.ticketPrefix.toLowerCase() }}-{{ channel.nextNumber | number:'4.0-0' }}</small>
+      <div class="sidebar__profile" *ngIf="sessionUser">
+        <span>Logged in</span>
+        <strong>{{ sessionUser.displayName }}</strong>
+        <small>&#64;{{ sessionUser.handle }}</small>
+      </div>
+      <nav class="primary-nav">
+        <button type="button" (click)="setActiveTab('dashboard')" [class.active]="activeTab === 'dashboard'">
+          Dashboard
         </button>
-      </div>
-    </div>
-
-    <footer class="sidebar__footer">
-      <p>Need someone else on a ticket? Hit "Join ticket" to log their participation.</p>
-    </footer>
+        <button type="button" (click)="setActiveTab('home')" [class.active]="activeTab === 'home'">
+          Home
+        </button>
+        <button type="button" (click)="setActiveTab('dms')" [class.active]="activeTab === 'dms'">
+          DMs
+        </button>
+        <button type="button" (click)="setActiveTab('activity')" [class.active]="activeTab === 'activity'">
+          Activity
+        </button>
+      </nav>
     </aside>
 
     <main class="workspace__main">
-    <header class="main__header">
-      <div>
-        <h2>{{ channelLabel }}</h2>
-        <p *ngIf="currentUser">Signed in as {{ currentUser.displayName }} - &#64;{{ currentUser.handle }}</p>
-      </div>
-      <div class="header__actions">
-        <input type="search" placeholder="Search tickets" [(ngModel)]="ticketSearch" />
-        <button
-          type="button"
-          (click)="handleStartTicketClick()"
-          [disabled]="!selectedTicket || !isTicketMember"
-        >
-          Start ticket
-        </button>
+      <header class="main__header">
+        <div>
+          <h2>{{ headerTitle }}</h2>
+          <p>{{ headerSubtitle }}</p>
+        </div>
+        <div class="header__actions" *ngIf="activeTab === 'home'">
+          <input type="search" placeholder="Search tickets" [(ngModel)]="ticketSearch" />
+          <button
+            type="button"
+            (click)="handleStartTicketClick()"
+            [disabled]="!selectedTicket || !isTicketMember"
+          >
+            Start ticket
+          </button>
+        </div>
         <button type="button" class="ghost" (click)="handleLogout()">Sign out</button>
-      </div>
-    </header>
+      </header>
 
-    <section *ngIf="feedback" class="inline-feedback">{{ feedback }}</section>
+      <section *ngIf="feedback" class="inline-feedback">{{ feedback }}</section>
 
-    <section class="main__view" *ngIf="activeTab === 'home'">
-      <section class="dashboard">
-        <article class="card" *ngFor="let entry of dashboard">
-          <header>
-            <h3>{{ entry.displayName }}</h3>
-            <span class="badge">{{ entry.archivedCount }} archived</span>
-          </header>
-          <div class="metrics">
-            <div>
-              <p>In progress</p>
-              <strong>{{ entry.inProgressCount }}</strong>
-            </div>
-            <div>
-              <p>Open</p>
-              <strong>{{ entry.openCount }}</strong>
-            </div>
-            <div>
-              <p>Est. Hours</p>
-              <strong>{{ entry.estimatedTotal | number:'1.0-1' }}</strong>
-            </div>
+      <section class="main__view" *ngIf="activeTab === 'dashboard'">
+        <section class="card dashboard-controls">
+          <div>
+            <label>Range</label>
+            <select [(ngModel)]="dashboardRange" (ngModelChange)="handleDashboardRangeChange($event)">
+              <option *ngFor="let option of dashboardRanges" [value]="option.value">
+                {{ option.label }}
+              </option>
+            </select>
           </div>
-        </article>
-      </section>
-
-      <section class="ticket-panel">
-        <div class="ticket-panel__left">
-          <form class="card create-ticket" (ngSubmit)="handleCreateTicket()">
+          <div class="custom-range" *ngIf="dashboardRange === 'custom'">
+            <label>
+              Start
+              <input
+                type="date"
+                [ngModel]="dashboardStartDate"
+                (ngModelChange)="handleDashboardDateChange('start', $event)"
+              />
+            </label>
+            <label>
+              End
+              <input
+                type="date"
+                [ngModel]="dashboardEndDate"
+                (ngModelChange)="handleDashboardDateChange('end', $event)"
+              />
+            </label>
+          </div>
+        </section>
+        <section class="dashboard-grid" *ngIf="dashboard.length; else emptyDashboard">
+          <article class="card dashboard-card" *ngFor="let entry of dashboard">
             <header>
-              <h3>Create ticket</h3>
-              <span class="muted">Channel {{ channelLabel }}</span>
+              <h3>{{ entry.displayName }}</h3>
+              <p>{{ entry.openCount + entry.inProgressCount + entry.archivedCount }} tickets</p>
             </header>
-            <label>
-              Title
-              <input type="text" [(ngModel)]="createTicketModel.title" name="title" required />
-            </label>
-            <label>
-              Description
-              <textarea rows="2" [(ngModel)]="createTicketModel.description" name="description"></textarea>
-            </label>
-            <label>
-              Estimated hours
-              <input type="number" min="1" step="0.5" [(ngModel)]="createTicketModel.estimatedHours" name="estimatedHours" />
-            </label>
-            <label>
-              Channel
-              <select [(ngModel)]="createTicketModel.channelId" name="channel">
-                <option *ngFor="let channel of channels" [value]="channel.id">
-                  #{{ channel.slug }} ({{ channel.ticketPrefix }})
-                </option>
-              </select>
-            </label>
-            <label>
-              Privacy
-              <select [(ngModel)]="createTicketModel.privacy" name="privacy">
-                <option value="public">Public — everyone can view</option>
-                <option value="private">Private — only invited members</option>
-              </select>
-            </label>
-            <label>
-              Share with teammates
-              <select
-                multiple
-                name="invitees"
-                [(ngModel)]="createTicketModel.inviteeIds"
-                size="4"
-              >
-                <option
-                  *ngFor="let user of users"
-                  [value]="user.id"
-                  [disabled]="user.id === selectedUserId"
-                >
-                  {{ user.displayName }}
-                </option>
-              </select>
-              <small class="hint">Hold Ctrl/Cmd to select multiple teammates.</small>
-            </label>
-            <button type="submit">Create</button>
-          </form>
-
-          <section class="card ticket-list">
-            <header>
-              <h3>Tickets</h3>
-              <span class="muted">{{ filteredTickets.length }}</span>
-            </header>
-            <div class="ticket-list__items" *ngIf="filteredTickets.length; else emptyState">
-              <button
-                type="button"
-                *ngFor="let ticket of filteredTickets"
-                (click)="selectTicket(ticket.id)"
-                [class.active]="selectedTicket?.id === ticket.id"
-              >
-                <div>
-                  <strong>{{ ticket.ticketNumber }}</strong>
-                  <p>{{ ticket.title }}</p>
-                </div>
-              <div class="ticket-meta">
-                <span [ngClass]="['status', ticket.status]">{{ ticket.status }}</span>
-                <span class="privacy-tag" *ngIf="ticket.privacy === 'private'">
-                  <span class="lock-icon" *ngIf="ticket.isLocked">🔒</span>
-                  Private
-                </span>
-              </div>
-              </button>
-            </div>
-            <ng-template #emptyState>
-              <p class="muted">No tickets for this channel yet.</p>
-            </ng-template>
-          </section>
-        </div>
-
-        <div class="ticket-panel__right" *ngIf="selectedTicket || lockedTicket; else noTicket">
-          <ng-container *ngIf="selectedTicket; else lockedTemplate">
-            <section class="card ticket-detail">
-              <header>
-                <div>
-                  <h3>{{ selectedTicket.ticketNumber }}</h3>
-                  <p>{{ selectedTicket.title }}</p>
-                </div>
-                <div class="ticket-flags">
-                  <span [ngClass]="['status', selectedTicket.status]">{{ selectedTicket.status }}</span>
-                  <span class="privacy-badge" [class.private]="selectedTicket.privacy === 'private'">
-                    {{ selectedTicket.privacy === 'private' ? 'Private' : 'Public' }}
-                  </span>
-                </div>
-              </header>
-              <p>{{ selectedTicket.description || 'No description provided.' }}</p>
-              <div class="detail__meta">
-                <div>
-                  <span class="muted">Assignee</span>
-                  <strong>{{ getUserName(selectedTicket.assigneeId) }}</strong>
-                </div>
-                <div>
-                  <span class="muted">Est. Hours</span>
-                  <strong>{{ selectedTicket.estimatedHours || '-' }}</strong>
-                </div>
-                <div>
-                  <span class="muted">Created</span>
-                  <strong>{{ selectedTicket.createdAt | date:'medium' }}</strong>
-                </div>
-              </div>
-              <div class="privacy-toggle" *ngIf="isTicketMember">
-                <span class="muted">Privacy</span>
-                <div class="privacy-toggle__buttons">
-                  <button
-                    type="button"
-                    [class.active]="selectedTicket.privacy === 'public'"
-                    (click)="handlePrivacyChange('public')"
-                  >
-                    Public
-                  </button>
-                  <button
-                    type="button"
-                    [class.active]="selectedTicket.privacy === 'private'"
-                    (click)="handlePrivacyChange('private')"
-                  >
-                    Private
-                  </button>
-                </div>
-              </div>
-              <div class="assign-select">
-                <span class="muted">Assign someone</span>
-                <select (change)="handleAssignSelect($event)" [disabled]="!isTicketMember">
-                  <option value="">Select teammate</option>
-                  <option *ngFor="let user of users" [value]="user.id">
-                    {{ user.displayName }}
-                  </option>
-                </select>
-              </div>
-              <div class="invite-select" *ngIf="isTicketMember">
-                <span class="muted">Invite teammate</span>
-                <select (change)="handleInviteSelect($event)">
-                  <option value="">Select teammate</option>
-                  <option
-                    *ngFor="let user of users"
-                    [value]="user.id"
-                    [disabled]="isMemberOfSelected(user.id)"
-                  >
-                    {{ user.displayName }}
-                  </option>
-                </select>
-              </div>
-              <div class="detail__actions">
-                <button type="button" (click)="handleJoinTicket()" [disabled]="isTicketMember">
-                  {{ isTicketMember ? 'Participant' : 'Join ticket' }}
-                </button>
-                <button type="button" (click)="handleAssignTo(selectedUserId)" [disabled]="!canAssign">
-                  Assign to me
-                </button>
-                <button type="button" class="ghost" (click)="handleArchiveTicket()">Archive</button>
-              </div>
-            </section>
-
-            <section class="card ticket-thread">
-              <header>
-                <h3>Thread</h3>
-                <span class="muted">{{ selectedTicket.messages.length }} updates</span>
-              </header>
-              <div class="thread__messages">
-                <article *ngFor="let message of selectedTicket.messages || []">
-                  <div>
-                    <strong>{{ message.displayName || 'Unknown' }}</strong>
-                    <small>
-                      &#64;{{ message.handle || 'unknown' }} - {{ message.createdAt | date:'short' }}
-                    </small>
-                  </div>
-                  <p>{{ message.body }}</p>
-                </article>
-              </div>
-              <div class="thread__composer" *ngIf="isTicketMember">
-                <textarea
-                  rows="2"
-                  placeholder="Type update or @mention a teammate"
-                  [(ngModel)]="messageDraft"
-                ></textarea>
-                <button type="button" (click)="handlePostMessage()" [disabled]="isPostingMessage">
-                  {{ isPostingMessage ? 'Posting...' : 'Post' }}
-                </button>
-              </div>
-              <p class="muted" *ngIf="!isTicketMember">Join the ticket to start collaborating.</p>
-            </section>
-
-            <section class="card report-work">
-              <header>
-                <h3>Report of work</h3>
-                <span class="muted">{{ reportOfWork.length }} entries</span>
-              </header>
-              <ul>
-                <li *ngFor="let log of reportOfWork">
-                  <span>{{ log.createdAt | date:'short' }}</span>
-                  <p>{{ log.message }}</p>
-                  <small *ngIf="log.actorName">- {{ log.actorName }}</small>
-                </li>
-              </ul>
-            </section>
-          </ng-container>
-        </div>
-        <ng-template #lockedTemplate>
-          <section class="card locked-card" *ngIf="lockedTicket">
-            <header>
-              <h3>{{ lockedTicket.ticketNumber }}</h3>
-              <span class="privacy-badge private">Private</span>
-            </header>
-            <p class="muted">{{ lockedTicket.title }}</p>
-            <p>This ticket is private. Ask a teammate to invite you to see the full conversation.</p>
-            <button type="button" (click)="handleJoinTicket()">Request access</button>
+            <ul>
+              <li>
+                <span>Fixed (archived)</span>
+                <strong>{{ entry.archivedCount }}</strong>
+              </li>
+              <li>
+                <span>In progress</span>
+                <strong>{{ entry.inProgressCount }}</strong>
+              </li>
+              <li>
+                <span>Open</span>
+                <strong>{{ entry.openCount }}</strong>
+              </li>
+              <li>
+                <span>Estimated hrs</span>
+                <strong>{{ entry.estimatedTotal | number: '1.1-1' }}</strong>
+              </li>
+              <li>
+                <span>Actual hrs</span>
+                <strong>{{ entry.actualTotal | number: '1.1-1' }}</strong>
+              </li>
+            </ul>
+          </article>
+        </section>
+        <ng-template #emptyDashboard>
+          <section class="card empty-detail">
+            <h3>No data yet</h3>
+            <p class="muted">Start assigning tickets to see the dashboard populate.</p>
           </section>
         </ng-template>
-        <ng-template #noTicket>
-          <div class="ticket-panel__right">
+      </section>
+
+      <section class="main__view home-view" *ngIf="activeTab === 'home'">
+        <div class="home-layout">
+          <div class="home-layout__left">
+            <article class="card home-card channels">
+              <header>
+                <h3>Channels</h3>
+                <span class="muted">{{ channels.length }} spaces</span>
+              </header>
+              <div class="channel-list">
+                <button
+                  type="button"
+                  *ngFor="let channel of channels"
+                  (click)="handleChannelChange(channel.id)"
+                  [class.active]="channel.id === selectedChannelId"
+                >
+                  <div>
+                    <strong>#{{ channel.slug }}</strong>
+                    <small>{{ channel.name }}</small>
+                  </div>
+                  <span class="muted">Next {{ channel.ticketPrefix }}-{{ channel.nextNumber }}</span>
+                </button>
+              </div>
+            </article>
+
+            <article class="card home-card" *ngFor="let category of ticketsByCategory">
+              <header>
+                <h3>{{ category.label }}</h3>
+                <span class="muted">{{ category.items.length }} tickets</span>
+              </header>
+              <ul class="category-list">
+                <li *ngFor="let ticket of category.items | slice:0:5" (click)="selectTicket(ticket.id)">
+                  <div>
+                    <strong>{{ ticket.ticketNumber }}</strong>
+                    <p>{{ ticket.title }}</p>
+                  </div>
+                  <small>{{ ticket.updatedAt | date: 'shortDate' }}</small>
+                </li>
+                <li *ngIf="!category.items.length" class="muted">No tickets yet.</li>
+              </ul>
+            </article>
+
+            <article class="card home-card create-ticket">
+              <header>
+                <h3>Create ticket</h3>
+                <span class="muted">Channel {{ channelLabel }}</span>
+              </header>
+              <form (ngSubmit)="handleCreateTicket()">
+                <label>
+                  Title
+                  <input type="text" [(ngModel)]="createTicketModel.title" name="title" required />
+                </label>
+                <label>
+                  Description
+                  <textarea rows="2" [(ngModel)]="createTicketModel.description" name="description"></textarea>
+                </label>
+                <label>
+                  Estimated hours
+                  <input
+                    type="number"
+                    min="1"
+                    step="0.5"
+                    [(ngModel)]="createTicketModel.estimatedHours"
+                    name="estimatedHours"
+                  />
+                </label>
+                <label>
+                  Channel
+                  <select [(ngModel)]="createTicketModel.channelId" name="channel">
+                    <option *ngFor="let channel of channels" [value]="channel.id">
+                      #{{ channel.slug }} ({{ channel.ticketPrefix }})
+                    </option>
+                  </select>
+                </label>
+                <label>
+                  Privacy
+                  <select [(ngModel)]="createTicketModel.privacy" name="privacy">
+                    <option value="public">Public — everyone can view</option>
+                    <option value="private">Private — invited only</option>
+                  </select>
+                </label>
+                <label>
+                  Share with teammates
+                  <select multiple name="invitees" [(ngModel)]="createTicketModel.inviteeIds" size="4">
+                    <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
+                      {{ user.displayName }}
+                    </option>
+                  </select>
+                  <small class="hint">Hold Ctrl/Cmd for multiple.</small>
+                </label>
+                <button type="submit">Create</button>
+              </form>
+            </article>
+          </div>
+
+          <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket; else promptSelect">
+            <ng-container *ngIf="selectedTicket; else lockedTemplate">
+              <section class="card ticket-detail">
+                <header>
+                  <div>
+                    <h3>{{ selectedTicket.ticketNumber }}</h3>
+                    <p>{{ selectedTicket.title }}</p>
+                  </div>
+                  <div class="ticket-flags">
+                    <span [ngClass]="['status', selectedTicket.status]">{{ selectedTicket.status }}</span>
+                    <span class="privacy-badge" [class.private]="selectedTicket.privacy === 'private'">
+                      {{ selectedTicket.privacy === 'private' ? 'Private' : 'Public' }}
+                    </span>
+                  </div>
+                </header>
+                <p>{{ selectedTicket.description || 'No description provided.' }}</p>
+                <div class="detail__meta">
+                  <div>
+                    <span class="muted">Assignee</span>
+                    <strong>{{ getUserName(selectedTicket.assigneeId) }}</strong>
+                  </div>
+                  <div>
+                    <span class="muted">Est. Hours</span>
+                    <strong>{{ selectedTicket.estimatedHours || '-' }}</strong>
+                  </div>
+                  <div>
+                    <span class="muted">Created</span>
+                    <strong>{{ selectedTicket.createdAt | date: 'medium' }}</strong>
+                  </div>
+                </div>
+                <div class="privacy-toggle" *ngIf="isTicketMember">
+                  <span class="muted">Privacy</span>
+                  <div class="privacy-toggle__buttons">
+                    <button
+                      type="button"
+                      [class.active]="selectedTicket.privacy === 'public'"
+                      (click)="handlePrivacyChange('public')"
+                    >
+                      Public
+                    </button>
+                    <button
+                      type="button"
+                      [class.active]="selectedTicket.privacy === 'private'"
+                      (click)="handlePrivacyChange('private')"
+                    >
+                      Private
+                    </button>
+                  </div>
+                </div>
+                <div class="assign-select">
+                  <span class="muted">Assign someone</span>
+                  <select (change)="handleAssignSelect($event)" [disabled]="!isTicketMember">
+                    <option value="">Select teammate</option>
+                    <option *ngFor="let user of users" [value]="user.id">
+                      {{ user.displayName }}
+                    </option>
+                  </select>
+                </div>
+                <div class="invite-select" *ngIf="isTicketMember">
+                  <span class="muted">Invite teammate</span>
+                  <select (change)="handleInviteSelect($event)">
+                    <option value="">Select teammate</option>
+                    <option *ngFor="let user of users" [value]="user.id" [disabled]="isMemberOfSelected(user.id)">
+                      {{ user.displayName }}
+                    </option>
+                  </select>
+                </div>
+                <div class="detail__actions">
+                  <button type="button" (click)="handleJoinTicket()" [disabled]="isTicketMember">
+                    {{ isTicketMember ? 'Participant' : 'Join ticket' }}
+                  </button>
+                  <button type="button" (click)="handleAssignTo(selectedUserId)" [disabled]="!canAssign">
+                    Assign to me
+                  </button>
+                  <button type="button" class="ghost" (click)="handleArchiveTicket()">Archive</button>
+                </div>
+              </section>
+
+              <section class="card ticket-thread">
+                <header>
+                  <h3>Thread</h3>
+                  <span class="muted">{{ selectedTicket.messages.length }} updates</span>
+                </header>
+                <div class="thread__messages">
+                  <article *ngFor="let message of selectedTicket.messages || []">
+                    <div>
+                      <strong>{{ message.displayName || 'Unknown' }}</strong>
+                      <small>
+                        &#64;{{ message.handle || 'unknown' }} - {{ message.createdAt | date: 'short' }}
+                      </small>
+                    </div>
+                    <p>{{ message.body }}</p>
+                  </article>
+                </div>
+                <div class="thread__composer" *ngIf="isTicketMember">
+                  <textarea
+                    rows="2"
+                    placeholder="Type update or @mention a teammate"
+                    [(ngModel)]="messageDraft"
+                  ></textarea>
+                  <button type="button" (click)="handlePostMessage()" [disabled]="isPostingMessage">
+                    {{ isPostingMessage ? 'Posting...' : 'Post' }}
+                  </button>
+                </div>
+                <p class="muted" *ngIf="!isTicketMember">Join the ticket to start collaborating.</p>
+              </section>
+
+              <section class="card report-work">
+                <header>
+                  <h3>Report of work</h3>
+                  <span class="muted">{{ reportOfWork.length }} entries</span>
+                </header>
+                <ul>
+                  <li *ngFor="let log of reportOfWork">
+                    <span>{{ log.createdAt | date: 'short' }}</span>
+                    <p>{{ log.message }}</p>
+                    <small *ngIf="log.actorName">- {{ log.actorName }}</small>
+                  </li>
+                </ul>
+              </section>
+            </ng-container>
+          </div>
+          <ng-template #lockedTemplate>
+            <section class="card locked-card" *ngIf="lockedTicket">
+              <header>
+                <h3>{{ lockedTicket.ticketNumber }}</h3>
+                <span class="privacy-badge private">Private</span>
+              </header>
+              <p class="muted">{{ lockedTicket.title }}</p>
+              <p>This ticket is private. Ask a teammate to invite you to see the full conversation.</p>
+              <button type="button" (click)="handleJoinTicket()">Request access</button>
+            </section>
+          </ng-template>
+          <ng-template #promptSelect>
             <section class="card empty-detail">
               <h3>Select a ticket</h3>
-              <p class="muted">Choose a ticket from the list to see its thread.</p>
+              <p class="muted">Choose a ticket from the categories to see full details.</p>
             </section>
-          </div>
-        </ng-template>
-      </section>
-    </section>
-
-    <section class="main__view" *ngIf="activeTab === 'dms'">
-      <section class="card dm-panel">
-        <header>
-          <h3>Direct messages</h3>
-          <span class="muted">{{ dms.length }} conversations</span>
-        </header>
-        <label>
-          Send to
-          <select [(ngModel)]="dmForm.recipientId">
-            <option value="">Select teammate</option>
-            <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
-              {{ user.displayName }}
-            </option>
-          </select>
-        </label>
-        <textarea rows="3" placeholder="Say hi or hand off a ticket" [(ngModel)]="dmForm.body"></textarea>
-        <button type="button" (click)="handleSendDm()">Send DM</button>
-        <div class="dm-thread">
-          <article *ngFor="let dm of dms">
-            <header>
-              <strong>{{ dm.senderName }}</strong>
-              <small>{{ dm.createdAt | date:'short' }}</small>
-            </header>
-            <p>{{ dm.body }}</p>
-            <span class="muted">-> {{ dm.recipientName }}</span>
-          </article>
+          </ng-template>
         </div>
       </section>
-    </section>
 
-    <section class="main__view" *ngIf="activeTab === 'activity'">
-      <section class="card activity-panel">
-        <header>
-          <h3>Activity</h3>
-          <span class="muted">{{ notifications.length }} updates</span>
-        </header>
-        <ul>
-          <li *ngFor="let notification of notifications" [class.unread]="!notification.isRead">
-            <div>
-              <strong>{{ notification.message }}</strong>
-              <small>{{ notification.createdAt | date:'short' }}</small>
-            </div>
-            <p *ngIf="notification.ticketNumber">Ticket {{ notification.ticketNumber }}</p>
-            <button type="button" (click)="handleMarkNotification(notification)" [disabled]="notification.isRead">
-              Mark read
-            </button>
-          </li>
-        </ul>
+      <section class="main__view" *ngIf="activeTab === 'dms'">
+        <section class="card dm-panel">
+          <header>
+            <h3>Direct messages</h3>
+            <span class="muted">{{ dms.length }} conversations</span>
+          </header>
+          <label>
+            Send to
+            <select [(ngModel)]="dmForm.recipientId">
+              <option value="">Select teammate</option>
+              <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
+                {{ user.displayName }}
+              </option>
+            </select>
+          </label>
+          <textarea rows="3" placeholder="Say hi or hand off a ticket" [(ngModel)]="dmForm.body"></textarea>
+          <button type="button" (click)="handleSendDm()">Send DM</button>
+          <div class="dm-thread">
+            <article *ngFor="let dm of dms">
+              <header>
+                <strong>{{ dm.senderName }}</strong>
+                <small>{{ dm.createdAt | date: 'short' }}</small>
+              </header>
+              <p>{{ dm.body }}</p>
+              <span class="muted">→ {{ dm.recipientName }}</span>
+            </article>
+          </div>
+        </section>
       </section>
-    </section>
+
+      <section class="main__view" *ngIf="activeTab === 'activity'">
+        <section class="card activity-panel">
+          <header>
+            <h3>Activity</h3>
+            <span class="muted">{{ notifications.length }} updates</span>
+          </header>
+          <ul>
+            <li *ngFor="let notification of notifications" [class.unread]="!notification.isRead">
+              <div>
+                <strong>{{ notification.message }}</strong>
+                <small>{{ notification.createdAt | date: 'short' }}</small>
+              </div>
+              <p *ngIf="notification.ticketNumber">Ticket {{ notification.ticketNumber }}</p>
+              <button type="button" (click)="handleMarkNotification(notification)" [disabled]="notification.isRead">
+                Mark read
+              </button>
+            </li>
+          </ul>
+        </section>
+      </section>
     </main>
   </div>
 </ng-container>

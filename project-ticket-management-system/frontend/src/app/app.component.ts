@@ -23,6 +23,7 @@ import {
 })
 export class AppComponent implements OnInit {
   title = 'Project and Ticket Management System';
+  workspaceLabel = 'Mission Control Workspace';
 
   users: User[] = [];
   channels: Channel[] = [];
@@ -30,12 +31,17 @@ export class AppComponent implements OnInit {
   dashboard: DashboardEntry[] = [];
   notifications: NotificationItem[] = [];
   dms: DmMessage[] = [];
+  private readonly ticketCategoryConfig = [
+    { key: 'open', label: 'Open' },
+    { key: 'in_progress', label: 'In progress' },
+    { key: 'archived', label: 'Archived' },
+  ] as const;
 
   selectedUserId = '';
   selectedChannelId = '';
   selectedTicket: TicketDetail | null = null;
   lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null = null;
-  activeTab: 'home' | 'dms' | 'activity' = 'home';
+  activeTab: 'dashboard' | 'home' | 'dms' | 'activity' = 'home';
 
   ticketSearch = '';
   messageDraft = '';
@@ -50,9 +56,6 @@ export class AppComponent implements OnInit {
   dmForm = {
     recipientId: '',
     body: '',
-  };
-  inviteForm = {
-    userId: '',
   };
 
   isLoadingTickets = false;
@@ -74,6 +77,17 @@ export class AppComponent implements OnInit {
   };
   authMode: 'login' | 'register' = 'login';
   sessionUser: User | null = null;
+
+  dashboardRange: '7d' | '30d' | '90d' | 'all' | 'custom' = '30d';
+  dashboardStartDate: string | null = null;
+  dashboardEndDate: string | null = null;
+  readonly dashboardRanges = [
+    { value: '7d', label: 'Last 7 days' },
+    { value: '30d', label: 'Last 30 days' },
+    { value: '90d', label: 'Last 90 days' },
+    { value: 'all', label: 'All time' },
+    { value: 'custom', label: 'Custom range' },
+  ] as const;
 
   constructor(private readonly api: ApiService) {}
 
@@ -261,6 +275,13 @@ export class AppComponent implements OnInit {
     });
   }
 
+  get ticketsByCategory() {
+    return this.ticketCategoryConfig.map((category) => ({
+      ...category,
+      items: this.tickets.filter((ticket) => ticket.status === category.key),
+    }));
+  }
+
   get isTicketMember(): boolean {
     if (!this.selectedUserId) return false;
     if (!this.selectedTicket) return false;
@@ -322,7 +343,48 @@ export class AppComponent implements OnInit {
   }
 
   async loadDashboard() {
-    this.dashboard = await firstValueFrom(this.api.getDashboard());
+    const filters = this.getDashboardFilters();
+    this.dashboard = await firstValueFrom(this.api.getDashboard(filters));
+  }
+
+  async handleDashboardRangeChange(range: '7d' | '30d' | '90d' | 'all' | 'custom') {
+    this.dashboardRange = range;
+    if (range !== 'custom') {
+      this.dashboardStartDate = null;
+      this.dashboardEndDate = null;
+      await this.loadDashboard();
+    }
+  }
+
+  async handleDashboardDateChange(type: 'start' | 'end', value: string | null) {
+    if (type === 'start') {
+      this.dashboardStartDate = value || null;
+    } else {
+      this.dashboardEndDate = value || null;
+    }
+    if (this.dashboardRange === 'custom' && this.dashboardStartDate && this.dashboardEndDate) {
+      await this.loadDashboard();
+    }
+  }
+
+  private getDashboardFilters(): { startDate?: string; endDate?: string } | undefined {
+    if (this.dashboardRange === 'all') {
+      return undefined;
+    }
+    if (this.dashboardRange === 'custom') {
+      if (this.dashboardStartDate && this.dashboardEndDate) {
+        const start = new Date(`${this.dashboardStartDate}T00:00:00`);
+        const end = new Date(`${this.dashboardEndDate}T23:59:59`);
+        return { startDate: start.toISOString(), endDate: end.toISOString() };
+      }
+      return undefined;
+    }
+    const dayMap: Record<'7d' | '30d' | '90d', number> = { '7d': 7, '30d': 30, '90d': 90 };
+    const days = dayMap[this.dashboardRange];
+    const now = new Date();
+    const end = now.toISOString();
+    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+    return { startDate: start, endDate: end };
   }
 
   async loadNotifications() {
@@ -517,13 +579,16 @@ export class AppComponent implements OnInit {
     await this.loadNotifications();
   }
 
-  switchTab(tab: 'home' | 'dms' | 'activity') {
+  setActiveTab(tab: 'dashboard' | 'home' | 'dms' | 'activity') {
     this.activeTab = tab;
     if (tab === 'activity') {
       void this.loadNotifications();
-    }
-    if (tab === 'dms') {
+    } else if (tab === 'dms') {
       void this.loadDms();
+    } else if (tab === 'dashboard') {
+      void this.loadDashboard();
+    } else if (tab === 'home') {
+      void this.loadTickets();
     }
   }
 
@@ -542,6 +607,31 @@ export class AppComponent implements OnInit {
   get channelLabel(): string {
     const channel = this.channels.find((chan) => chan.id === this.selectedChannelId);
     return channel ? channel.name : 'Select channel';
+  }
+
+  get headerTitle(): string {
+    switch (this.activeTab) {
+      case 'dashboard':
+        return 'Dashboard overview';
+      case 'home':
+        return this.channelLabel;
+      case 'dms':
+        return 'Direct messages';
+      case 'activity':
+        return 'Activity';
+      default:
+        return this.channelLabel;
+    }
+  }
+
+  get headerSubtitle(): string {
+    if (this.activeTab === 'home') {
+      return `Workspace: ${this.workspaceLabel}`;
+    }
+    if (this.sessionUser) {
+      return `Signed in as ${this.sessionUser.displayName} - @${this.sessionUser.handle}`;
+    }
+    return this.workspaceLabel;
   }
 
   get reportOfWork() {

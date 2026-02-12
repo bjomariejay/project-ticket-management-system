@@ -896,8 +896,36 @@ app.get(
 app.get(
   '/api/dashboard/overview',
   asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      `SELECT
+    const { startDate, endDate } = req.query;
+    const params = [];
+    const conditions = [];
+
+    const parseDate = (value) => {
+      if (!value) return null;
+      const date = new Date(value);
+      return Number.isNaN(date.getTime()) ? null : date;
+    };
+
+    const start = parseDate(startDate);
+    const end = parseDate(endDate);
+
+    if (start && end && start > end) {
+      return res.status(400).json({ message: 'startDate must be before endDate' });
+    }
+    if (start) {
+      params.push(start);
+      conditions.push(`t.updated_at >= $${params.length}`);
+    }
+    if (end) {
+      params.push(end);
+      conditions.push(`t.updated_at <= $${params.length}`);
+    }
+
+    const joinCondition = conditions.length
+      ? `t.assignee_id = u.id AND ${conditions.join(' AND ')}`
+      : 't.assignee_id = u.id';
+
+    const queryText = `SELECT
         u.id,
         u.display_name AS "displayName",
         COUNT(CASE WHEN t.status = 'archived' THEN 1 END) AS "archivedCount",
@@ -906,10 +934,11 @@ app.get(
         COALESCE(SUM(t.estimated_hours), 0)::float AS "estimatedTotal",
         COALESCE(SUM(t.actual_hours), 0)::float AS "actualTotal"
       FROM users u
-      LEFT JOIN tickets t ON t.assignee_id = u.id
+      LEFT JOIN tickets t ON ${joinCondition}
       GROUP BY u.id, u.display_name
-      ORDER BY u.display_name`
-    );
+      ORDER BY u.display_name`;
+
+    const { rows } = await query(queryText, params);
     res.json(rows);
   })
 );
