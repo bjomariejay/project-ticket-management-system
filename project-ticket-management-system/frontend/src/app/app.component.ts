@@ -25,6 +25,7 @@ import {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit {
+  readonly globalReportChannelId = 'global-reports';
   @ViewChild('messageInput') messageInputRef?: ElementRef<HTMLTextAreaElement>;
 
   title = 'Project and Ticket Management System';
@@ -126,6 +127,7 @@ export class AppComponent implements OnInit {
   viewingReportsForChannelId = '';
   viewingReportsForChannelName = '';
   channelReportsLoading = false;
+  isGlobalReportView = false;
 
   constructor(private readonly api: ApiService) {}
 
@@ -569,6 +571,7 @@ export class AppComponent implements OnInit {
     this.viewingReportsForChannelId = '';
     this.viewingReportsForChannelName = '';
     this.channelReportsLoading = false;
+    this.isGlobalReportView = false;
   }
 
   async handleChannelReportView(channel: Channel, event?: Event) {
@@ -581,6 +584,27 @@ export class AppComponent implements OnInit {
       this.selectedChannelId = channel.id;
       this.createTicketModel.channelId = channel.id;
       this.channelReportEntries = await firstValueFrom(this.api.getChannelReports(channel.id));
+      this.selectedTicket = null;
+      this.lockedTicket = null;
+      this.selectedLog = null;
+      this.isGlobalReportView = false;
+    } catch (error) {
+      console.error(error);
+      this.closeChannelReports();
+    } finally {
+      this.channelReportsLoading = false;
+    }
+  }
+
+  async handleGlobalReportView(event?: Event) {
+    event?.stopPropagation();
+    event?.preventDefault();
+    this.channelReportsLoading = true;
+    try {
+      this.viewingReportsForChannelId = this.globalReportChannelId;
+      this.viewingReportsForChannelName = 'All channels';
+      this.isGlobalReportView = true;
+      this.channelReportEntries = await firstValueFrom(this.api.getAllReports());
       this.selectedTicket = null;
       this.lockedTicket = null;
       this.selectedLog = null;

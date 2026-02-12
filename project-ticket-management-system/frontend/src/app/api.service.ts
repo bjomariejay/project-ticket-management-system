@@ -196,6 +196,10 @@ export class ApiService {
     return this.http.get<ChannelReportEntry[]>(`${this.baseUrl}/channels/${channelId}/reports`);
   }
 
+  getAllReports() {
+    return this.http.get<ChannelReportEntry[]>(`${this.baseUrl}/reports`);
+  }
+
   archiveTicket(ticketId: string, actorId: string) {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/archive`, { actorId });
   }

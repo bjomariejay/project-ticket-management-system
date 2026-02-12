@@ -152,6 +152,20 @@
                       Report of work
                     </button>
                   </div>
+                  <div class="channel-item report-channel">
+                    <button
+                      type="button"
+                      class="channel-main"
+                      [class.active]="isGlobalReportView"
+                      (click)="handleGlobalReportView($event)"
+                    >
+                      <div>
+                        <strong>Report of work</strong>
+                        <small>All channels</small>
+                      </div>
+                      <span class="channel-number">View</span>
+                    </button>
+                  </div>
                 </div>
                 <div class="space-section__actions" *ngIf="!channelsCollapsed">
                   <button type="button" class="link-button" (click)="openCreateChannel()">

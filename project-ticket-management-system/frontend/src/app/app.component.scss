@@ -294,7 +294,10 @@
 .channel-main.active {
   border-radius: 0.6rem;
   background: rgba(161, 130, 255, 0.12);
-  padding: 0.2rem 0.3rem;
+}
+
+.report-channel .channel-main {
+  justify-content: space-between;
 }
 
 .workspace-board {
