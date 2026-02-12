@@ -591,6 +591,28 @@
   gap: 0.8rem;
 }
 
+.ticket-quick-settings {
+  margin-top: 1.25rem;
+  background: #f6f6fb;
+  border-radius: 1rem;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+}
+
+.quick-settings__item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.ticket-quick-settings .assign-select,
+.ticket-quick-settings .estimate-edit,
+.ticket-quick-settings .priority-toggle {
+  margin-top: 0;
+}
+
 .status-select,
 .estimate-edit,
 .priority-toggle,
@@ -606,6 +628,7 @@
 .status-select select,
 .estimate-edit input,
 .assign-select select,
+.assign-select input,
 .invite-select select,
 .privacy-toggle select {
   border-radius: 0.7rem;
@@ -725,7 +748,8 @@
   gap: 0.3rem;
 }
 
-.assign-select select {
+.assign-select select,
+.assign-select input {
   border-radius: 0.7rem;
   border: 1px solid #dfe3ef;
   padding: 0.5rem 0.7rem;
