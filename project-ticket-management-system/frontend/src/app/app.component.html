@@ -255,21 +255,13 @@
             <ng-template #ticketView>
               <ng-container *ngIf="selectedTicket; else lockedTemplate">
               <section class="card ticket-detail">
-                <header>
-                  <div>
-                    <h3>{{ selectedTicket.ticketNumber }}</h3>
-                    <p>{{ selectedTicket.title }}</p>
-                  </div>
-                  <div class="ticket-flags">
-                    <span [ngClass]="['status', selectedTicket.status]">{{ selectedTicket.status }}</span>
-                    <span class="privacy-badge" [class.private]="selectedTicket.privacy === 'private'">
-                      {{ selectedTicket.privacy === 'private' ? 'Private' : 'Public' }}
-                    </span>
-                  </div>
-                </header>
               <ng-container *ngIf="isTicketMember; else joinTicketPrompt">
-                <p>{{ selectedTicket.description || 'No description provided.' }}</p>
                 <section class="ticket-info" *ngIf="isTicketMember">
+                  <p>
+                    <label>Ticket name:</label>
+                    <br />
+                    <strong>{{ selectedTicket.title || 'Untitled ticket' }}</strong>
+                  </p>
                   <p>
                     <label>Assigned to:</label>
                     <br />
@@ -294,14 +286,7 @@
                   </p>
                 </section>
                 <section class="ticket-members" *ngIf="selectedTicket?.members?.length">
-                  <label>Participants:</label>
-                  <br />
-                  <ul>
-                    <li *ngFor="let member of selectedTicket.members">
-                      <strong>{{ member.displayName }}</strong>
-                      <small>&#64;{{ member.handle }}</small>
-                    </li>
-                  </ul>
+                  <label>Participants:  <label *ngFor="let member of selectedTicket.members">{{ member.displayName }}, </label> </label> 
                 </section>
               </ng-container>
               <ng-template #joinTicketPrompt>
