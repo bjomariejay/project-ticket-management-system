@@ -574,28 +574,6 @@ export class AppComponent implements OnInit {
     this.isGlobalReportView = false;
   }
 
-  async handleChannelReportView(channel: Channel, event?: Event) {
-    event?.stopPropagation();
-    event?.preventDefault();
-    this.channelReportsLoading = true;
-    try {
-      this.viewingReportsForChannelId = channel.id;
-      this.viewingReportsForChannelName = channel.name;
-      this.selectedChannelId = channel.id;
-      this.createTicketModel.channelId = channel.id;
-      this.channelReportEntries = await firstValueFrom(this.api.getChannelReports(channel.id));
-      this.selectedTicket = null;
-      this.lockedTicket = null;
-      this.selectedLog = null;
-      this.isGlobalReportView = false;
-    } catch (error) {
-      console.error(error);
-      this.closeChannelReports();
-    } finally {
-      this.channelReportsLoading = false;
-    }
-  }
-
   async handleGlobalReportView(event?: Event) {
     event?.stopPropagation();
     event?.preventDefault();

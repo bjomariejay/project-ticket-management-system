@@ -144,13 +144,6 @@
                       </div>
                       <span class="channel-number">{{ channel.ticketPrefix }}-{{ channel.nextNumber | number: '2.0-0' }}</span>
                     </button>
-                    <button
-                      type="button"
-                      class="channel-report"
-                      (click)="handleChannelReportView(channel, $event)"
-                    >
-                      Report of work
-                    </button>
                   </div>
                   <div class="channel-item report-channel">
                     <button
@@ -177,7 +170,7 @@
                 </div>
               </section>
               <section class="space-section">
-                <p class="muted">Select a channel to browse tickets or open its report-of-work to review ticket starts.</p>
+                <p class="muted">Open “Report of work” to view ticket starts across all channels.</p>
               </section>
               <section class="space-section">
                 <div class="space-section__header">

@@ -268,23 +268,12 @@
   color: #6b6f82;
 }
 
-.channel-main.active + .channel-report,
 .channel-main.active {
   color: #611f69;
 }
 
 .channel-main.active .channel-number {
   color: #611f69;
-}
-
-.channel-report {
-  align-self: flex-start;
-  border: 1px dashed rgba(97, 31, 105, 0.4);
-  background: rgba(97, 31, 105, 0.05);
-  border-radius: 999px;
-  padding: 0.35rem 0.9rem;
-  color: #611f69;
-  cursor: pointer;
 }
 
 .channel-number {
