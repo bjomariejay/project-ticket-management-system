@@ -1,0 +1,29 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: project_ticket_management
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db-data:/var/lib/postgresql/data
+      - ./db-init.sql:/docker-entrypoint-initdb.d/db-init.sql:ro
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      context: .
+    depends_on:
+      - db
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgres://postgres:postgres@db:5432/project_ticket_management
+      CLIENT_ORIGIN: http://localhost:4200
+      DB_SSL: 'false'
+    ports:
+      - "4000:4000"
+
+volumes:
+  db-data:
