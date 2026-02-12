@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const { pool, query } = require('./db');
 const { asyncHandler, padTicketNumber } = require('./utils');
 
@@ -10,6 +11,92 @@ const app = express();
 const allowedOrigins = process.env.CLIENT_ORIGIN
   ? process.env.CLIENT_ORIGIN.split(',').map((origin) => origin.trim())
   : undefined;
+
+const jwtSecret = process.env.JWT_SECRET || 'dev-secret';
+
+if (!process.env.JWT_SECRET) {
+  console.warn('JWT_SECRET is not set. Falling back to a development secret.');
+}
+
+const base64UrlEncode = (value) =>
+  Buffer.from(value)
+    .toString('base64')
+    .replace(/=/g, '')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_');
+
+const base64UrlDecode = (value) => {
+  let normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+  while (normalized.length % 4) {
+    normalized += '=';
+  }
+  return Buffer.from(normalized, 'base64');
+};
+
+const hashPassword = (password) => {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const derivedHash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${derivedHash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+  if (!storedHash) return false;
+  const [salt, hash] = storedHash.split(':');
+  if (!salt || !hash) return false;
+  const derivedHash = crypto.scryptSync(password, salt, 64).toString('hex');
+  const hashBuffer = Buffer.from(hash, 'hex');
+  const derivedBuffer = Buffer.from(derivedHash, 'hex');
+  if (hashBuffer.length !== derivedBuffer.length) return false;
+  return crypto.timingSafeEqual(hashBuffer, derivedBuffer);
+};
+
+const authenticate = asyncHandler(async (req, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ message: 'Missing authorization header' });
+  }
+  const token = authHeader.substring('Bearer '.length);
+  try {
+    const payload = verifyToken(token);
+    req.user = payload;
+    next();
+  } catch (error) {
+    console.error('Invalid token', error);
+    return res.status(401).json({ message: 'Invalid token' });
+  }
+});
+
+const signToken = (payload) => {
+  const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
+  const claims = base64UrlEncode(JSON.stringify(payload));
+  const signature = base64UrlEncode(
+    crypto.createHmac('sha256', jwtSecret).update(`${header}.${claims}`).digest()
+  );
+  return `${header}.${claims}.${signature}`;
+};
+
+const verifyToken = (token) => {
+  const [header, claims, signature] = token.split('.');
+  if (!header || !claims || !signature) {
+    throw new Error('Invalid token structure');
+  }
+  const expectedSignature = base64UrlEncode(
+    crypto.createHmac('sha256', jwtSecret).update(`${header}.${claims}`).digest()
+  );
+  const providedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expectedSignature);
+  if (providedBuffer.length !== expectedBuffer.length) {
+    throw new Error('Invalid token signature');
+  }
+  if (!crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+    throw new Error('Invalid token signature');
+  }
+  const payload = JSON.parse(base64UrlDecode(claims).toString('utf8'));
+  if (payload.exp && Date.now() > payload.exp) {
+    throw new Error('Token expired');
+  }
+  return payload;
+};
 
 app.use(
   cors({
@@ -76,6 +163,87 @@ app.get(
     res.json({ status: 'ok' });
   })
 );
+
+app.post(
+  '/api/auth/login',
+  asyncHandler(async (req, res) => {
+    const { handle, password } = req.body;
+    if (!handle || !password) {
+      return res.status(400).json({ message: 'handle and password are required' });
+    }
+    const {
+      rows: [user],
+    } = await query('SELECT id, display_name, handle, location, password_hash FROM users WHERE handle = $1', [
+      handle,
+    ]);
+    if (!user || !verifyPassword(password, user.password_hash)) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    const token = signToken({
+      userId: user.id,
+      handle: user.handle,
+      exp: Date.now() + 8 * 60 * 60 * 1000,
+    });
+    res.json({
+      token,
+      user: {
+        id: user.id,
+        displayName: user.display_name,
+        handle: user.handle,
+        location: user.location,
+      },
+    });
+  })
+);
+
+app.post(
+  '/api/auth/register',
+  asyncHandler(async (req, res) => {
+    const { displayName, handle, email, password, location } = req.body;
+    if (!displayName || !handle || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: 'displayName, handle, email and password are required' });
+    }
+    const passwordHash = hashPassword(password);
+    const userId = uuidv4();
+    try {
+      await query(
+        `INSERT INTO users (id, display_name, handle, email, password_hash, location)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, displayName, handle.toLowerCase(), email.toLowerCase(), passwordHash, location]
+      );
+    } catch (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ message: 'Handle or email already exists' });
+      }
+      throw error;
+    }
+    const token = signToken({
+      userId,
+      handle: handle.toLowerCase(),
+      exp: Date.now() + 8 * 60 * 60 * 1000,
+    });
+    res.status(201).json({
+      token,
+      user: {
+        id: userId,
+        displayName,
+        handle: handle.toLowerCase(),
+        location,
+      },
+    });
+  })
+);
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api')) return next();
+  const openPaths = ['/api/health', '/api/auth/login', '/api/auth/register'];
+  if (req.method === 'OPTIONS' || openPaths.includes(req.path)) {
+    return next();
+  }
+  return authenticate(req, res, next);
+});
 
 app.get(
   '/api/users',

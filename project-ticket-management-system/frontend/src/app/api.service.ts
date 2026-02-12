@@ -99,6 +99,20 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
 
+  login(payload: { handle: string; password: string }): Observable<{ token: string; user: User }> {
+    return this.http.post<{ token: string; user: User }>(`${this.baseUrl}/auth/login`, payload);
+  }
+
+  register(payload: {
+    displayName: string;
+    handle: string;
+    email: string;
+    password: string;
+    location?: string;
+  }): Observable<{ token: string; user: User }> {
+    return this.http.post<{ token: string; user: User }>(`${this.baseUrl}/auth/register`, payload);
+  }
+
   getUsers(): Observable<User[]> {
     return this.http.get<User[]>(`${this.baseUrl}/users`);
   }

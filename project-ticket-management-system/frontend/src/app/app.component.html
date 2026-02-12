@@ -1,5 +1,6 @@
-<div class="workspace">
-  <aside class="workspace__sidebar">
+<ng-container *ngIf="isAuthenticated; else loginView">
+  <div class="workspace">
+    <aside class="workspace__sidebar">
     <div class="sidebar__brand">
       <h1>{{ title }}</h1>
       <p>Slack-inspired mission control</p>
@@ -47,9 +48,9 @@
     <footer class="sidebar__footer">
       <p>Need someone else on a ticket? Hit "Join ticket" to log their participation.</p>
     </footer>
-  </aside>
+    </aside>
 
-  <main class="workspace__main">
+    <main class="workspace__main">
     <header class="main__header">
       <div>
         <h2>{{ channelLabel }}</h2>
@@ -64,6 +65,7 @@
         >
           Start ticket
         </button>
+        <button type="button" class="ghost" (click)="handleLogout()">Sign out</button>
       </div>
     </header>
 
@@ -290,5 +292,90 @@
         </ul>
       </section>
     </section>
-  </main>
-</div>
+    </main>
+  </div>
+</ng-container>
+
+<ng-template #loginView>
+  <div class="auth">
+    <section class="auth__card">
+      <header>
+        <h1>{{ authMode === 'login' ? 'Welcome back' : 'Join a workspace' }}</h1>
+        <p>
+          {{
+            authMode === 'login'
+              ? 'Sign in with your workspace handle to access tickets and conversations.'
+              : 'Create an account to collaborate on tickets and direct messages.'
+          }}
+        </p>
+      </header>
+      <form *ngIf="authMode === 'login'; else registerFormTpl" (ngSubmit)="handleLogin()">
+        <label>
+          Handle
+          <input
+            type="text"
+            name="handle"
+            [(ngModel)]="loginForm.handle"
+            placeholder="ava"
+            autocomplete="username"
+            required
+          />
+        </label>
+        <label>
+          Password
+          <input
+            type="password"
+            name="password"
+            [(ngModel)]="loginForm.password"
+            placeholder="••••••••"
+            autocomplete="current-password"
+            required
+          />
+        </label>
+        <button type="submit" [disabled]="authLoading">
+          {{ authLoading ? 'Signing in…' : 'Sign in' }}
+        </button>
+      </form>
+      <ng-template #registerFormTpl>
+        <form (ngSubmit)="handleRegister()">
+          <label>
+            Full name
+            <input type="text" name="displayName" [(ngModel)]="registerForm.displayName" required />
+          </label>
+          <label>
+            Handle
+            <input type="text" name="handle" [(ngModel)]="registerForm.handle" required />
+          </label>
+          <label>
+            Email
+            <input type="email" name="email" [(ngModel)]="registerForm.email" required />
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" [(ngModel)]="registerForm.password" required />
+          </label>
+          <label>
+            Location (optional)
+            <input type="text" name="location" [(ngModel)]="registerForm.location" />
+          </label>
+          <button type="submit" [disabled]="authLoading">
+            {{ authLoading ? 'Creating account…' : 'Create account' }}
+          </button>
+        </form>
+      </ng-template>
+      <p class="auth__error" *ngIf="loginError">{{ loginError }}</p>
+      <p class="auth__hint">
+        <ng-container *ngIf="authMode === 'login'; else signupHint">
+          Demo handles: ava, noel, ivy, liam — password: password123
+        </ng-container>
+        <ng-template #signupHint>
+          Already have an account? <button type="button" (click)="switchAuthMode('login')">Sign in</button>
+        </ng-template>
+      </p>
+      <p class="auth__toggle" *ngIf="authMode === 'login'">
+        Need an account?
+        <button type="button" (click)="switchAuthMode('register')">Create one</button>
+      </p>
+    </section>
+  </div>
+</ng-template>

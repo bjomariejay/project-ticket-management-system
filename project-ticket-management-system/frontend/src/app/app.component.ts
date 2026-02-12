@@ -51,17 +51,42 @@ export class AppComponent implements OnInit {
   isLoadingTickets = false;
   isPostingMessage = false;
   feedback = '';
+  isAuthenticated = false;
+  authLoading = false;
+  loginError = '';
+  loginForm = {
+    handle: '',
+    password: '',
+  };
+  registerForm = {
+    displayName: '',
+    handle: '',
+    email: '',
+    password: '',
+    location: '',
+  };
+  authMode: 'login' | 'register' = 'login';
+  sessionUser: User | null = null;
 
   constructor(private readonly api: ApiService) {}
 
   async ngOnInit() {
-    await this.bootstrapWorkspace();
+    const storedToken = this.getStoredToken();
+    const storedUser = this.getStoredUser();
+    if (storedToken && storedUser) {
+      this.sessionUser = storedUser;
+      this.selectedUserId = storedUser.id;
+      this.isAuthenticated = true;
+      await this.bootstrapWorkspace();
+    }
   }
 
   private async bootstrapWorkspace() {
+    if (!this.isAuthenticated) return;
     await Promise.all([this.loadUsers(), this.loadChannels()]);
-    if (this.users.length) {
-      this.selectedUserId = this.users[0].id;
+    if (!this.selectedUserId && this.users.length) {
+      const fallbackUser = this.sessionUser || this.users[0];
+      this.selectedUserId = fallbackUser.id;
     }
     if (this.channels.length) {
       this.selectedChannelId = this.channels[0].id;
@@ -73,6 +98,145 @@ export class AppComponent implements OnInit {
 
   get currentUser(): User | undefined {
     return this.users.find((user) => user.id === this.selectedUserId);
+  }
+
+  private getStoredToken(): string | null {
+    try {
+      return localStorage.getItem('authToken');
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private getStoredUser(): User | null {
+    try {
+      const raw = localStorage.getItem('authUser');
+      return raw ? (JSON.parse(raw) as User) : null;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  private persistSession(token: string, user: User) {
+    try {
+      localStorage.setItem('authToken', token);
+      localStorage.setItem('authUser', JSON.stringify(user));
+    } catch (error) {
+      console.error('Unable to persist auth session', error);
+    }
+  }
+
+  private clearSessionStorage() {
+    try {
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('authUser');
+    } catch (error) {
+      console.error('Unable to clear auth storage', error);
+    }
+  }
+
+  private resetWorkspaceState(clearUserSelection = false) {
+    this.users = [];
+    this.channels = [];
+    this.tickets = [];
+    this.dashboard = [];
+    this.notifications = [];
+    this.dms = [];
+    this.selectedTicket = null;
+    this.activeTab = 'home';
+    this.ticketSearch = '';
+    this.messageDraft = '';
+    this.createTicketModel = {
+      title: '',
+      description: '',
+      channelId: '',
+      estimatedHours: 1,
+    };
+    this.dmForm = {
+      recipientId: '',
+      body: '',
+    };
+    this.feedback = '';
+    if (clearUserSelection) {
+      this.selectedUserId = '';
+      this.selectedChannelId = '';
+    }
+  }
+
+  async handleLogin() {
+    if (!this.loginForm.handle || !this.loginForm.password) {
+      this.loginError = 'Handle and password are required.';
+      return;
+    }
+    this.authLoading = true;
+    this.loginError = '';
+    try {
+      const response = await firstValueFrom(this.api.login({
+        handle: this.loginForm.handle.trim(),
+        password: this.loginForm.password,
+      }));
+      this.persistSession(response.token, response.user);
+      this.sessionUser = response.user;
+      this.selectedUserId = response.user.id;
+      this.isAuthenticated = true;
+      this.resetWorkspaceState();
+      await this.bootstrapWorkspace();
+    } catch (error) {
+      console.error(error);
+      this.loginError = 'Invalid handle or password.';
+    } finally {
+      this.authLoading = false;
+      this.loginForm.password = '';
+    }
+  }
+
+  handleLogout() {
+    this.clearSessionStorage();
+    this.sessionUser = null;
+    this.isAuthenticated = false;
+    this.resetWorkspaceState(true);
+  }
+
+  switchAuthMode(mode: 'login' | 'register') {
+    this.authMode = mode;
+    this.loginError = '';
+  }
+
+  async handleRegister() {
+    if (
+      !this.registerForm.displayName ||
+      !this.registerForm.handle ||
+      !this.registerForm.email ||
+      !this.registerForm.password
+    ) {
+      this.loginError = 'All fields are required.';
+      return;
+    }
+    this.authLoading = true;
+    this.loginError = '';
+    try {
+      const response = await firstValueFrom(
+        this.api.register({
+          displayName: this.registerForm.displayName.trim(),
+          handle: this.registerForm.handle.trim(),
+          email: this.registerForm.email.trim(),
+          password: this.registerForm.password,
+          location: this.registerForm.location.trim() || undefined,
+        })
+      );
+      this.persistSession(response.token, response.user);
+      this.sessionUser = response.user;
+      this.selectedUserId = response.user.id;
+      this.isAuthenticated = true;
+      this.resetWorkspaceState();
+      await this.bootstrapWorkspace();
+    } catch (error: any) {
+      console.error(error);
+      this.loginError = error?.error?.message || 'Registration failed.';
+    } finally {
+      this.authLoading = false;
+      this.registerForm.password = '';
+    }
   }
 
   get filteredTickets(): Ticket[] {

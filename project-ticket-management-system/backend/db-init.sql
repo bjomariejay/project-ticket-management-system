@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY,
   display_name TEXT NOT NULL,
   handle TEXT UNIQUE NOT NULL,
+  email TEXT UNIQUE NOT NULL,
+  password_hash TEXT NOT NULL,
   location TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
@@ -96,12 +98,40 @@ CREATE TABLE IF NOT EXISTS dms (
 );
 
 -- seed users
-INSERT INTO users (id, display_name, handle, location)
+INSERT INTO users (id, display_name, handle, email, password_hash, location)
 VALUES
-  ('11111111-1111-1111-1111-111111111111', 'Ava Cruz', 'ava', 'Cebu City'),
-  ('22222222-2222-2222-2222-222222222222', 'Noel Tan', 'noel', 'Manila'),
-  ('33333333-3333-3333-3333-333333333333', 'Ivy Santos', 'ivy', 'Cebu HQ'),
-  ('44444444-4444-4444-4444-444444444444', 'Liam Ortega', 'liam', 'Davao')
+  (
+    '11111111-1111-1111-1111-111111111111',
+    'Ava Cruz',
+    'ava',
+    'ava@example.com',
+    '5adf1a0ce4c69f4a6a5bb05232bf891c:94ea88a051ca7d33603919efca0a2dbf680cd0087907aafdddb38f0a640afbd10c6c8f2a8b82b7dd0b0fd027f8c62716f4cf475ba928329848fa309838e56d13',
+    'Cebu City'
+  ),
+  (
+    '22222222-2222-2222-2222-222222222222',
+    'Noel Tan',
+    'noel',
+    'noel@example.com',
+    'f3a4238b7aa079b7abcc273d709b20ea:21514180e5ff11619000d9338fc44f38a9b41ec1e8ca995ec8c07fcdd7bd051d911f310fe697971a3af67513f6852238983fae35683e10fcd3e5e14c0f0be9f1',
+    'Manila'
+  ),
+  (
+    '33333333-3333-3333-3333-333333333333',
+    'Ivy Santos',
+    'ivy',
+    'ivy@example.com',
+    '5067c6e56adc90c3edd27908d715e391:065ae81bc0afc6dd9471a9b36461fc5e8dda50204c27f8c9135399bc6e6c19094ea3a584f77bedb1e3140061463ba5ee56656721e28d9a275c2b3db7efcaf2a7',
+    'Cebu HQ'
+  ),
+  (
+    '44444444-4444-4444-4444-444444444444',
+    'Liam Ortega',
+    'liam',
+    'liam@example.com',
+    '8c45a8e7ededecf93d7405c354193374:6d83d0fde7adb7c22a80f30e1bb7bde3639d3f2de04ec0cabbca58314eaec44f5569167b03f5bcd37cd26c79068ec0466c8821ed6346ccee3ea9c57c500f58ad',
+    'Davao'
+  )
 ON CONFLICT (id) DO NOTHING;
 
 -- seed channels

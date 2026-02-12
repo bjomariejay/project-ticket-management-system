@@ -170,6 +170,12 @@
   cursor: pointer;
 }
 
+.header__actions button.ghost {
+  background: transparent;
+  color: #4c5165;
+  border: 1px solid #d4d7e5;
+}
+
 .inline-feedback {
   background: #e9f5ff;
   padding: 0.75rem 1rem;
@@ -501,6 +507,96 @@
   justify-content: space-between;
   align-items: center;
   font-weight: 600;
+}
+
+.auth {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: radial-gradient(circle at top, rgba(97, 31, 105, 0.4), transparent 60%), #0d0d19;
+  color: #f6f3ff;
+}
+
+.auth__card {
+  width: min(420px, 100%);
+  background: rgba(15, 16, 27, 0.9);
+  border-radius: 1.5rem;
+  padding: 2rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.auth__card header h1 {
+  margin: 0;
+  font-size: 1.8rem;
+}
+
+.auth__card header p {
+  margin: 0.4rem 0 0;
+  color: #cfc8ff;
+}
+
+.auth__card form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.auth__card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.9rem;
+}
+
+.auth__card input {
+  border-radius: 0.75rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  padding: 0.65rem;
+}
+
+.auth__card button {
+  border: none;
+  border-radius: 999px;
+  padding: 0.7rem;
+  font-size: 1rem;
+  font-weight: 600;
+  background: linear-gradient(90deg, #611f69, #bb34c9);
+  color: #fff;
+  cursor: pointer;
+}
+
+.auth__error {
+  margin: 0;
+  color: #ffb4c0;
+  font-size: 0.9rem;
+}
+
+.auth__hint {
+  margin: 0;
+  color: #cfc8ff;
+  font-size: 0.85rem;
+}
+
+.auth__hint button,
+.auth__toggle button {
+  background: none;
+  border: none;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+}
+
+.auth__toggle {
+  margin: 0.5rem 0 0;
+  color: #cfc8ff;
 }
 
 @media (max-width: 1100px) {
