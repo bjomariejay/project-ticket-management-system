@@ -118,10 +118,6 @@
         <div class="home-layout">
           <div class="home-layout__left">
             <article class="card home-card workspace-board">
-              <header>
-                <h3>Workspace board</h3>
-                <span class="muted">Channels & tickets</span>
-              </header>
               <section class="space-section">
                 <div class="space-section__header">
                   <h4>Channels</h4>
@@ -140,9 +136,8 @@
                     >
                       <div>
                         <strong>{{ channel.name }}</strong>
-                        <small>#{{ channel.slug }}</small>
                       </div>
-                      <span class="channel-number">{{ channel.ticketPrefix }}-{{ channel.nextNumber | number: '2.0-0' }}</span>
+                      <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
                     </button>
                   </div>
                   <div class="channel-item report-channel">
@@ -162,21 +157,15 @@
                 </div>
                 <div class="space-section__actions" *ngIf="!channelsCollapsed">
                   <button type="button" class="link-button" (click)="openCreateChannel()">
-                    + Create channel
+                    + Channel
                   </button>
                   <button type="button" class="link-button" (click)="openCreateTicket()">
-                    + Create ticket
+                    + Ticket
                   </button>
                 </div>
               </section>
               <section class="space-section">
-                <p class="muted">Open “Report of work” to view ticket starts across all channels.</p>
-              </section>
-              <section class="space-section">
-                <div class="space-section__header">
-                  <h4>Tickets by status</h4>
                   <span class="muted">{{ tickets.length }} total</span>
-                </div>
                 <div class="ticket-category" *ngFor="let category of ticketsByCategory">
                   <header>
                     <strong>{{ category.label }}</strong>
@@ -340,9 +329,27 @@
                       </button>
                     </div>
                   </div>
-                  <button type="button" (click)="handlePostMessage()" [disabled]="isPostingMessage">
-                    {{ isPostingMessage ? 'Posting...' : 'Post' }}
-                  </button>
+                  <div class="composer-actions">
+                    <button
+                      type="button"
+                      (click)="handlePostMessage()"
+                      [disabled]="isPostingMessage"
+                    >
+                      {{ isPostingMessage ? 'Posting...' : 'Post' }}
+                    </button>
+                    <button
+                      type="button"
+                      class="ghost"
+                      (click)="handleArchiveTicket()"
+                      [disabled]="
+                        !selectedTicket ||
+                        selectedTicket.status === 'archived' ||
+                        !isTicketMember
+                      "
+                    >
+                      {{ selectedTicket?.status === 'archived' ? 'Archived' : 'Archive ticket' }}
+                    </button>
+                  </div>
                 </div>
               </section>
               <ng-template #joinThreadPrompt>

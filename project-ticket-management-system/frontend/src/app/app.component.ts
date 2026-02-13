@@ -39,7 +39,7 @@ export class AppComponent implements OnInit, OnDestroy {
   notifications: NotificationItem[] = [];
   dms: DmMessage[] = [];
   private readonly ticketCategoryConfig = [
-    { key: 'open', label: 'Open' },
+    { key: 'open', label: 'Available' },
     { key: 'in_progress', label: 'In progress' },
     { key: 'archived', label: 'Archived' },
   ] as const;
