@@ -1,7 +1,8 @@
-import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { firstValueFrom } from 'rxjs';
+import { SESSION_EXPIRED_EVENT } from './auth.interceptor';
 import {
   ApiService,
   Channel,
@@ -24,7 +25,7 @@ import {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.scss']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnInit, OnDestroy {
   readonly globalReportChannelId = 'global-reports';
   @ViewChild('messageInput') messageInputRef?: ElementRef<HTMLTextAreaElement>;
 
@@ -122,16 +123,39 @@ export class AppComponent implements OnInit {
   channelReportsLoading = false;
   isGlobalReportView = false;
 
+  private readonly handleSessionExpired = () => {
+    this.handleLogout();
+    this.loginError = 'Your session expired. Please log in again.';
+    this.authMode = 'login';
+  };
+
   constructor(private readonly api: ApiService) {}
 
   async ngOnInit() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener(SESSION_EXPIRED_EVENT, this.handleSessionExpired);
+    }
     const storedToken = this.getStoredToken();
     const storedUser = this.getStoredUser();
     if (storedToken && storedUser) {
+      if (this.isTokenExpired(storedToken)) {
+        this.handleSessionExpired();
+        return;
+      }
       this.sessionUser = storedUser;
       this.selectedUserId = storedUser.id;
       this.isAuthenticated = true;
       await this.bootstrapWorkspace();
+      return;
+    }
+    if (storedToken || storedUser) {
+      this.clearSessionStorage();
+    }
+  }
+
+  ngOnDestroy() {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, this.handleSessionExpired);
     }
   }
 
@@ -185,6 +209,31 @@ export class AppComponent implements OnInit {
       localStorage.removeItem('authUser');
     } catch (error) {
       console.error('Unable to clear auth storage', error);
+    }
+  }
+
+  private isTokenExpired(token: string): boolean {
+    const segments = token.split('.');
+    if (segments.length !== 3) {
+      return true;
+    }
+    try {
+      const normalized = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+      const padding = '='.repeat((4 - (normalized.length % 4)) % 4);
+      const decoded = atob(normalized + padding);
+      const payload = JSON.parse(decoded) as { exp?: unknown };
+      if (payload.exp === undefined) {
+        return false;
+      }
+      const expValue = Number(payload.exp);
+      if (!Number.isFinite(expValue)) {
+        return true;
+      }
+      const expMs = expValue > 1e12 ? expValue : expValue * 1000;
+      return Date.now() >= expMs;
+    } catch (error) {
+      console.warn('Unable to inspect stored token expiry', error);
+      return true;
     }
   }
 

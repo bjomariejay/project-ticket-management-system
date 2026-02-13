@@ -73,6 +73,9 @@ const authenticate = asyncHandler(async (req, res, next) => {
   }
 });
 
+const TOKEN_TTL_SECONDS = 8 * 60 * 60;
+const createExpiryClaim = () => Math.floor(Date.now() / 1000) + TOKEN_TTL_SECONDS;
+
 const signToken = (payload) => {
   const header = base64UrlEncode(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
   const claims = base64UrlEncode(JSON.stringify(payload));
@@ -99,8 +102,15 @@ const verifyToken = (token) => {
     throw new Error('Invalid token signature');
   }
   const payload = JSON.parse(base64UrlDecode(claims).toString('utf8'));
-  if (payload.exp && Date.now() > payload.exp) {
-    throw new Error('Token expired');
+  if (payload.exp !== undefined) {
+    const expValue = Number(payload.exp);
+    if (!Number.isFinite(expValue)) {
+      throw new Error('Token expired');
+    }
+    const expMs = expValue > 1e12 ? expValue : expValue * 1000;
+    if (Date.now() > expMs) {
+      throw new Error('Token expired');
+    }
   }
   return payload;
 };
@@ -197,7 +207,7 @@ app.post(
     const token = signToken({
       userId: user.id,
       handle: user.handle,
-      exp: Date.now() + 8 * 60 * 60 * 1000,
+      exp: createExpiryClaim(),
     });
     res.json({
       token,
@@ -237,7 +247,7 @@ app.post(
     const token = signToken({
       userId,
       handle: handle.toLowerCase(),
-      exp: Date.now() + 8 * 60 * 60 * 1000,
+      exp: createExpiryClaim(),
     });
     res.status(201).json({
       token,
