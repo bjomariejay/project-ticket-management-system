@@ -112,86 +112,91 @@
           <div class="home-layout__left">
             <article class="card home-card workspace-board">
               <section class="space-section">
+                    <div class="space-section__actions">
+                       <button type="button" class="link-button" (click)="openCreateTicket()">
+                      + Ticket
+                    </button>
+                    <button type="button" class="link-button" (click)="openCreateChannel()">
+                      + Project
+                    </button>
+                  </div>
                 <div class="space-section__header">
-                  <h4>Channels</h4>
+                  <h4>Projects</h4>
                   <span class="muted">{{ channels.length }} active</span>
                   <button type="button" class="collapse-btn" (click)="toggleChannelsCollapsed()">
                     {{ channelsCollapsed ? '▶' : '▼' }}
                   </button>
                 </div>
-                <div class="channel-list" *ngIf="!channelsCollapsed">
-                  <div class="channel-item" *ngFor="let channel of channels">
-                    <div class="channel-row">
+                <div class="channel-panel" [class.is-collapsed]="channelsCollapsed">
+                  <div class="channel-list">
+                    <div class="channel-item" *ngFor="let channel of channels">
+                      <div class="channel-row">
+                        <button
+                          type="button"
+                          class="channel-main"
+                          (click)="handleChannelChange(channel.id)"
+                          [class.active]="channel.id === selectedChannelId"
+                        >
+                          <div>
+                            <strong>{{ channel.name }}</strong>
+                          </div>
+                          <span class="channel-number">
+                          {{ getChannelTicketCount(channel.id) }}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          class="channel-delete"
+                          title="Delete channel"
+                          aria-label="Delete channel"
+                          (click)="openDeleteChannelDialog(channel); $event.stopPropagation()"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path
+                              d="M9 3h6l1 2h5v2h-2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H3V5h5l1-2zm8 4H7v12h10V7zm-6 3h2v7h-2v-7z"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                      <div
+                        class="channel-ticket-groups"
+                        *ngIf="expandedChannelId === channel.id"
+                      >
+                        <div class="channel-ticket-group" *ngFor="let category of getTicketsByCategory(channel.id)">
+                          <header>
+                            <strong>{{ category.label }}</strong>
+                            <small>{{ category.items.length }}</small>
+                          </header>
+                          <ul>
+                            <li *ngFor="let ticket of category.items | slice:0:4">
+                              <button type="button" (click)="selectTicket(ticket.id)">
+                                <div>
+                                  <strong>{{ ticket.ticketNumber }}</strong>
+                                </div>
+                             
+                              </button>
+                            </li>
+                            <li *ngIf="!category.items.length" class="muted">No tickets.</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="channel-item report-channel">
                       <button
                         type="button"
                         class="channel-main"
-                        (click)="handleChannelChange(channel.id)"
-                        [class.active]="channel.id === selectedChannelId"
+                        [class.active]="isGlobalReportView"
+                        (click)="handleGlobalReportView($event)"
                       >
                         <div>
-                          <strong>{{ channel.name }}</strong>
+                          <strong>Report of work</strong>
+                          <small>All channels</small>
                         </div>
-                      </button>
-                      <button
-                        type="button"
-                        class="channel-delete"
-                        title="Delete channel"
-                        aria-label="Delete channel"
-                        (click)="openDeleteChannelDialog(channel); $event.stopPropagation()"
-                      >
-                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-                          <path
-                            d="M9 3h6l1 2h5v2h-2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H3V5h5l1-2zm8 4H7v12h10V7zm-6 3h2v7h-2v-7z"
-                          />
-                        </svg>
+                        <span class="channel-number">View</span>
                       </button>
                     </div>
                   </div>
-                  <div class="channel-item report-channel">
-                    <button
-                      type="button"
-                      class="channel-main"
-                      [class.active]="isGlobalReportView"
-                      (click)="handleGlobalReportView($event)"
-                    >
-                      <div>
-                        <strong>Report of work</strong>
-                        <small>All channels</small>
-                      </div>
-                      <span class="channel-number">View</span>
-                    </button>
-                  </div>
-                </div>
-                <div class="space-section__actions" *ngIf="!channelsCollapsed">
-                  <button type="button" class="link-button" (click)="openCreateChannel()">
-                    + Channel
-                  </button>
-                  <button type="button" class="link-button" (click)="openCreateTicket()">
-                    + Ticket
-                  </button>
-                </div>
-              </section>
-              <section class="space-section">
-                  <span class="muted">{{ tickets.length }} total</span>
-                <div class="ticket-category" *ngFor="let category of ticketsByCategory">
-                  <header>
-                    <strong>{{ category.label }}</strong>
-                    <small>{{ category.items.length }}</small>
-                    <button
-                      type="button"
-                      class="collapse-btn"
-                      (click)="toggleCategoryCollapse(category.key)"
-                    >
-                      {{ category.collapsed ? '▶' : '▼' }}
-                    </button>
-                  </header>
-                  <ul class="category-list compact" *ngIf="!category.collapsed">
-                    <li *ngFor="let ticket of category.items | slice:0:6" (click)="selectTicket(ticket.id)">
-                      <strong>{{ ticket.ticketNumber }}</strong>
-                      <small>{{ ticket.updatedAt | date: 'shortDate' }}</small>
-                    </li>
-                    <li *ngIf="!category.items.length" class="muted">No tickets yet.</li>
-                  </ul>
+              
                 </div>
               </section>
             </article>

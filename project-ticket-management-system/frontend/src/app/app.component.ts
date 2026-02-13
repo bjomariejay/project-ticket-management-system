@@ -50,7 +50,6 @@ export class AppComponent implements OnInit, OnDestroy {
   lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null = null;
   activeTab: 'dashboard' | 'home' | 'dms' | 'activity' = 'home';
   channelsCollapsed = false;
-  ticketCategoryCollapsed: Record<string, boolean> = {};
 
   ticketSearch = '';
   messageDraft = '';
@@ -116,6 +115,7 @@ export class AppComponent implements OnInit, OnDestroy {
   selectedLog: TicketLog | null = null;
   isCreateChannelOpen = false;
   isCreateTicketOpen = false;
+  expandedChannelId = '';
   private mentionReplaceRange: { start: number; end: number } | null = null;
   private slashReplaceRange: { start: number; end: number } | null = null;
   private messageCursorIndex = 0;
@@ -173,6 +173,7 @@ export class AppComponent implements OnInit, OnDestroy {
     }
     if (this.channels.length) {
       this.selectedChannelId = this.channels[0].id;
+      this.expandedChannelId = this.channels[0].id;
       this.createTicketModel.channelId = this.channels[0].id;
     }
     await this.loadTickets();
@@ -256,7 +257,6 @@ export class AppComponent implements OnInit, OnDestroy {
     this.ticketSearch = '';
     this.messageDraft = '';
     this.channelsCollapsed = false;
-    this.ticketCategoryCollapsed = {};
     this.resetMentionSuggestions();
     this.resetSlashSuggestions();
     this.createTicketModel = {
@@ -280,6 +280,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isCreateChannelOpen = false;
     this.isCreateTicketOpen = false;
     this.selectedLog = null;
+    this.expandedChannelId = '';
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
       this.selectedChannelId = '';
@@ -375,11 +376,12 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  get ticketsByCategory() {
+  getTicketsByCategory(channelId: string) {
     return this.ticketCategoryConfig.map((category) => ({
       ...category,
-      items: this.tickets.filter((ticket) => ticket.status === category.key),
-      collapsed: this.ticketCategoryCollapsed[category.key] || false,
+      items: this.tickets.filter(
+        (ticket) => ticket.channelId === channelId && ticket.status === category.key
+      ),
     }));
   }
 
@@ -418,9 +420,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.selectedUserId) return;
     this.isLoadingTickets = true;
     try {
-      this.tickets = await firstValueFrom(
-        this.api.getTickets({ channelId: this.selectedChannelId || undefined })
-      );
+      this.tickets = await firstValueFrom(this.api.getTickets({}));
       if (this.selectedTicket) {
         const stillExists = this.tickets.some((ticket) => ticket.id === this.selectedTicket?.id);
         if (!stillExists) {
@@ -1058,7 +1058,12 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   handleChannelChange(channelId: string) {
+    if (this.expandedChannelId === channelId) {
+      this.expandedChannelId = '';
+      return;
+    }
     this.selectedChannelId = channelId;
+    this.expandedChannelId = channelId;
     this.createTicketModel.channelId = channelId;
     this.selectedTicket = null;
     this.lockedTicket = null;
@@ -1067,15 +1072,12 @@ export class AppComponent implements OnInit, OnDestroy {
     void this.loadTickets();
   }
 
-  toggleChannelsCollapsed() {
-    this.channelsCollapsed = !this.channelsCollapsed;
+  getChannelTicketCount(channelId: string): number {
+    return this.tickets.filter((ticket) => ticket.channelId === channelId).length;
   }
 
-  toggleCategoryCollapse(key: string) {
-    this.ticketCategoryCollapsed = {
-      ...this.ticketCategoryCollapsed,
-      [key]: !this.ticketCategoryCollapsed[key],
-    };
+  toggleChannelsCollapsed() {
+    this.channelsCollapsed = !this.channelsCollapsed;
   }
 
   get activityUnreadCount(): number {
