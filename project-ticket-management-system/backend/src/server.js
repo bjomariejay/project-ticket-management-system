@@ -993,12 +993,21 @@ app.post(
       await appendLog(client, ticketId, userId, `${user.display_name} posted an update`);
 
       const trimmed = body.trim().toLowerCase();
-      if (trimmed === 'start ticket' && ticket.status === 'open') {
-        await client.query(
-          'UPDATE tickets SET status = $1, started_at = now(), updated_at = now() WHERE id = $2',
-          ['in_progress', ticketId]
-        );
-        await appendLog(client, ticketId, userId, `${user.display_name} started working on the ticket`);
+      if (trimmed === 'start ticket') {
+        if (ticket.status === 'open' || ticket.status === 'archived') {
+          const params = ['in_progress'];
+          const clauses = ['status = $1'];
+          if (ticket.status === 'open') {
+            clauses.push('started_at = now()');
+          }
+          if (ticket.status === 'archived') {
+            clauses.push('archived_at = NULL');
+          }
+          clauses.push('updated_at = now()');
+          const updateQuery = `UPDATE tickets SET ${clauses.join(', ')} WHERE id = $${params.length + 1}`;
+          await client.query(updateQuery, [...params, ticketId]);
+          await appendLog(client, ticketId, userId, `${user.display_name} started working on the ticket`);
+        }
       }
 
       const recipients = await resolveMentionRecipients(client, mentions, userId);

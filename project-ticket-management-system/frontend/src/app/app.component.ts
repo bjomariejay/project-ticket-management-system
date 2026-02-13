@@ -747,6 +747,7 @@ export class AppComponent implements OnInit, OnDestroy {
         this.resetSlashSuggestions();
       }
       await this.refreshTicketDetail();
+      await this.loadTickets();
       await this.loadNotifications();
     } catch (error) {
       console.error(error);
