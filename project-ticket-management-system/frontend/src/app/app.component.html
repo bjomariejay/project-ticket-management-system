@@ -128,17 +128,32 @@
                 </div>
                 <div class="channel-list" *ngIf="!channelsCollapsed">
                   <div class="channel-item" *ngFor="let channel of channels">
-                    <button
-                      type="button"
-                      class="channel-main"
-                      (click)="handleChannelChange(channel.id)"
-                      [class.active]="channel.id === selectedChannelId"
-                    >
-                      <div>
-                        <strong>{{ channel.name }}</strong>
-                      </div>
-                      <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
-                    </button>
+                    <div class="channel-row">
+                      <button
+                        type="button"
+                        class="channel-main"
+                        (click)="handleChannelChange(channel.id)"
+                        [class.active]="channel.id === selectedChannelId"
+                      >
+                        <div>
+                          <strong>{{ channel.name }}</strong>
+                        </div>
+                        <span class="channel-number">{{ channel.nextNumber | number: '2.0-0' }}</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="channel-delete"
+                        title="Delete channel"
+                        aria-label="Delete channel"
+                        (click)="openDeleteChannelDialog(channel); $event.stopPropagation()"
+                      >
+                        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                          <path
+                            d="M9 3h6l1 2h5v2h-2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H3V5h5l1-2zm8 4H7v12h10V7zm-6 3h2v7h-2v-7z"
+                          />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   <div class="channel-item report-channel">
                     <button
@@ -611,5 +626,22 @@
         <button type="submit">Create ticket</button>
       </footer>
     </form>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="isDeleteChannelOpen" (click)="closeDeleteChannelDialog()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <h3>Delete channel</h3>
+      <button type="button" (click)="closeDeleteChannelDialog()">✕</button>
+    </header>
+    <p>
+      Are you sure you want to delete
+      <strong>{{ channelPendingDeletion?.name }}</strong>? This cannot be undone.
+    </p>
+    <footer>
+      <button type="button" class="ghost" (click)="closeDeleteChannelDialog()">No</button>
+      <button type="button" (click)="confirmDeleteChannel()">Yes, delete</button>
+    </footer>
   </section>
 </div>

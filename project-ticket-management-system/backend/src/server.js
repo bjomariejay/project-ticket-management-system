@@ -346,6 +346,18 @@ app.post(
   })
 );
 
+app.delete(
+  '/api/channels/:channelId',
+  asyncHandler(async (req, res) => {
+    const { channelId } = req.params;
+    const { rowCount } = await query('DELETE FROM channels WHERE id = $1', [channelId]);
+    if (!rowCount) {
+      return res.status(404).json({ message: 'Channel not found' });
+    }
+    res.status(204).send();
+  })
+);
+
 app.get(
   '/api/channels/:channelId/reports',
   asyncHandler(async (req, res) => {

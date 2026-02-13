@@ -188,6 +188,10 @@ export class ApiService {
     return this.http.post<Channel & { nextNumber: number }>(`${this.baseUrl}/channels`, payload);
   }
 
+  deleteChannel(channelId: string) {
+    return this.http.delete(`${this.baseUrl}/channels/${channelId}`);
+  }
+
   assignTicket(ticketId: string, assigneeId: string, actorId: string) {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/assign`, { assigneeId, actorId });
   }

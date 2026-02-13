@@ -122,6 +122,8 @@ export class AppComponent implements OnInit, OnDestroy {
   viewingReportsForChannelName = '';
   channelReportsLoading = false;
   isGlobalReportView = false;
+  isDeleteChannelOpen = false;
+  channelPendingDeletion: Channel | null = null;
 
   private readonly handleSessionExpired = () => {
     this.handleLogout();
@@ -954,6 +956,37 @@ export class AppComponent implements OnInit, OnDestroy {
       void this.loadDashboard();
     } else if (tab === 'home') {
       void this.loadTickets();
+    }
+  }
+
+  openDeleteChannelDialog(channel: Channel) {
+    this.channelPendingDeletion = channel;
+    this.isDeleteChannelOpen = true;
+  }
+
+  closeDeleteChannelDialog() {
+    this.channelPendingDeletion = null;
+    this.isDeleteChannelOpen = false;
+  }
+
+  async confirmDeleteChannel() {
+    if (!this.channelPendingDeletion) return;
+    const { id: channelId, name } = this.channelPendingDeletion;
+    this.closeDeleteChannelDialog();
+    try {
+      await firstValueFrom(this.api.deleteChannel(channelId));
+      this.feedback = `Channel "${name}" deleted.`;
+      await this.loadChannels();
+      if (this.selectedChannelId === channelId) {
+        this.selectedChannelId = this.channels[0]?.id || '';
+        this.createTicketModel.channelId = this.selectedChannelId || '';
+        this.selectedTicket = null;
+        this.lockedTicket = null;
+      }
+      await this.loadTickets();
+    } catch (error: any) {
+      console.error(error);
+      this.feedback = error?.error?.message || 'Unable to delete channel.';
     }
   }
 
