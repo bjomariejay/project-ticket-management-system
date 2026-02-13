@@ -764,7 +764,8 @@
   color: #611f69;
 }
 
-.mention-suggestions {
+.mention-suggestions,
+.slash-suggestions {
   position: absolute;
   top: 100%;
   left: 0;
@@ -783,7 +784,12 @@
   z-index: 5;
 }
 
-.mention-suggestions button {
+.slash-suggestions {
+  margin-top: 3rem;
+}
+
+.mention-suggestions button,
+.slash-suggestions button {
   border: none;
   background: transparent;
   text-align: left;
@@ -795,7 +801,8 @@
   cursor: pointer;
 }
 
-.mention-suggestions button:hover {
+.mention-suggestions button:hover,
+.slash-suggestions button:hover {
   background: #f4f5fb;
 }
 

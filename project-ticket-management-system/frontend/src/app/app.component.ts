@@ -57,6 +57,8 @@ export class AppComponent implements OnInit, OnDestroy {
   mentionSuggestions: User[] = [];
   mentionQuery = '';
   showMentionSuggestions = false;
+  slashSuggestions: string[] = [];
+  showSlashSuggestions = false;
   createTicketModel = {
     title: '',
     description: '',
@@ -115,8 +117,9 @@ export class AppComponent implements OnInit, OnDestroy {
   isCreateChannelOpen = false;
   isCreateTicketOpen = false;
   private mentionReplaceRange: { start: number; end: number } | null = null;
+  private slashReplaceRange: { start: number; end: number } | null = null;
   private messageCursorIndex = 0;
-  private mentionHideTimeout: number | null = null;
+  private suggestionHideTimeout: number | null = null;
   channelReportEntries: ChannelReportEntry[] = [];
   viewingReportsForChannelId = '';
   viewingReportsForChannelName = '';
@@ -124,6 +127,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isGlobalReportView = false;
   isDeleteChannelOpen = false;
   channelPendingDeletion: Channel | null = null;
+  readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
 
   private readonly handleSessionExpired = () => {
     this.handleLogout();
@@ -254,6 +258,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.channelsCollapsed = false;
     this.ticketCategoryCollapsed = {};
     this.resetMentionSuggestions();
+    this.resetSlashSuggestions();
     this.createTicketModel = {
       title: '',
       description: '',
@@ -640,6 +645,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
       this.messageDraft = '';
       this.resetMentionSuggestions();
+      this.resetSlashSuggestions();
       this.lockedTicket = null;
       this.syncTicketSettings(this.selectedTicket);
       this.selectedLog = null;
@@ -714,15 +720,16 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  async handlePostMessage(body?: string) {
+  async handlePostMessage(body?: string, skipCommandParsing = false) {
     if (!this.selectedTicket || !this.selectedUserId || !this.isTicketMember) return;
     const payload = body ?? this.messageDraft.trim();
     if (!payload) return;
-    const handledCommand = await this.tryHandleTicketCommand(payload);
+    const handledCommand = skipCommandParsing ? false : await this.tryHandleTicketCommand(payload);
     if (handledCommand) {
       if (!body) {
         this.messageDraft = '';
         this.resetMentionSuggestions();
+        this.resetSlashSuggestions();
       }
       return;
     }
@@ -737,6 +744,7 @@ export class AppComponent implements OnInit, OnDestroy {
       if (!body) {
         this.messageDraft = '';
         this.resetMentionSuggestions();
+        this.resetSlashSuggestions();
       }
       await this.refreshTicketDetail();
       await this.loadNotifications();
@@ -752,18 +760,23 @@ export class AppComponent implements OnInit, OnDestroy {
     this.messageDraft = target.value;
     const caretPosition = target.selectionStart ?? this.messageDraft.length;
     this.updateMentionContext(caretPosition);
+    this.updateSlashContext(caretPosition);
   }
 
   handleMessageFocus() {
-    if (this.mentionHideTimeout) {
-      window.clearTimeout(this.mentionHideTimeout);
-      this.mentionHideTimeout = null;
+    if (this.suggestionHideTimeout) {
+      window.clearTimeout(this.suggestionHideTimeout);
+      this.suggestionHideTimeout = null;
     }
     this.updateMentionContext(this.messageCursorIndex);
+    this.updateSlashContext(this.messageCursorIndex);
   }
 
   handleMessageBlur() {
-    this.mentionHideTimeout = window.setTimeout(() => this.resetMentionSuggestions(), 120);
+    this.suggestionHideTimeout = window.setTimeout(() => {
+      this.resetMentionSuggestions();
+      this.resetSlashSuggestions();
+    }, 120);
   }
 
   handleSelectMention(user: User) {
@@ -775,6 +788,24 @@ export class AppComponent implements OnInit, OnDestroy {
     this.messageDraft = `${before}${insertion}${after}`;
     this.messageCursorIndex = nextCursor;
     this.resetMentionSuggestions();
+    setTimeout(() => {
+      const textarea = this.messageInputRef?.nativeElement;
+      if (textarea) {
+        textarea.focus();
+        textarea.setSelectionRange(nextCursor, nextCursor);
+      }
+    });
+  }
+
+  handleSelectSlash(command: string) {
+    if (!this.slashReplaceRange) return;
+    const before = this.messageDraft.slice(0, this.slashReplaceRange.start);
+    const after = this.messageDraft.slice(this.messageCursorIndex);
+    const insertion = `${command} `;
+    const nextCursor = before.length + insertion.length;
+    this.messageDraft = `${before}${insertion}${after}`;
+    this.messageCursorIndex = nextCursor;
+    this.resetSlashSuggestions();
     setTimeout(() => {
       const textarea = this.messageInputRef?.nativeElement;
       if (textarea) {
@@ -804,10 +835,43 @@ export class AppComponent implements OnInit, OnDestroy {
     this.showMentionSuggestions = this.mentionSuggestions.length > 0;
   }
 
+  private updateSlashContext(caretIndex: number) {
+    this.messageCursorIndex = caretIndex;
+    const textBeforeCaret = this.messageDraft.slice(0, caretIndex);
+    const slashMatch = textBeforeCaret.match(/(?:^|\s)\/([\w]*)$/);
+    if (!slashMatch) {
+      this.resetSlashSuggestions();
+      return;
+    }
+    const query = slashMatch[1] || '';
+    const slashStart = caretIndex - query.length - 1;
+    if (slashStart < 0) {
+      this.resetSlashSuggestions();
+      return;
+    }
+    const normalized = query.toLowerCase();
+    const suggestions = this.slashCommands.filter((command) =>
+      command.slice(1).toLowerCase().startsWith(normalized)
+    );
+    this.slashReplaceRange = { start: slashStart, end: caretIndex };
+    this.slashSuggestions = suggestions;
+    this.showSlashSuggestions = suggestions.length > 0;
+  }
+
   private async tryHandleTicketCommand(payload: string): Promise<boolean> {
     if (!this.selectedTicket || !this.selectedUserId) return false;
     const trimmed = payload.trim();
     if (!trimmed) return false;
+
+    if (trimmed.toLowerCase() === '/start') {
+      await this.handlePostMessage('start ticket', true);
+      return true;
+    }
+
+    if (trimmed.toLowerCase() === '/archive') {
+      await this.handleArchiveTicket();
+      return true;
+    }
 
     const assignMatch = trimmed.match(/^(?:a\s+)?@([\w.-]+)$/i);
     if (assignMatch) {
@@ -860,18 +924,20 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private resetMentionSuggestions() {
-    if (this.mentionHideTimeout) {
-      window.clearTimeout(this.mentionHideTimeout);
-      this.mentionHideTimeout = null;
-    }
     this.mentionSuggestions = [];
     this.showMentionSuggestions = false;
     this.mentionQuery = '';
     this.mentionReplaceRange = null;
   }
 
+  private resetSlashSuggestions() {
+    this.slashSuggestions = [];
+    this.showSlashSuggestions = false;
+    this.slashReplaceRange = null;
+  }
+
   handleStartTicketClick() {
-    this.handlePostMessage('start ticket').catch((error) => console.error(error));
+    this.handlePostMessage('start ticket', true).catch((error) => console.error(error));
   }
 
   async handleJoinTicket(targetUserId?: string) {

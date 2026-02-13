@@ -34,13 +34,6 @@
         </div>
         <div class="header__actions" *ngIf="activeTab === 'home'">
           <input type="search" placeholder="Search tickets" [(ngModel)]="ticketSearch" />
-          <button
-            type="button"
-            (click)="handleStartTicketClick()"
-            [disabled]="!selectedTicket || !isTicketMember"
-          >
-            Start ticket
-          </button>
         </div>
         <button type="button" class="ghost" (click)="handleLogout()">Sign out</button>
       </header>
@@ -343,6 +336,19 @@
                         <small>&#64;{{ user.handle }}</small>
                       </button>
                     </div>
+                    <div
+                      class="slash-suggestions"
+                      *ngIf="showSlashSuggestions && slashSuggestions.length"
+                    >
+                      <button
+                        type="button"
+                        *ngFor="let command of slashSuggestions"
+                        (mousedown)="$event.preventDefault()"
+                        (click)="handleSelectSlash(command)"
+                      >
+                        <strong>{{ command }}</strong>
+                      </button>
+                    </div>
                   </div>
                   <div class="composer-actions">
                     <button
@@ -351,18 +357,6 @@
                       [disabled]="isPostingMessage"
                     >
                       {{ isPostingMessage ? 'Posting...' : 'Post' }}
-                    </button>
-                    <button
-                      type="button"
-                      class="ghost"
-                      (click)="handleArchiveTicket()"
-                      [disabled]="
-                        !selectedTicket ||
-                        selectedTicket.status === 'archived' ||
-                        !isTicketMember
-                      "
-                    >
-                      {{ selectedTicket?.status === 'archived' ? 'Archived' : 'Archive ticket' }}
                     </button>
                   </div>
                 </div>
