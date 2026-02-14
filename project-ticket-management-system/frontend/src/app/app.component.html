@@ -450,10 +450,10 @@
         <section class="card activity-panel">
           <header>
             <h3>Activity</h3>
-            <span class="muted">{{ notifications.length }} updates</span>
+            <span class="muted">{{ activityNotifications.length }} updates</span>
           </header>
           <ul>
-            <li *ngFor="let notification of notifications" [class.unread]="!notification.isRead">
+            <li *ngFor="let notification of activityNotifications" [class.unread]="!notification.isRead">
               <div>
                 <strong>{{ notification.message }}</strong>
                 <small>{{ notification.createdAt | date: 'short' }}</small>

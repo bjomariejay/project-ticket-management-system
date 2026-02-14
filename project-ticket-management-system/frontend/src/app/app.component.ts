@@ -838,6 +838,14 @@ export class AppComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  private isDmNotification(notification: NotificationItem): boolean {
+    if (notification.ticketId) {
+      return false;
+    }
+    const message = notification.message?.toLowerCase() || '';
+    return message.includes('sent you a dm');
+  }
+
   private getLatestIncomingDmTimestamp(): string | null {
     if (!this.selectedUserId) return null;
     const incoming = this.dms
@@ -1372,7 +1380,11 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   get activityUnreadCount(): number {
-    return this.notifications.filter((notification) => !notification.isRead).length;
+    return this.activityNotifications.filter((notification) => !notification.isRead).length;
+  }
+
+  get activityNotifications(): NotificationItem[] {
+    return this.notifications.filter((notification) => !this.isDmNotification(notification));
   }
 
   get projectLabel(): string {
