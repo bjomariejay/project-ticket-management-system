@@ -176,6 +176,12 @@ const WorkspacePage = () => {
 
   const handleMessageSubmit = (event: FormEvent) => {
     event.preventDefault();
+    const payload = messageDraft.trim();
+    if (payload === '/start') {
+      event.preventDefault();
+      void startTicket();
+      return;
+    }
     void postTicketMessage();
   };
 
