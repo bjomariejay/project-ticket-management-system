@@ -1,5 +1,5 @@
-import { createContext, useEffect, useMemo, useState, type ReactNode } from 'react';
-import { apiClient } from '../api';
+import { createContext, useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { apiClient, SESSION_EXPIRED_EVENT } from '../api';
 import { LoginPayload, RegisterPayload, User } from '../types/api';
 import { storage } from '../utils/storage';
 
@@ -14,7 +14,7 @@ interface AuthContextValue {
   authError: string | null;
   login: (payload: LoginPayload) => Promise<void>;
   register: (payload: RegisterPayload) => Promise<void>;
-  logout: () => Promise<void>;
+  logout: (options?: { silent?: boolean }) => Promise<void>;
   updateProfile: (payload: Partial<Pick<User, 'displayName' | 'handle' | 'location'>>) => Promise<User>;
   clearAuthError: () => void;
 }
@@ -44,11 +44,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  useEffect(() => {
-    apiClient.setAuthToken(token);
-  }, [token]);
+  apiClient.setAuthToken(token);
 
-  const persistSession = (nextToken: string | null, nextUser: User | null) => {
+  const persistSession = useCallback((nextToken: string | null, nextUser: User | null) => {
     setToken(nextToken);
     setUser(nextUser);
     apiClient.setAuthToken(nextToken);
@@ -67,56 +65,80 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       }
       storage.remove(USER_KEY);
     }
-  };
+  }, []);
 
-  const login = async (payload: LoginPayload) => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      const response = await apiClient.login(payload);
-      persistSession(response.token, response.user);
-    } catch (error) {
-      setAuthError('Invalid username or password.');
-      throw error;
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+  const login = useCallback(
+    async (payload: LoginPayload) => {
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+        const response = await apiClient.login(payload);
+        persistSession(response.token, response.user);
+      } catch (error) {
+        setAuthError('Invalid username or password.');
+        throw error;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [persistSession],
+  );
 
-  const register = async (payload: RegisterPayload) => {
-    setAuthLoading(true);
-    setAuthError(null);
-    try {
-      const response = await apiClient.register(payload);
-      persistSession(response.token, response.user);
-    } catch (error: any) {
-      setAuthError(error?.response?.data?.message || 'Unable to register.');
-      throw error;
-    } finally {
-      setAuthLoading(false);
-    }
-  };
+  const register = useCallback(
+    async (payload: RegisterPayload) => {
+      setAuthLoading(true);
+      setAuthError(null);
+      try {
+        const response = await apiClient.register(payload);
+        persistSession(response.token, response.user);
+      } catch (error: any) {
+        setAuthError(error?.response?.data?.message || 'Unable to register.');
+        throw error;
+      } finally {
+        setAuthLoading(false);
+      }
+    },
+    [persistSession],
+  );
 
-  const logout = async () => {
-    try {
-      await apiClient.markInactive();
-    } catch (error) {
-      console.warn('Unable to mark inactive', error);
-    }
-    persistSession(null, null);
-  };
+  const logout = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent ?? false;
+      if (!silent) {
+        try {
+          await apiClient.markInactive();
+        } catch (error) {
+          console.warn('Unable to mark inactive', error);
+        }
+      }
+      persistSession(null, null);
+    },
+    [persistSession],
+  );
 
-  const updateProfile = async (
-    payload: Partial<Pick<User, 'displayName' | 'handle' | 'location'>>
-  ) => {
-    if (!user) {
-      throw new Error('Not authenticated');
-    }
-    const updatedUser = await apiClient.updateUser(user.id, payload);
-    const nextUser = { ...user, ...updatedUser };
-    persistSession(token, nextUser);
-    return nextUser;
-  };
+  const updateProfile = useCallback(
+    async (payload: Partial<Pick<User, 'displayName' | 'handle' | 'location'>>) => {
+      if (!user) {
+        throw new Error('Not authenticated');
+      }
+      const updatedUser = await apiClient.updateUser(user.id, payload);
+      const nextUser = { ...user, ...updatedUser };
+      persistSession(token, nextUser);
+      return nextUser;
+    },
+    [persistSession, token, user],
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const handleSessionExpired = () => {
+      logout({ silent: true }).catch((error) => console.warn('Session cleanup failed', error));
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
+  }, [logout]);
 
   const value = useMemo(
     () => ({
@@ -131,7 +153,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       updateProfile,
       clearAuthError: () => setAuthError(null),
     }),
-    [user, token, authLoading, authError]
+    [authError, authLoading, login, logout, register, token, updateProfile, user]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

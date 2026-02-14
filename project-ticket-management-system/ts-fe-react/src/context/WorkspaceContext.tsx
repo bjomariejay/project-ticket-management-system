@@ -14,6 +14,7 @@ import {
   DmMessage,
   NotificationItem,
   Project,
+  ProjectReportEntry,
   Ticket,
   TicketDetail,
   TicketPriority,
@@ -91,6 +92,13 @@ interface WorkspaceState {
   lastActivityViewTimestamp: string | null;
   showCreateProject: boolean;
   showCreateTicket: boolean;
+  projectReportEntries: ProjectReportEntry[];
+  viewingReportsForProjectId: string;
+  viewingReportsForProjectName: string;
+  projectReportsLoading: boolean;
+  isGlobalReportView: boolean;
+  hasUnseenGlobalReports: boolean;
+  latestGlobalReportTimestamp: string | null;
 }
 
 const defaultTicketModel: CreateTicketModel = {
@@ -160,6 +168,13 @@ const initialState: WorkspaceState = {
   lastActivityViewTimestamp: null,
   showCreateProject: false,
   showCreateTicket: false,
+  projectReportEntries: [],
+  viewingReportsForProjectId: '',
+  viewingReportsForProjectName: '',
+  projectReportsLoading: false,
+  isGlobalReportView: false,
+  hasUnseenGlobalReports: false,
+  latestGlobalReportTimestamp: null,
 };
 
 interface WorkspaceContextValue {
@@ -196,8 +211,8 @@ interface WorkspaceContextValue {
   closeCreateProject: () => void;
   openCreateTicket: () => void;
   closeCreateTicket: () => void;
-  openCreateTicket: () => void;
-  closeCreateTicket: () => void;
+  handleGlobalReportView: () => Promise<void>;
+  closeProjectReports: () => void;
   handleDmRecipientChange: (userId: string) => void;
   markNotification: (notificationId: string) => Promise<void>;
   navigateToNotification: (notification: NotificationItem) => Promise<void>;
@@ -205,6 +220,8 @@ interface WorkspaceContextValue {
 
 const ACTIVITY_VIEW_KEY = (userId: string) => `tsfe:activity:lastViewed:${userId}`;
 const DM_VIEW_KEY = (userId: string) => `tsfe:dms:lastViewed:${userId}`;
+const GLOBAL_REPORTS_KEY = (userId: string) => `tsfe:globalReports:lastSeen:${userId}`;
+const GLOBAL_REPORT_PROJECT_ID = 'global-reports';
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
@@ -357,6 +374,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const getLastSeenGlobalReportTimestamp = () => {
+    const userId = stateRef.current.selectedUserId;
+    if (!userId) return null;
+    try {
+      return localStorage.getItem(GLOBAL_REPORTS_KEY(userId));
+    } catch (error) {
+      console.warn('Unable to read report-of-work state', error);
+      return null;
+    }
+  };
+
+  const persistGlobalReportTimestamp = (timestamp: string | null) => {
+    const userId = stateRef.current.selectedUserId;
+    if (!userId) return;
+    const key = GLOBAL_REPORTS_KEY(userId);
+    try {
+      if (timestamp) {
+        localStorage.setItem(key, timestamp);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.warn('Unable to persist report-of-work state', error);
+    }
+  };
+
+  const markGlobalReportsSeen = (timestamp: string | null) => {
+    persistGlobalReportTimestamp(timestamp);
+    mergeState({ hasUnseenGlobalReports: false, latestGlobalReportTimestamp: timestamp });
+  };
+
   const updateActivityAttention = useCallback(() => {
     const userId = stateRef.current.selectedUserId;
     if (!userId) return;
@@ -391,16 +439,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     });
   }, [mergeState]);
 
-  const loadNotifications = useCallback(async () => {
-    if (!stateRef.current.selectedUserId) return;
+  const closeProjectReports = () => {
+    mergeState({
+      projectReportEntries: [],
+      viewingReportsForProjectId: '',
+      viewingReportsForProjectName: '',
+      projectReportsLoading: false,
+      isGlobalReportView: false,
+    });
+  };
+
+  const handleGlobalReportView = async () => {
+    mergeState({ projectReportsLoading: true });
     try {
-      const notifications = await apiClient.getNotifications();
-      mergeState({ notifications });
-      updateActivityAttention();
+      const entries = await apiClient.getAllReports();
+      const latest = entries[0]?.createdAt || null;
+      mergeState({
+        viewingReportsForProjectId: GLOBAL_REPORT_PROJECT_ID,
+        viewingReportsForProjectName: 'All projects',
+        projectReportEntries: entries,
+        projectReportsLoading: false,
+        isGlobalReportView: true,
+        selectedTicket: null,
+        lockedTicket: null,
+      });
+      markGlobalReportsSeen(latest);
     } catch (error) {
-      console.error('Unable to load notifications', error);
+      console.error('Unable to load report-of-work', error);
+      mergeState({ projectReportsLoading: false });
+      closeProjectReports();
     }
-  }, [mergeState, updateActivityAttention]);
+  };
 
   const loadDms = useCallback(async () => {
     if (!stateRef.current.selectedUserId) return;
@@ -427,12 +496,49 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [mergeState, updateDmAttention]);
 
+  const checkGlobalReports = useCallback(async () => {
+    if (!stateRef.current.selectedUserId) return;
+    try {
+      const entries = await apiClient.getAllReports();
+      const latest = entries[0]?.createdAt || null;
+      if (!latest) {
+        mergeState({ latestGlobalReportTimestamp: null, hasUnseenGlobalReports: false });
+        return;
+      }
+      const lastSeen = getLastSeenGlobalReportTimestamp();
+      const latestTime = new Date(latest).getTime();
+      const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : NaN;
+      const hasUnseen =
+        !lastSeen || !Number.isFinite(lastSeenTime) || (Number.isFinite(latestTime) && latestTime > lastSeenTime);
+      mergeState({ latestGlobalReportTimestamp: latest, hasUnseenGlobalReports: hasUnseen });
+    } catch (error) {
+      console.error('Unable to check report-of-work updates', error);
+    }
+  }, [mergeState]);
+
+  const loadNotifications = useCallback(async () => {
+    if (!stateRef.current.selectedUserId) return;
+    try {
+      const notifications = await apiClient.getNotifications();
+      mergeState({ notifications });
+      updateActivityAttention();
+      await checkGlobalReports();
+    } catch (error) {
+      console.error('Unable to load notifications', error);
+    }
+  }, [checkGlobalReports, mergeState, updateActivityAttention]);
+
   const selectProject = (projectId: string) => {
     mergeState({
       selectedProjectId: projectId,
       createTicketModel: { ...stateRef.current.createTicketModel, projectId },
       selectedTicket: null,
       lockedTicket: null,
+      viewingReportsForProjectId: '',
+      viewingReportsForProjectName: '',
+      projectReportEntries: [],
+      projectReportsLoading: false,
+      isGlobalReportView: false,
     });
     void loadTickets();
   };
@@ -442,7 +548,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const selectTicket = async (ticketId: string) => {
-    mergeState({ lockedTicket: null });
+    mergeState({
+      lockedTicket: null,
+      viewingReportsForProjectId: '',
+      viewingReportsForProjectName: '',
+      projectReportEntries: [],
+      projectReportsLoading: false,
+      isGlobalReportView: false,
+    });
     try {
       const ticket = await apiClient.getTicket(ticketId);
       mergeState({ selectedTicket: ticket, messageDraft: '', lockedTicket: null });
@@ -784,6 +897,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       closeCreateProject,
       openCreateTicket,
       closeCreateTicket,
+      handleGlobalReportView,
+      closeProjectReports,
       handleDmRecipientChange,
       markNotification,
       navigateToNotification,

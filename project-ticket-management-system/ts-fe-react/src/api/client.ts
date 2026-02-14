@@ -23,6 +23,7 @@ import {
 } from '../types/api';
 
 const defaultBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:4000/api';
+export const SESSION_EXPIRED_EVENT = 'app-session-expired';
 
 export class ApiClient {
   private client: AxiosInstance;
@@ -32,6 +33,18 @@ export class ApiClient {
       baseURL,
       withCredentials: true,
     });
+
+    this.client.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        if (error?.response?.status === 401) {
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+          }
+        }
+        return Promise.reject(error);
+      },
+    );
   }
 
   setAuthToken(token?: string | null) {

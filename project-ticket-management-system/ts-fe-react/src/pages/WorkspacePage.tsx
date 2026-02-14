@@ -45,6 +45,8 @@ const WorkspacePage = () => {
     closeCreateProject,
     openCreateTicket,
     closeCreateTicket,
+    handleGlobalReportView,
+    closeProjectReports,
   } = useWorkspace();
 
   const {
@@ -78,6 +80,12 @@ const WorkspacePage = () => {
     showUserSettings,
     showCreateProject,
     showCreateTicket,
+    projectReportEntries,
+    viewingReportsForProjectId,
+    viewingReportsForProjectName,
+    projectReportsLoading,
+    isGlobalReportView,
+    hasUnseenGlobalReports,
     userSettingsForm,
     userSettingsError,
     userSettingsSaving,
@@ -365,122 +373,174 @@ const WorkspacePage = () => {
                       )}
                     </div>
                   ))}
+                  <div className="project-item report-project">
+                    <button
+                      type="button"
+                      className={clsx('project-main', {
+                        active: isGlobalReportView,
+                        'has-updates': hasUnseenGlobalReports,
+                      })}
+                      onClick={() => void handleGlobalReportView()}
+                    >
+                      <div>
+                        <strong>Report of work</strong>
+                        <small>All projects</small>
+                      </div>
+                      <span className="project-number">View</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
           </article>
         </section>
         <section className="home-layout__right">
-          <article className="card ticket-panel">
-            <div className="ticket-panel__right">
-              {selectedTicket ? (
-                <article className="ticket-detail">
-                  <header>
-                    <h3>
-                      {selectedTicket.ticketNumber} · {selectedTicket.title}
-                    </h3>
-                    <span className={clsx('status', selectedTicket.status)}>
-                      {selectedTicket.status.replace('_', ' ')}
-                    </span>
-                  </header>
-                  <p>{selectedTicket.description || 'No description provided.'}</p>
-                  <section className="ticket-info">
-                    <div>
-                      <label>Assignee</label>
-                      <select
-                        value={selectedTicket.assigneeId || ''}
-                        onChange={(event) => handleAssigneeChange(event.target.value)}
-                      >
-                        <option value="">Unassigned</option>
-                        {users.map((teammate) => (
-                          <option key={teammate.id} value={teammate.id}>
-                            {teammate.displayName}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label>Privacy</label>
-                      <p>
-                        <span className={clsx('privacy-badge', selectedTicket.privacy)}>
-                          {selectedTicket.privacy}
-                        </span>
-                      </p>
-                    </div>
-                    <div>
-                      <label>Estimated hrs</label>
-                      <p>{selectedTicket.estimatedHours ?? '—'}</p>
-                    </div>
-                  </section>
-                  <section className="ticket-members">
-                    <label>Members</label>
-                    <ul>
-                      {selectedTicket.members.map((member) => (
-                        <li key={member.userId}>
-                          <span>{member.displayName}</span>
-                          <small>@{member.handle}</small>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                  <section className="ticket-thread">
-                    <h4>Messages</h4>
-                    <div className="message-list">
-                      {selectedTicket.messages.map((message) => (
-                        <article key={message.id} className="message-item">
-                          <header>
-                            <strong>{message.displayName || 'Unknown user'}</strong>
-                            <small>{new Date(message.createdAt).toLocaleString()}</small>
-                          </header>
-                          <p>{message.body}</p>
-                        </article>
-                      ))}
-                    </div>
-                    <form onSubmit={handleMessageSubmit} className="message-form">
-                      <textarea
-                        rows={3}
-                        value={messageDraft}
-                        placeholder="Write an update…"
-                        onChange={(event) => setMessageDraft(event.target.value)}
-                      />
-                      <button className="link-button" type="submit" disabled={isPostingMessage}>
-                        {isPostingMessage ? 'Posting…' : 'Post update'}
-                      </button>
-                    </form>
-                  </section>
-                  <footer className="ticket-actions">
-                    <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
-                      Join ticket
-                    </button>
-                    <button
-                      type="button"
-                      className="link-button outline"
-                      onClick={() => void handleArchiveTicket()}
-                    >
-                      Archive
-                    </button>
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => void handlePrivacyChange(selectedTicket.privacy === 'public' ? 'private' : 'public')}
-                    >
-                      Make {selectedTicket.privacy === 'public' ? 'private' : 'public'}
-                    </button>
-                  </footer>
-                </article>
-              ) : lockedTicket ? (
-                <article className="card empty-detail">
-                  <h3>{lockedTicket.ticketNumber}</h3>
-                  <p>This ticket is private or locked. Request access from its members.</p>
-                </article>
+          {viewingReportsForProjectId ? (
+            <section className="card project-reports">
+              <header>
+                <div>
+                  <h3>Report of work</h3>
+                  <p>{viewingReportsForProjectName || 'All projects'}</p>
+                </div>
+                <button type="button" className="link-button outline" onClick={closeProjectReports}>
+                  Close
+                </button>
+              </header>
+              {projectReportsLoading ? (
+                <p className="muted">Loading reports…</p>
+              ) : projectReportEntries.length === 0 ? (
+                <p className="muted">No ticket starts recorded yet.</p>
               ) : (
-                <article className="card empty-detail">
-                  <h3>Select a ticket</h3>
-                  <p className="muted">Choose a ticket from the left panel to see its details.</p>
-                </article>
+                <ul>
+                  {projectReportEntries.map((entry) => (
+                    <li key={entry.id}>
+                      <div>
+                        <strong>{entry.ticketNumber}</strong>
+                        <small>{new Date(entry.createdAt).toLocaleString()}</small>
+                      </div>
+                      <p>{entry.ticketTitle}</p>
+                      <p className="muted">{entry.message}</p>
+                      {entry.actorName && <small>Started by {entry.actorName}</small>}
+                    </li>
+                  ))}
+                </ul>
               )}
-            </div>
-          </article>
+            </section>
+          ) : (
+            <article className="card ticket-panel">
+              <div className="ticket-panel__left">
+               
+              </div>
+              <div className="ticket-panel__right">
+                {selectedTicket ? (
+                  <article className="ticket-detail">
+                    <header>
+                      <h3>
+                        {selectedTicket.ticketNumber} · {selectedTicket.title}
+                      </h3>
+                      <span className={clsx('status', selectedTicket.status)}>
+                        {selectedTicket.status.replace('_', ' ')}
+                      </span>
+                    </header>
+                    <p>{selectedTicket.description || 'No description provided.'}</p>
+                    <section className="ticket-info">
+                      <div>
+                        <label>Assignee</label>
+                        <select
+                          value={selectedTicket.assigneeId || ''}
+                          onChange={(event) => handleAssigneeChange(event.target.value)}
+                        >
+                          <option value="">Unassigned</option>
+                          {users.map((teammate) => (
+                            <option key={teammate.id} value={teammate.id}>
+                              {teammate.displayName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label>Privacy</label>
+                        <p>
+                          <span className={clsx('privacy-badge', selectedTicket.privacy)}>
+                            {selectedTicket.privacy}
+                          </span>
+                        </p>
+                      </div>
+                      <div>
+                        <label>Estimated hrs</label>
+                        <p>{selectedTicket.estimatedHours ?? '—'}</p>
+                      </div>
+                    </section>
+                    <section className="ticket-members">
+                      <label>Members</label>
+                      <ul>
+                        {selectedTicket.members.map((member) => (
+                          <li key={member.userId}>
+                            <span>{member.displayName}</span>
+                            <small>@{member.handle}</small>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                    <section className="ticket-thread">
+                      <h4>Messages</h4>
+                      <div className="message-list">
+                        {selectedTicket.messages.map((message) => (
+                          <article key={message.id} className="message-item">
+                            <header>
+                              <strong>{message.displayName || 'Unknown user'}</strong>
+                              <small>{new Date(message.createdAt).toLocaleString()}</small>
+                            </header>
+                            <p>{message.body}</p>
+                          </article>
+                        ))}
+                      </div>
+                      <form onSubmit={handleMessageSubmit} className="message-form">
+                        <textarea
+                          rows={3}
+                          value={messageDraft}
+                          placeholder="Write an update…"
+                          onChange={(event) => setMessageDraft(event.target.value)}
+                        />
+                        <button className="link-button" type="submit" disabled={isPostingMessage}>
+                          {isPostingMessage ? 'Posting…' : 'Post update'}
+                        </button>
+                      </form>
+                    </section>
+                    <footer className="ticket-actions">
+                      <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
+                        Join ticket
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button outline"
+                        onClick={() => void handleArchiveTicket()}
+                      >
+                        Archive
+                      </button>
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => void handlePrivacyChange(selectedTicket.privacy === 'public' ? 'private' : 'public')}
+                      >
+                        Make {selectedTicket.privacy === 'public' ? 'private' : 'public'}
+                      </button>
+                    </footer>
+                  </article>
+                ) : lockedTicket ? (
+                  <article className="card empty-detail">
+                    <h3>{lockedTicket.ticketNumber}</h3>
+                    <p>This ticket is private or locked. Request access from its members.</p>
+                  </article>
+                ) : (
+                  <article className="card empty-detail">
+                    <h3>Select a ticket</h3>
+                    <p className="muted">Choose a ticket from the left panel to see its details.</p>
+                  </article>
+                )}
+              </div>
+            </article>
+          )}
         </section>
       </div>
     </section>
