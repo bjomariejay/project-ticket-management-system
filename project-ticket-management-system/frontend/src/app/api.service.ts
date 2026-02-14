@@ -51,6 +51,7 @@ export interface TicketMember {
   userId: string;
   displayName: string;
   handle: string;
+  username: string;
   role: string;
   joinedAt: string;
 }

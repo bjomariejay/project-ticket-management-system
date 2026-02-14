@@ -708,7 +708,7 @@ app.get(
     const ticket = mapTicket(ticketRow, isMember);
     const [membersResult, logsResult, messagesResult] = await Promise.all([
       query(
-        `SELECT tm.user_id AS "userId", u.display_name AS "displayName", u.handle, tm.role, tm.joined_at AS "joinedAt"
+        `SELECT tm.user_id AS "userId", u.display_name AS "displayName", u.handle, u.username, tm.role, tm.joined_at AS "joinedAt"
          FROM ticket_members tm
          JOIN users u ON tm.user_id = u.id
          WHERE tm.ticket_id = $1
@@ -1191,7 +1191,10 @@ const resolveMentionRecipients = async (client, mentionHandles, authorId, worksp
       continue;
     }
     const { rows } = await client.query(
-      'SELECT id, display_name FROM users WHERE workspace_id = $1 AND LOWER(handle) = $2',
+      `SELECT id, display_name
+         FROM users
+        WHERE workspace_id = $1
+          AND (LOWER(handle) = $2 OR LOWER(username) = $2)`,
       [workspaceId, handle]
     );
     if (rows.length && rows[0].id !== authorId) {

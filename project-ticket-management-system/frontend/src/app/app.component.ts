@@ -15,6 +15,7 @@ import {
   TicketPrivacy,
   TicketPriority,
   TicketLog,
+  TicketMessage,
   User,
 } from './api.service';
 
@@ -1112,7 +1113,8 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.mentionReplaceRange) return;
     const before = this.messageDraft.slice(0, this.mentionReplaceRange.start);
     const after = this.messageDraft.slice(this.messageCursorIndex);
-    const insertion = `@${user.handle} `;
+    const mentionValue = (user.username || user.handle).trim();
+    const insertion = `@${mentionValue} `;
     const nextCursor = before.length + insertion.length;
     this.messageDraft = `${before}${insertion}${after}`;
     this.messageCursorIndex = nextCursor;
@@ -1246,7 +1248,7 @@ export class AppComponent implements OnInit, OnDestroy {
     return this.users
       .filter((user) => {
         if (!normalized) return true;
-        const haystack = `${user.displayName} ${user.handle}`.toLowerCase();
+        const haystack = `${user.displayName} ${user.handle} ${user.username ?? ''}`.toLowerCase();
         return haystack.includes(normalized);
       })
       .slice(0, 8);
@@ -1258,11 +1260,19 @@ export class AppComponent implements OnInit, OnDestroy {
     if (Array.isArray(message.mentions) && message.mentions.length) {
       for (const mention of message.mentions) {
         if (!mention) continue;
-        const mentionHandle = mention.toLowerCase();
-        const user = this.users.find((candidate) => candidate.handle.toLowerCase() === mentionHandle);
-        const fallbackMember = this.selectedTicket?.members.find(
-          (member) => member.handle.toLowerCase() === mentionHandle
-        );
+        const normalized = mention.toLowerCase();
+        const user = this.users.find((candidate) => {
+          const usernameMatch = candidate.username
+            ? candidate.username.toLowerCase() === normalized
+            : false;
+          return candidate.handle.toLowerCase() === normalized || usernameMatch;
+        });
+        const fallbackMember = this.selectedTicket?.members.find((member) => {
+          const usernameMatch = member.username
+            ? member.username.toLowerCase() === normalized
+            : false;
+          return member.handle.toLowerCase() === normalized || usernameMatch;
+        });
         const displayName = user?.displayName || fallbackMember?.displayName;
         if (!displayName) continue;
         const escapedHandle = this.escapeRegExp(mention);
@@ -1287,7 +1297,7 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   private escapeRegExp(value: string) {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   }
 
   handleStartTicketClick() {

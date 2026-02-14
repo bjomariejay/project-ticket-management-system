@@ -357,8 +357,8 @@
                         (mousedown)="$event.preventDefault()"
                         (click)="handleSelectMention(user)"
                       >
-                        <strong>{{ user.displayName }}</strong>
-                        <small>&#64;{{ user.handle }}</small>
+                        <strong>&#64;{{ user.username }}</strong>
+                        <small>{{ user.displayName }} · handle: {{ user.handle }}</small>
                       </button>
                     </div>
                     <div
