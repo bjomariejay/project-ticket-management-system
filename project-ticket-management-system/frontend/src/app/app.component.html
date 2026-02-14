@@ -11,7 +11,12 @@
         <small>&#64;{{ sessionUser.handle }}</small>
       </div>
       <nav class="primary-nav">
-        <button type="button" (click)="setActiveTab('dashboard')" [class.active]="activeTab === 'dashboard'">
+        <button
+          type="button"
+          *ngIf="sessionUser?.handle === 'admin'"
+          (click)="setActiveTab('dashboard')"
+          [class.active]="activeTab === 'dashboard'"
+        >
           Dashboard
         </button>
         <button type="button" (click)="setActiveTab('home')" [class.active]="activeTab === 'home'">
@@ -72,7 +77,7 @@
 
       <section *ngIf="feedback" class="inline-feedback">{{ feedback }}</section>
 
-      <section class="main__view" *ngIf="activeTab === 'dashboard'">
+      <section class="main__view" *ngIf="activeTab === 'dashboard' && sessionUser?.handle === 'admin'">
         <section class="card dashboard-controls">
           <div>
             <label>Range</label>
@@ -606,10 +611,7 @@
             Username
             <input type="text" name="username" [(ngModel)]="registerForm.username" required />
           </label>
-          <label>
-            Position or role 
-            <input type="text" name="handle" [(ngModel)]="registerForm.handle" required />
-          </label>
+          <input type="hidden" name="handle" [(ngModel)]="registerForm.handle" />
           <label>
             Workspace name
             <input

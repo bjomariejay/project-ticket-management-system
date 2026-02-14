@@ -104,7 +104,7 @@ export class AppComponent implements OnInit, OnDestroy {
   registerForm = {
     displayName: '',
     username: '',
-    handle: '',
+    handle: 'user',
     email: '',
     password: '',
     location: '',
@@ -543,7 +543,6 @@ export class AppComponent implements OnInit, OnDestroy {
     if (
       !this.registerForm.displayName ||
       !this.registerForm.username ||
-      !this.registerForm.handle ||
       !this.registerForm.email ||
       !this.registerForm.password ||
       !workspaceName
