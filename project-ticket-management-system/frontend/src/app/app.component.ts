@@ -77,6 +77,7 @@ export class AppComponent implements OnInit, OnDestroy {
     recipientId: '',
     body: '',
   };
+  selectedDmRecipientId = '';
 
   isLoadingTickets = false;
   isPostingMessage = false;
@@ -295,6 +296,23 @@ export class AppComponent implements OnInit, OnDestroy {
     this.persistActivityViewTimestamp(value);
   }
 
+  private ensureDmRecipientSelection() {
+    if (this.selectedDmRecipientId || !this.dms.length) return;
+    const nextConversation = this.dms.find((dm) => this.resolveDmPartnerId(dm));
+    const partnerId = nextConversation ? this.resolveDmPartnerId(nextConversation) : null;
+    if (partnerId) {
+      this.selectedDmRecipientId = partnerId;
+      this.dmForm.recipientId = partnerId;
+    }
+  }
+
+  private resolveDmPartnerId(dm: DmMessage): string | null {
+    if (!this.selectedUserId) return null;
+    if (dm.senderId === this.selectedUserId) return dm.recipientId;
+    if (dm.recipientId === this.selectedUserId) return dm.senderId;
+    return null;
+  }
+
   private isTokenExpired(token: string): boolean {
     const segments = token.split('.');
     if (segments.length !== 3) {
@@ -348,6 +366,7 @@ export class AppComponent implements OnInit, OnDestroy {
       recipientId: '',
       body: '',
     };
+    this.selectedDmRecipientId = '';
     this.feedback = '';
     this.ticketSettings = {
       priority: 'normal',
@@ -780,6 +799,11 @@ export class AppComponent implements OnInit, OnDestroy {
   async loadDms() {
     if (!this.selectedUserId) return;
     this.dms = await firstValueFrom(this.api.getDms(this.selectedUserId));
+    if (this.selectedDmRecipientId) {
+      this.dmForm.recipientId = this.selectedDmRecipientId;
+    } else {
+      this.ensureDmRecipientSelection();
+    }
   }
 
   async selectTicket(ticketId: string) {
@@ -1148,8 +1172,25 @@ export class AppComponent implements OnInit, OnDestroy {
       })
     );
     this.dmForm.body = '';
+    this.selectedDmRecipientId = this.dmForm.recipientId;
     await this.loadDms();
     await this.loadNotifications();
+  }
+
+  handleDmRecipientChange(userId: string) {
+    this.selectedDmRecipientId = userId;
+    this.dmForm.recipientId = userId;
+  }
+
+  get selectedDmThread(): DmMessage[] {
+    if (!this.selectedUserId || !this.selectedDmRecipientId) return [];
+    return this.dms
+      .filter(
+        (dm) =>
+          (dm.senderId === this.selectedUserId && dm.recipientId === this.selectedDmRecipientId) ||
+          (dm.senderId === this.selectedDmRecipientId && dm.recipientId === this.selectedUserId)
+      )
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
   }
 
   async handleMarkNotification(notification: NotificationItem) {

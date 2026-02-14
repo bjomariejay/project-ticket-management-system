@@ -406,18 +406,25 @@
             <span class="muted">{{ dms.length }} conversations</span>
           </header>
           <label>
-            Send to
-            <select [(ngModel)]="dmForm.recipientId">
+            Conversation with
+            <select [(ngModel)]="selectedDmRecipientId" (ngModelChange)="handleDmRecipientChange($event)">
               <option value="">Select teammate</option>
               <option *ngFor="let user of users" [value]="user.id" [disabled]="user.id === selectedUserId">
                 {{ user.displayName }}
               </option>
             </select>
           </label>
-          <textarea rows="3" placeholder="Say hi or hand off a ticket" [(ngModel)]="dmForm.body"></textarea>
-          <button type="button" (click)="handleSendDm()">Send DM</button>
-          <div class="dm-thread">
-            <article *ngFor="let dm of dms">
+          <textarea
+            rows="3"
+            placeholder="Say hi or hand off a ticket"
+            [(ngModel)]="dmForm.body"
+            [disabled]="!selectedDmRecipientId"
+          ></textarea>
+          <button type="button" (click)="handleSendDm()" [disabled]="!selectedDmRecipientId || !dmForm.body.trim()">
+            Send DM
+          </button>
+          <div class="dm-thread" *ngIf="selectedDmRecipientId && selectedDmThread.length; else dmEmptyState">
+            <article *ngFor="let dm of selectedDmThread">
               <header>
                 <strong>{{ dm.senderName }}</strong>
                 <small>{{ dm.createdAt | date: 'short' }}</small>
@@ -426,6 +433,9 @@
               <span class="muted">→ {{ dm.recipientName }}</span>
             </article>
           </div>
+          <ng-template #dmEmptyState>
+            <p class="muted">{{ selectedDmRecipientId ? 'No messages yet. Say hello!' : 'Select a teammate to start chatting.' }}</p>
+          </ng-template>
         </section>
       </section>
 
