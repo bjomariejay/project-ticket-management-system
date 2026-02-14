@@ -135,6 +135,10 @@ export class ApiService {
     return this.http.get<User[]>(`${this.baseUrl}/users`);
   }
 
+  updateUser(userId: string, payload: { displayName?: string; handle?: string; location?: string | null }): Observable<User> {
+    return this.http.patch<User>(`${this.baseUrl}/users/${userId}`, payload);
+  }
+
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(`${this.baseUrl}/projects`);
   }

@@ -22,6 +22,10 @@
   gap: 1.5rem;
 }
 
+.sidebar__footer {
+  margin-top: auto;
+}
+
 .sidebar__brand {
   display: flex;
   flex-direction: column;
@@ -46,6 +50,31 @@
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+}
+
+.user-settings-btn {
+  margin-top: 0.4rem;
+  align-self: flex-start;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #f6f3ff;
+  border-radius: 999px;
+  padding: 0.3rem 0.6rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s ease;
+}
+
+.user-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.user-settings-btn svg {
+  width: 1rem;
+  height: 1rem;
+  fill: currentColor;
 }
 
 .sidebar__section label {
@@ -1046,6 +1075,12 @@
 .muted {
   color: #777b92;
   font-size: 0.85rem;
+}
+
+.error {
+  color: #d53a9d;
+  font-weight: 600;
+  margin: 0.5rem 0 0;
 }
 
 .section-heading {

@@ -280,6 +280,53 @@ app.get(
   })
 );
 
+app.patch(
+  '/api/users/:userId',
+  asyncHandler(async (req, res) => {
+    const { userId } = req.params;
+    if (!req.user || req.user.userId !== userId) {
+      return res.status(403).json({ message: 'You can only update your own profile.' });
+    }
+    const { displayName, handle, location } = req.body || {};
+    const updates = [];
+    const params = [];
+
+    if (typeof displayName === 'string' && displayName.trim()) {
+      params.push(displayName.trim());
+      updates.push(`display_name = $${params.length}`);
+    }
+    if (typeof handle === 'string' && handle.trim()) {
+      params.push(handle.trim().toLowerCase());
+      updates.push(`handle = $${params.length}`);
+    }
+    if (typeof location === 'string') {
+      params.push(location.trim() || null);
+      updates.push(`location = $${params.length}`);
+    }
+
+    if (!updates.length) {
+      return res.status(400).json({ message: 'Provide at least one field to update.' });
+    }
+
+    params.push(userId);
+    const queryText = `UPDATE users SET ${updates.join(', ')}
+      WHERE id = $${params.length} RETURNING id, display_name AS "displayName", handle, location`;
+    try {
+      const { rows } = await query(queryText, params);
+      if (!rows.length) {
+        return res.status(404).json({ message: 'User not found.' });
+      }
+      res.json(rows[0]);
+    } catch (error) {
+      if (error.code === '23505') {
+        return res.status(409).json({ message: 'Handle already in use.' });
+      }
+      console.error('User update failed', error);
+      res.status(500).json({ message: 'Unable to update profile.' });
+    }
+  })
+);
+
 const listProjects = asyncHandler(async (req, res) => {
   const { rows } = await query(
     'SELECT p.*, ps.last_value FROM projects p LEFT JOIN project_sequences ps ON p.id = ps.project_id ORDER BY p.name'

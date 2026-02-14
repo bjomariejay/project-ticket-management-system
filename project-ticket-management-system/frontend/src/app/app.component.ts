@@ -78,6 +78,14 @@ export class AppComponent implements OnInit, OnDestroy {
     body: '',
   };
   selectedDmRecipientId = '';
+  isUserSettingsOpen = false;
+  userSettingsSaving = false;
+  userSettingsError = '';
+  userSettingsForm = {
+    displayName: '',
+    handle: '',
+    location: '',
+  };
   hasDmAttention = false;
 
   isLoadingTickets = false;
@@ -215,6 +223,14 @@ export class AppComponent implements OnInit, OnDestroy {
       localStorage.setItem('authUser', JSON.stringify(user));
     } catch (error) {
       console.error('Unable to persist auth session', error);
+    }
+  }
+
+  private persistUserProfile(user: User) {
+    try {
+      localStorage.setItem('authUser', JSON.stringify(user));
+    } catch (error) {
+      console.error('Unable to persist user profile', error);
     }
   }
 
@@ -424,6 +440,9 @@ export class AppComponent implements OnInit, OnDestroy {
     this.hasActivityAttention = false;
     this.lastActivityViewTimestamp = null;
     this.isLogoutConfirmOpen = false;
+    this.isUserSettingsOpen = false;
+    this.userSettingsSaving = false;
+    this.userSettingsError = '';
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
     }
@@ -463,6 +482,24 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isAuthenticated = false;
     this.resetWorkspaceState(true);
     this.lockedTicket = null;
+  }
+
+  openUserSettings() {
+    if (!this.sessionUser) return;
+    this.userSettingsForm = {
+      displayName: this.sessionUser.displayName,
+      handle: this.sessionUser.handle,
+      location: this.sessionUser.location || '',
+    };
+    this.userSettingsSaving = false;
+    this.userSettingsError = '';
+    this.isUserSettingsOpen = true;
+  }
+
+  closeUserSettings() {
+    this.isUserSettingsOpen = false;
+    this.userSettingsSaving = false;
+    this.userSettingsError = '';
   }
 
   openLogoutConfirm() {
@@ -1281,6 +1318,44 @@ export class AppComponent implements OnInit, OnDestroy {
   handleDmRecipientChange(userId: string) {
     this.selectedDmRecipientId = userId;
     this.dmForm.recipientId = userId;
+  }
+
+  async handleSaveUserSettings() {
+    if (!this.sessionUser) return;
+    const trimmedName = this.userSettingsForm.displayName.trim();
+    const trimmedHandle = this.userSettingsForm.handle.trim();
+    const trimmedLocation = this.userSettingsForm.location.trim();
+    const updates: { displayName?: string; handle?: string; location?: string | null } = {};
+    if (trimmedName && trimmedName !== this.sessionUser.displayName) {
+      updates.displayName = trimmedName;
+    }
+    if (trimmedHandle && trimmedHandle !== this.sessionUser.handle) {
+      updates.handle = trimmedHandle;
+    }
+    if (trimmedLocation !== (this.sessionUser.location || '')) {
+      updates.location = trimmedLocation || null;
+    }
+    if (!Object.keys(updates).length) {
+      this.userSettingsError = 'No changes to save.';
+      return;
+    }
+    this.userSettingsSaving = true;
+    this.userSettingsError = '';
+    try {
+      const updatedUser = await firstValueFrom(this.api.updateUser(this.sessionUser.id, updates));
+      this.sessionUser = { ...this.sessionUser, ...updatedUser };
+      this.selectedUserId = updatedUser.id;
+      this.persistUserProfile(updatedUser);
+      this.users = this.users.map((user) => (user.id === updatedUser.id ? updatedUser : user));
+      await this.loadUsers();
+      this.feedback = 'Profile updated.';
+      this.closeUserSettings();
+    } catch (error: any) {
+      console.error(error);
+      this.userSettingsError = error?.error?.message || 'Unable to update profile.';
+    } finally {
+      this.userSettingsSaving = false;
+    }
   }
 
   get selectedDmThread(): DmMessage[] {
