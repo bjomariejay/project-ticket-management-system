@@ -33,6 +33,7 @@ const WorkspacePage = () => {
     handleJoinTicket,
     handleArchiveTicket,
     handlePrivacyChange,
+    restoreArchivedTicket,
     handleDashboardRangeChange,
     handleDashboardDateChange,
     handleDmRecipientChange,
@@ -586,24 +587,32 @@ const WorkspacePage = () => {
                       </ul>
                     </section>
                     {isTicketMember ? (
-                      <section className="ticket-thread">
-                        <h4>Messages</h4>
-                        <div className="message-list">
-                          {selectedTicket.messages.map((message) => (
-                            <article key={message.id} className="message-item">
-                              <header>
-                                <strong>{message.displayName || 'Unknown user'}</strong>
-                                <small>{new Date(message.createdAt).toLocaleString()}</small>
-                              </header>
-                              <p>{message.body}</p>
-                            </article>
-                          ))}
-                        </div>
-                        <form onSubmit={handleMessageSubmit} className="message-form">
-                          <div className="message-input">
-                            <textarea
-                              rows={3}
-                              value={messageDraft}
+                      selectedTicket.status === 'archived' ? (
+                        <section className="card join-card">
+                          <p className="muted">This ticket is archived. Unarchive to continue collaborating.</p>
+                          <button type="button" onClick={() => void restoreArchivedTicket()}>
+                            Unarchive ticket
+                          </button>
+                        </section>
+                      ) : (
+                        <section className="ticket-thread">
+                          <h4>Messages</h4>
+                          <div className="message-list">
+                            {selectedTicket.messages.map((message) => (
+                              <article key={message.id} className="message-item">
+                                <header>
+                                  <strong>{message.displayName || 'Unknown user'}</strong>
+                                  <small>{new Date(message.createdAt).toLocaleString()}</small>
+                                </header>
+                                <p>{message.body}</p>
+                              </article>
+                            ))}
+                          </div>
+                          <form onSubmit={handleMessageSubmit} className="message-form">
+                            <div className="message-input">
+                              <textarea
+                                rows={3}
+                                value={messageDraft}
                               placeholder="Write an update…"
                               onChange={(event) => setMessageDraft(event.target.value)}
                               onInput={(event) => {
@@ -689,7 +698,8 @@ const WorkspacePage = () => {
                             {isPostingMessage ? 'Posting…' : 'Post update'}
                           </button>
                         </form>
-                      </section>
+                        </section>
+                      )
                     ) : (
                       <section className="card join-card">
                         <p>You’re not part of this ticket yet. Join to read and post updates.</p>
@@ -697,11 +707,39 @@ const WorkspacePage = () => {
                       </section>
                     )}
                     <footer className="ticket-actions">
-                      {!isTicketMember && (
+                      {selectedTicket.status === 'archived' ? (
+                        <button type="button" className="link-button" onClick={() => void restoreArchivedTicket()}>
+                          Unarchive ticket
+                        </button>
+                      ) : (
+                        isTicketMember && (
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => void startTicket()}
+                            disabled={isPostingMessage}
+                          >
+                            {isPostingMessage ? 'Starting…' : 'Start ticket'}
+                          </button>
+                        )
+                      )}
+                      {!isTicketMember && selectedTicket.status !== 'archived' && (
                         <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
                           Join ticket
                         </button>
                       )}
+                      {selectedTicket.status !== 'archived' && (
+                        <button type="button" className="link-button outline" onClick={() => void handleArchiveTicket()}>
+                          Archive
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => void handlePrivacyChange(selectedTicket.privacy === 'public' ? 'private' : 'public')}
+                      >
+                        Make {selectedTicket.privacy === 'public' ? 'private' : 'public'}
+                      </button>
                     </footer>
                   </article>
                 ) : lockedTicket ? (

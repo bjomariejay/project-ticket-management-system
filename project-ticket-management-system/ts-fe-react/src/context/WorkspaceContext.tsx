@@ -202,6 +202,7 @@ interface WorkspaceContextValue {
   handleJoinTicket: (targetUserId?: string) => Promise<void>;
   handleArchiveTicket: () => Promise<void>;
   handlePrivacyChange: (privacy: TicketPrivacy) => Promise<void>;
+  restoreArchivedTicket: () => Promise<void>;
   handleDashboardRangeChange: (range: DashboardRange) => Promise<void>;
   handleDashboardDateChange: (type: 'start' | 'end', value: string | null) => Promise<void>;
   openUserSettings: () => void;
@@ -724,6 +725,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     await loadTickets();
   };
 
+  const restoreArchivedTicket = async () => {
+    if (!stateRef.current.selectedTicket || stateRef.current.selectedTicket.status !== 'archived') return;
+    if (!stateRef.current.selectedUserId) return;
+    await apiClient.updateTicketSettings(stateRef.current.selectedTicket.id, {
+      actorId: stateRef.current.selectedUserId,
+      status: 'in_progress',
+    });
+    mergeState({ feedback: 'Ticket restarted and moved to In progress.' });
+    await refreshTicketDetail(stateRef.current.selectedTicket.id);
+    await loadTickets();
+  };
+
   const handlePrivacyChange = async (privacy: TicketPrivacy) => {
     if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
     if (stateRef.current.selectedTicket.privacy === privacy) return;
@@ -916,6 +929,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       handleJoinTicket,
       handleArchiveTicket,
       handlePrivacyChange,
+      restoreArchivedTicket,
       handleDashboardRangeChange,
       handleDashboardDateChange,
       openUserSettings,
