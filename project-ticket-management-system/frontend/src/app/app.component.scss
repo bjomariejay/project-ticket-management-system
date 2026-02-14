@@ -26,6 +26,55 @@
   margin-top: auto;
 }
 
+.sidebar__team {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.sidebar__team h4 {
+  margin: 0 0 0.35rem;
+  font-size: 0.85rem;
+  color: #d0ccf5;
+}
+
+.sidebar__team ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.sidebar__team li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+}
+
+.sidebar__team li strong {
+  display: block;
+}
+
+.sidebar__team li small {
+  font-size: 0.7rem;
+  color: #aaa8d6;
+}
+
+.sidebar__team .badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar__team .badge.active {
+  background: #4caf50;
+  color: #fff;
+}
+
 .sidebar__brand {
   display: flex;
   flex-direction: column;

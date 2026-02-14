@@ -147,6 +147,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private slashReplaceRange: { start: number; end: number } | null = null;
   private messageCursorIndex = 0;
   private suggestionHideTimeout: number | null = null;
+  private heartbeatIntervalId: number | null = null;
   projectReportEntries: ProjectReportEntry[] = [];
   viewingReportsForProjectId = '';
   viewingReportsForProjectName = '';
@@ -163,6 +164,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private lastDmViewTimestamp: string | null = null;
 
   private readonly handleSessionExpired = () => {
+    void this.markSelfInactive();
     this.handleLogout();
     this.loginError = 'Your session expired. Please log in again.';
     this.authMode = 'login';
@@ -197,10 +199,12 @@ export class AppComponent implements OnInit, OnDestroy {
     if (typeof window !== 'undefined') {
       window.removeEventListener(SESSION_EXPIRED_EVENT, this.handleSessionExpired);
     }
+    this.stopHeartbeat();
   }
 
   private async bootstrapWorkspace() {
     if (!this.isAuthenticated) return;
+    this.startHeartbeat();
     await Promise.all([this.loadUsers(), this.loadProjects()]);
     if (!this.selectedUserId && this.sessionUser) {
       this.selectedUserId = this.sessionUser.id;
@@ -505,12 +509,14 @@ export class AppComponent implements OnInit, OnDestroy {
 
   handleLogout() {
     this.isLogoutConfirmOpen = false;
+    void this.markSelfInactive();
     this.clearSessionStorage();
     this.sessionUser = null;
     this.isAuthenticated = false;
     this.resetWorkspaceState(true);
     this.lockedTicket = null;
     this.updateWorkspaceLabel();
+    this.stopHeartbeat();
   }
 
   openUserSettings() {
@@ -672,6 +678,42 @@ export class AppComponent implements OnInit, OnDestroy {
       this.workspaceSuggestions = [];
     } finally {
       this.isWorkspaceLookupLoading = false;
+    }
+  }
+
+  private startHeartbeat() {
+    if (!this.sessionUser) return;
+    this.sendHeartbeat().catch((error) => console.error(error));
+    if (this.heartbeatIntervalId) {
+      window.clearInterval(this.heartbeatIntervalId);
+    }
+    this.heartbeatIntervalId = window.setInterval(() => {
+      this.sendHeartbeat().catch((error) => console.error(error));
+    }, 60000);
+  }
+
+  private stopHeartbeat() {
+    if (this.heartbeatIntervalId) {
+      window.clearInterval(this.heartbeatIntervalId);
+      this.heartbeatIntervalId = null;
+    }
+  }
+
+  private async sendHeartbeat() {
+    try {
+      await firstValueFrom(this.api.sendHeartbeat());
+      await this.loadUsers();
+    } catch (error) {
+      console.error('Failed to send heartbeat', error);
+    }
+  }
+
+  private async markSelfInactive() {
+    try {
+      await firstValueFrom(this.api.markInactive());
+      await this.loadUsers();
+    } catch (error) {
+      console.error('Failed to mark inactive', error);
     }
   }
 

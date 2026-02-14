@@ -11,6 +11,7 @@ export interface User {
   location?: string | null;
   workspaceId?: string;
   workspaceName?: string;
+  isActive?: boolean;
 }
 
 export interface Project {
@@ -261,5 +262,13 @@ export class ApiService {
     let params = new HttpParams();
     if (search) params = params.set('search', search);
     return this.http.get<WorkspaceSummary[]>(`${this.baseUrl}/workspaces`, { params });
+  }
+
+  sendHeartbeat() {
+    return this.http.post(`${this.baseUrl}/users/me/heartbeat`, {});
+  }
+
+  markInactive() {
+    return this.http.post(`${this.baseUrl}/users/me/inactive`, {});
   }
 }

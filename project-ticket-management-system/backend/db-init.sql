@@ -18,6 +18,8 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+
 CREATE UNIQUE INDEX IF NOT EXISTS users_workspace_handle_unique
   ON users (workspace_id, LOWER(handle))
   WHERE LOWER(handle) <> 'admin';

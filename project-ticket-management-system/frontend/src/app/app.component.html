@@ -48,6 +48,20 @@
           </svg>
         </button>
       </div>
+      <section class="sidebar__team" *ngIf="users.length">
+        <h4>Team</h4>
+        <ul>
+          <li *ngFor="let teammate of users">
+            <span>
+              <strong>{{ teammate.displayName }}</strong>
+              <small>&#64;{{ teammate.handle }}</small>
+            </span>
+            <span class="badge" [class.active]="teammate.isActive">
+              {{ teammate.isActive ? 'Active' : 'Away' }}
+            </span>
+          </li>
+        </ul>
+      </section>
     </aside>
 
     <main class="workspace__main">
