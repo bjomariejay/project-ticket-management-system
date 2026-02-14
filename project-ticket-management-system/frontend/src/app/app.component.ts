@@ -144,7 +144,7 @@ export class AppComponent implements OnInit, OnDestroy {
   isDeleteProjectOpen = false;
   projectPendingDeletion: Project | null = null;
   isLogoutConfirmOpen = false;
-  readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
+  readonly baseSlashCommands = ['/start', '/archive', '/addTime'];
   private latestGlobalReportTimestamp: string | null = null;
   private lastActivityViewTimestamp: string | null = null;
   private lastDmViewTimestamp: string | null = null;
@@ -1180,10 +1180,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.resetSlashSuggestions();
       return;
     }
-    const normalized = query.toLowerCase();
-    const suggestions = this.slashCommands.filter((command) =>
-      command.slice(1).toLowerCase().startsWith(normalized)
-    );
+    const suggestions = this.buildSlashSuggestions();
     this.slashReplaceRange = { start: slashStart, end: caretIndex };
     this.slashSuggestions = suggestions;
     this.showSlashSuggestions = suggestions.length > 0;
@@ -1204,25 +1201,7 @@ export class AppComponent implements OnInit, OnDestroy {
       return true;
     }
 
-    const assignMatch = trimmed.match(/^(?:a\s+)?@([\w.-]+)$/i);
-    if (assignMatch) {
-      const handle = assignMatch[1].toLowerCase();
-      const targetUser = this.users.find((user) => user.handle?.toLowerCase() === handle);
-      if (!targetUser) {
-        this.feedback = `No teammate found for @${handle}.`;
-        return true;
-      }
-      try {
-        await this.handleAssignTo(targetUser.id);
-        this.feedback = `Ticket assigned to ${targetUser.displayName}.`;
-      } catch (error) {
-        console.error(error);
-        this.feedback = 'Unable to assign ticket via command.';
-      }
-      return true;
-    }
-
-    const estimateMatch = trimmed.match(/^e\s+([0-9]+(?:\.[0-9]+)?)$/i);
+    const estimateMatch = trimmed.match(/^\/e[-\s]?([0-9]+(?:\.[0-9]+)?)$/i);
     if (estimateMatch) {
       const hours = Number(estimateMatch[1]);
       if (Number.isNaN(hours)) {
@@ -1240,6 +1219,28 @@ export class AppComponent implements OnInit, OnDestroy {
       return true;
     }
 
+    const assignCommandMatch = trimmed.match(/^\/a-@?([\w.-]+)$/i);
+    if (assignCommandMatch) {
+      const identifier = assignCommandMatch[1].toLowerCase();
+      const targetUser = this.users.find((user) => {
+        const username = user.username?.toLowerCase();
+        const handle = user.handle?.toLowerCase();
+        return username === identifier || handle === identifier;
+      });
+      if (!targetUser) {
+        this.feedback = `No teammate found for @${identifier}.`;
+        return true;
+      }
+      try {
+        await this.handleAssignTo(targetUser.id);
+        this.feedback = `Ticket assigned to ${targetUser.displayName}.`;
+      } catch (error) {
+        console.error(error);
+        this.feedback = 'Unable to assign ticket via command.';
+      }
+      return true;
+    }
+
     return false;
   }
 
@@ -1252,6 +1253,10 @@ export class AppComponent implements OnInit, OnDestroy {
         return haystack.includes(normalized);
       })
       .slice(0, 8);
+  }
+
+  private buildSlashSuggestions(): string[] {
+    return ['/start', '/archive', '/a-@username', '/e-hours'];
   }
 
   formatMessageBody(message: TicketMessage): string {
