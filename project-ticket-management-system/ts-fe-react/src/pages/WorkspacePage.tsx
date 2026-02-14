@@ -697,11 +697,11 @@ const WorkspacePage = () => {
                       </section>
                     )}
                     <footer className="ticket-actions">
-                     
-                      <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
-                        Join ticket
-                      </button>
-                      
+                      {!isTicketMember && (
+                        <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
+                          Join ticket
+                        </button>
+                      )}
                     </footer>
                   </article>
                 ) : lockedTicket ? (
