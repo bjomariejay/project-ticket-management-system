@@ -17,6 +17,7 @@ import {
   TicketLog,
   TicketMessage,
   User,
+  WorkspaceSummary,
 } from './api.service';
 
 @Component({
@@ -109,6 +110,9 @@ export class AppComponent implements OnInit, OnDestroy {
     location: '',
     workspaceName: '',
   };
+  workspaceSuggestions: WorkspaceSummary[] = [];
+  isWorkspaceLookupLoading = false;
+  private workspaceLookupTimeout: number | null = null;
   authMode: 'login' | 'register' = 'login';
   sessionUser: User | null = null;
 
@@ -529,6 +533,9 @@ export class AppComponent implements OnInit, OnDestroy {
   switchAuthMode(mode: 'login' | 'register') {
     this.authMode = mode;
     this.loginError = '';
+    if (mode === 'login') {
+      this.workspaceSuggestions = [];
+    }
   }
 
   async handleRegister() {
@@ -572,6 +579,38 @@ export class AppComponent implements OnInit, OnDestroy {
       this.authLoading = false;
       this.registerForm.password = '';
       this.registerForm.username = '';
+    }
+  }
+
+  handleWorkspaceInput(value: string) {
+    this.registerForm.workspaceName = value;
+    if (this.workspaceLookupTimeout) {
+      window.clearTimeout(this.workspaceLookupTimeout);
+      this.workspaceLookupTimeout = null;
+    }
+    if (!value.trim()) {
+      this.workspaceSuggestions = [];
+      return;
+    }
+    this.workspaceLookupTimeout = window.setTimeout(() => {
+      void this.fetchWorkspaceSuggestions(value.trim());
+    }, 200);
+  }
+
+  selectWorkspaceSuggestion(workspace: WorkspaceSummary) {
+    this.registerForm.workspaceName = workspace.name;
+    this.workspaceSuggestions = [];
+  }
+
+  private async fetchWorkspaceSuggestions(query: string) {
+    try {
+      this.isWorkspaceLookupLoading = true;
+      this.workspaceSuggestions = await firstValueFrom(this.api.getWorkspaces(query));
+    } catch (error) {
+      console.error('Unable to fetch workspaces', error);
+      this.workspaceSuggestions = [];
+    } finally {
+      this.isWorkspaceLookupLoading = false;
     }
   }
 

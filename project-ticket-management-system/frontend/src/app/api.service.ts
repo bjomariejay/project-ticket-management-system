@@ -116,6 +116,11 @@ export interface DashboardEntry {
   actualTotal: number;
 }
 
+export interface WorkspaceSummary {
+  id: string;
+  name: string;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
   private readonly http = inject(HttpClient);
@@ -250,5 +255,11 @@ export class ApiService {
     return this.http.get<DashboardEntry[]>(`${this.baseUrl}/dashboard/overview`, {
       params,
     });
+  }
+
+  getWorkspaces(search?: string) {
+    let params = new HttpParams();
+    if (search) params = params.set('search', search);
+    return this.http.get<WorkspaceSummary[]>(`${this.baseUrl}/workspaces`, { params });
   }
 }

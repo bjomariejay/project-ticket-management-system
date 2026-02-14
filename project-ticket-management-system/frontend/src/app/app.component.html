@@ -52,7 +52,7 @@
           <p>{{ headerSubtitle }}</p>
         </div>
         <div class="header__actions" *ngIf="activeTab === 'home'">
-          <input type="search" placeholder="Search tickets Or Title" [(ngModel)]="ticketSearch" />
+          <input type="search" placeholder="Search Tickets or Titles" [(ngModel)]="ticketSearch" />
           <div class="search-results" *ngIf="ticketSearchResults.length">
             <p class="muted">{{ ticketSearchResults.length }} result{{ ticketSearchResults.length === 1 ? '' : 's' }}</p>
             <ul>
@@ -607,7 +607,7 @@
             <input type="text" name="username" [(ngModel)]="registerForm.username" required />
           </label>
           <label>
-            Handle
+            Position or role 
             <input type="text" name="handle" [(ngModel)]="registerForm.handle" required />
           </label>
           <label>
@@ -616,10 +616,31 @@
               type="text"
               name="workspaceName"
               [(ngModel)]="registerForm.workspaceName"
+              (ngModelChange)="handleWorkspaceInput($event)"
               placeholder="ajoya-room"
               required
             />
             <small class="muted">Workspace data stays private per name.</small>
+            <div
+              class="workspace-suggestions"
+              *ngIf="registerForm.workspaceName && (workspaceSuggestions.length || isWorkspaceLookupLoading)"
+            >
+              <p class="muted">
+                {{ isWorkspaceLookupLoading ? 'Searching…' : 'Existing workspaces' }}
+              </p>
+              <ng-container *ngIf="workspaceSuggestions.length; else noWorkspaceResults">
+                <ul>
+                  <li *ngFor="let workspace of workspaceSuggestions">
+                    <button type="button" (click)="selectWorkspaceSuggestion(workspace)">
+                      {{ workspace.name }}
+                    </button>
+                  </li>
+                </ul>
+              </ng-container>
+            </div>
+            <ng-template #noWorkspaceResults>
+              <p class="muted">No workspaces found.</p>
+            </ng-template>
           </label>
           <label>
             Email

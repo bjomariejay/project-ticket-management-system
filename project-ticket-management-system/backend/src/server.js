@@ -230,6 +230,28 @@ app.get(
   })
 );
 
+app.get(
+  '/api/workspaces',
+  asyncHandler(async (req, res) => {
+    const search = String(req.query.search || '').toLowerCase().trim();
+    const params = [];
+    let whereClause = '';
+    if (search) {
+      params.push(`${search}%`);
+      whereClause = 'WHERE LOWER(name) LIKE $1';
+    }
+    const { rows } = await query(
+      `SELECT id, name
+         FROM workspaces
+         ${whereClause}
+         ORDER BY name
+         LIMIT 10`,
+      params
+    );
+    res.json(rows);
+  })
+);
+
 app.post(
   '/api/auth/login',
   asyncHandler(async (req, res) => {
@@ -383,7 +405,7 @@ app.post(
 
 app.use((req, res, next) => {
   if (!req.path.startsWith('/api')) return next();
-  const openPaths = ['/api/health', '/api/auth/login', '/api/auth/register'];
+  const openPaths = ['/api/health', '/api/auth/login', '/api/auth/register', '/api/workspaces'];
   if (req.method === 'OPTIONS' || openPaths.includes(req.path)) {
     return next();
   }
