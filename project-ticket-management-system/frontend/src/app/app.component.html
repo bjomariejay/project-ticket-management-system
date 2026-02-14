@@ -332,7 +332,7 @@
                         &#64;{{ message.handle || 'unknown' }} - {{ message.createdAt | date: 'short' }}
                       </small>
                     </div>
-                    <p>{{ message.body }}</p>
+                    <p>{{ formatMessageBody(message) }}</p>
                   </article>
                 </div>
                 <div class="thread__composer">

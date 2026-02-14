@@ -345,7 +345,16 @@ app.post(
     } catch (error) {
       await client.query('ROLLBACK');
       if (error.code === '23505') {
-        return res.status(409).json({ message: 'Handle, username or email already exists' });
+        switch (error.constraint) {
+          case 'users_username_key':
+            return res.status(409).json({ message: 'Username already exists' });
+          case 'users_email_key':
+            return res.status(409).json({ message: 'Email already exists' });
+          case 'users_workspace_id_handle_key':
+            return res.status(409).json({ message: 'Handle already exists in this workspace' });
+          default:
+            return res.status(409).json({ message: 'Account already exists' });
+        }
       }
       throw error;
     } finally {
@@ -455,7 +464,7 @@ app.patch(
       res.json(mapUser(rows[0]));
     } catch (error) {
       if (error.code === '23505') {
-        return res.status(409).json({ message: 'Handle already in use.' });
+        return res.status(409).json({ message: 'Handle already in use in this workspace.' });
       }
       console.error('User update failed', error);
       res.status(500).json({ message: 'Unable to update profile.' });

@@ -1252,6 +1252,27 @@ export class AppComponent implements OnInit, OnDestroy {
       .slice(0, 8);
   }
 
+  formatMessageBody(message: TicketMessage): string {
+    if (!message?.body) return '';
+    let formatted = message.body;
+    if (Array.isArray(message.mentions) && message.mentions.length) {
+      for (const mention of message.mentions) {
+        if (!mention) continue;
+        const mentionHandle = mention.toLowerCase();
+        const user = this.users.find((candidate) => candidate.handle.toLowerCase() === mentionHandle);
+        const fallbackMember = this.selectedTicket?.members.find(
+          (member) => member.handle.toLowerCase() === mentionHandle
+        );
+        const displayName = user?.displayName || fallbackMember?.displayName;
+        if (!displayName) continue;
+        const escapedHandle = this.escapeRegExp(mention);
+        const pattern = new RegExp(`@${escapedHandle}\\b`, 'gi');
+        formatted = formatted.replace(pattern, `@${displayName}`);
+      }
+    }
+    return formatted;
+  }
+
   private resetMentionSuggestions() {
     this.mentionSuggestions = [];
     this.showMentionSuggestions = false;
@@ -1263,6 +1284,10 @@ export class AppComponent implements OnInit, OnDestroy {
     this.slashSuggestions = [];
     this.showSlashSuggestions = false;
     this.slashReplaceRange = null;
+  }
+
+  private escapeRegExp(value: string) {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   }
 
   handleStartTicketClick() {

@@ -10,12 +10,13 @@ CREATE TABLE IF NOT EXISTS users (
   id UUID PRIMARY KEY,
   display_name TEXT NOT NULL,
   username TEXT UNIQUE NOT NULL,
-  handle TEXT UNIQUE NOT NULL,
+  handle TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   location TEXT,
   workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  UNIQUE (workspace_id, handle)
 );
 
 CREATE TABLE IF NOT EXISTS projects (
@@ -113,9 +114,7 @@ CREATE TABLE IF NOT EXISTS dms (
 INSERT INTO workspaces (id, name)
 VALUES
   ('aaaaaaaa-1111-1111-1111-111111111111', 'ajoya-room'),
-  ('bbbbbbbb-2222-2222-2222-222222222222', 'ops-war-room'),
-  ('cccccccc-3333-3333-3333-333333333333', 'ivy-product-lab'),
-  ('dddddddd-4444-4444-4444-444444444444', 'liam-staging-bay')
+  ('bbbbbbbb-2222-2222-2222-222222222222', 'cpc-room')
 ON CONFLICT (id) DO NOTHING;
 
 -- seed users
@@ -123,43 +122,33 @@ INSERT INTO users (id, display_name, username, handle, email, password_hash, loc
 VALUES
   (
     '11111111-1111-1111-1111-111111111111',
-    'Ava Cruz',
-    'ava',
-    'ava',
-    'ava@example.com',
-    '5adf1a0ce4c69f4a6a5bb05232bf891c:94ea88a051ca7d33603919efca0a2dbf680cd0087907aafdddb38f0a640afbd10c6c8f2a8b82b7dd0b0fd027f8c62716f4cf475ba928329848fa309838e56d13',
-    'Cebu City',
+    'Jaylingers',
+    'jay',
+    'admin',
+    'jay@example.com',
+    'efa1e58b8adbba359b491e544f23b8d7:72fe55279f69f8a53a298abdf7c024a714f3297e5019ae92dcf2846076a01d8ddae89d84c4beab72dbaff3acc1234254ffc14f066816e22f5f6c5c4b03e33032',
+    'HQ',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     '22222222-2222-2222-2222-222222222222',
-    'Noel Tan',
-    'noel',
-    'noel',
-    'noel@example.com',
-    'f3a4238b7aa079b7abcc273d709b20ea:21514180e5ff11619000d9338fc44f38a9b41ec1e8ca995ec8c07fcdd7bd051d911f310fe697971a3af67513f6852238983fae35683e10fcd3e5e14c0f0be9f1',
-    'Manila',
-    'bbbbbbbb-2222-2222-2222-222222222222'
+    'Joji',
+    'joji',
+    'user',
+    'joji@example.com',
+    '6f00585673a1a8108705b80bd568f23f:196714f853608770c43e591f3fecb367f1d313be602b34e731cc222fb9c285e1357e248fec9d8a6c2eb69b557f675e5f70120904270bbb8fe20194ff87c693c9',
+    'CEBU',
+    'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     '33333333-3333-3333-3333-333333333333',
-    'Ivy Santos',
-    'ivy',
-    'ivy',
-    'ivy@example.com',
-    '5067c6e56adc90c3edd27908d715e391:065ae81bc0afc6dd9471a9b36461fc5e8dda50204c27f8c9135399bc6e6c19094ea3a584f77bedb1e3140061463ba5ee56656721e28d9a275c2b3db7efcaf2a7',
-    'Cebu HQ',
-    'cccccccc-3333-3333-3333-333333333333'
-  ),
-  (
-    '44444444-4444-4444-4444-444444444444',
-    'Liam Ortega',
-    'liam',
-    'liam',
-    'liam@example.com',
-    '8c45a8e7ededecf93d7405c354193374:6d83d0fde7adb7c22a80f30e1bb7bde3639d3f2de04ec0cabbca58314eaec44f5569167b03f5bcd37cd26c79068ec0466c8821ed6346ccee3ea9c57c500f58ad',
-    'Davao',
-    'dddddddd-4444-4444-4444-444444444444'
+    'Lore',
+    'lore',
+    'user',
+    'lore@example.com',
+    '120bbf1cb1d70b195cc567687a258e7a:5755cf2486877a54e1bc9a6d94efbef2282c190f06b2a311c8c946bbc7f0e49c37a471f363d63f7ad00744cbbf482abfb04ab469480522998dde6d3764a7c879',
+    'Mandaue',
+    'bbbbbbbb-2222-2222-2222-222222222222'
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -168,18 +157,18 @@ INSERT INTO projects (id, name, slug, ticket_prefix, description, workspace_id)
 VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'Cyber X HRMS',
-    'cyber_x_hrms',
-    'HRMS',
-    'HR operations pod',
+    'Ajoya Launch Pad',
+    'ajoya_launch_pad',
+    'AJOYA',
+    'Core tickets for the Ajoya room',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'Dev Ops Automation',
-    'dev_ops_automation',
-    'OPS',
-    'Automation squads',
+    'CPC Operations',
+    'cpc_operations',
+    'CPC',
+    'CPC room initiatives',
     'bbbbbbbb-2222-2222-2222-222222222222'
   )
 ON CONFLICT (id) DO NOTHING;
