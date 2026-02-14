@@ -40,6 +40,19 @@
         </button>
       </nav>
       <div class="sidebar__footer" *ngIf="sessionUser">
+           <section class="sidebar__team" *ngIf="users.length">
+        <h4>Team</h4>
+        <ul>
+          <li *ngFor="let teammate of users">
+            <span>
+              <strong>{{ teammate.displayName }}</strong>
+            </span>
+            <span class="badge" [class.active]="teammate.isActive">
+              {{ teammate.isActive ? 'Active' : 'Away' }}
+            </span>
+          </li>
+        </ul>
+      </section>
         <button type="button" class="user-settings-btn" (click)="openUserSettings()" title="User settings" aria-label="Open user settings">
           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
             <path
@@ -48,20 +61,7 @@
           </svg>
         </button>
       </div>
-      <section class="sidebar__team" *ngIf="users.length">
-        <h4>Team</h4>
-        <ul>
-          <li *ngFor="let teammate of users">
-            <span>
-              <strong>{{ teammate.displayName }}</strong>
-              <small>&#64;{{ teammate.handle }}</small>
-            </span>
-            <span class="badge" [class.active]="teammate.isActive">
-              {{ teammate.isActive ? 'Active' : 'Away' }}
-            </span>
-          </li>
-        </ul>
-      </section>
+   
     </aside>
 
     <main class="workspace__main">
@@ -594,7 +594,7 @@
         <p>
           {{
             authMode === 'login'
-              ? 'Sign in with your workspace handle to access tickets and conversations.'
+              ? 'Sign in with your team workspace to continue.'
               : 'Create an account to collaborate on tickets and direct messages.'
           }}
         </p>
@@ -688,9 +688,6 @@
       </ng-template>
       <p class="auth__error" *ngIf="loginError">{{ loginError }}</p>
       <p class="auth__hint">
-        <ng-container *ngIf="authMode === 'login'; else signupHint">
-          Demo handles: ava, noel, ivy, liam — password: password123
-        </ng-container>
         <ng-template #signupHint>
           Already have an account? <button type="button" (click)="switchAuthMode('login')">Sign in</button>
         </ng-template>
