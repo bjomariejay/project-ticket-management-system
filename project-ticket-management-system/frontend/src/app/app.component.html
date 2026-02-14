@@ -335,56 +335,66 @@
                     <p>{{ formatMessageBody(message) }}</p>
                   </article>
                 </div>
-                <div class="thread__composer">
-                  <div class="composer-input">
-                    <textarea
-                      #messageInput
-                      rows="2"
-                      name="ticketMessage"
-                      placeholder="Type update or @mention a teammate"
-                      [(ngModel)]="messageDraft"
-                      (input)="handleMessageInput($event)"
-                      (focus)="handleMessageFocus()"
-                      (blur)="handleMessageBlur()"
-                    ></textarea>
-                    <div
-                      class="mention-suggestions"
-                      *ngIf="showMentionSuggestions && mentionSuggestions.length"
-                    >
-                      <button
-                        type="button"
-                        *ngFor="let user of mentionSuggestions"
-                        (mousedown)="$event.preventDefault()"
-                        (click)="handleSelectMention(user)"
+                <ng-container *ngIf="selectedTicket?.status !== 'archived'; else archivedComposer">
+                  <div class="thread__composer">
+                    <div class="composer-input">
+                      <textarea
+                        #messageInput
+                        rows="2"
+                        name="ticketMessage"
+                        placeholder="Type update or @mention a teammate"
+                        [(ngModel)]="messageDraft"
+                        (input)="handleMessageInput($event)"
+                        (focus)="handleMessageFocus()"
+                        (blur)="handleMessageBlur()"
+                      ></textarea>
+                      <div
+                        class="mention-suggestions"
+                        *ngIf="showMentionSuggestions && mentionSuggestions.length"
                       >
-                        <strong>&#64;{{ user.username }}</strong>
-                        <small>{{ user.displayName }} · handle: {{ user.handle }}</small>
-                      </button>
+                        <button
+                          type="button"
+                          *ngFor="let user of mentionSuggestions"
+                          (mousedown)="$event.preventDefault()"
+                          (click)="handleSelectMention(user)"
+                        >
+                          <strong>&#64;{{ user.username }}</strong>
+                          <small>{{ user.displayName }} · handle: {{ user.handle }}</small>
+                        </button>
+                      </div>
+                      <div
+                        class="slash-suggestions"
+                        *ngIf="showSlashSuggestions && slashSuggestions.length"
+                      >
+                        <button
+                          type="button"
+                          *ngFor="let command of slashSuggestions"
+                          (mousedown)="$event.preventDefault()"
+                          (click)="handleSelectSlash(command)"
+                        >
+                          <strong>{{ command }}</strong>
+                        </button>
+                      </div>
                     </div>
-                    <div
-                      class="slash-suggestions"
-                      *ngIf="showSlashSuggestions && slashSuggestions.length"
-                    >
+                    <div class="composer-actions">
                       <button
                         type="button"
-                        *ngFor="let command of slashSuggestions"
-                        (mousedown)="$event.preventDefault()"
-                        (click)="handleSelectSlash(command)"
+                        (click)="handlePostMessage()"
+                        [disabled]="isPostingMessage"
                       >
-                        <strong>{{ command }}</strong>
+                        {{ isPostingMessage ? 'Posting...' : 'Post' }}
                       </button>
                     </div>
                   </div>
-                  <div class="composer-actions">
-                    <button
-                      type="button"
-                      (click)="handlePostMessage()"
-                      [disabled]="isPostingMessage"
-                    >
-                      {{ isPostingMessage ? 'Posting...' : 'Post' }}
+                </ng-container>
+                <ng-template #archivedComposer>
+                  <div class="thread__composer archived">
+                    <p class="muted">This ticket is archived. Unarchive to continue sharing updates.</p>
+                    <button type="button" (click)="handleRestoreArchivedTicket()">
+                      Unarchive ticket
                     </button>
                   </div>
-                </div>
+                </ng-template>
               </section>
               <ng-template #joinThreadPrompt>
                 <section class="card join-card">

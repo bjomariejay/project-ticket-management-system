@@ -760,6 +760,7 @@ export class AppComponent implements OnInit, OnDestroy {
   private async updateTicketSettings(partial: {
     priority?: TicketPriority;
     estimatedHours?: number | null;
+    status?: 'open' | 'in_progress' | 'archived';
   }) {
     if (!this.selectedTicket || !this.selectedUserId) return;
     await firstValueFrom(
@@ -1341,6 +1342,12 @@ export class AppComponent implements OnInit, OnDestroy {
     await firstValueFrom(this.api.archiveTicket(ticketId, this.selectedUserId));
     this.selectedTicket = null;
     await this.loadTickets();
+  }
+
+  async handleRestoreArchivedTicket() {
+    if (!this.selectedTicket || this.selectedTicket.status !== 'archived') return;
+    await this.updateTicketSettings({ status: 'in_progress' });
+    this.feedback = 'Ticket restarted and moved to In progress.';
   }
 
   async handlePrivacyChange(privacy: TicketPrivacy) {
