@@ -182,6 +182,11 @@ const WorkspacePage = () => {
       void startTicket();
       return;
     }
+    if (payload === '/archive') {
+      event.preventDefault();
+      void handleArchiveTicket();
+      return;
+    }
     void postTicketMessage();
   };
 
@@ -692,33 +697,11 @@ const WorkspacePage = () => {
                       </section>
                     )}
                     <footer className="ticket-actions">
-                      {isTicketMember && selectedTicket.status !== 'archived' && (
-                        <button
-                          type="button"
-                          className="link-button"
-                          onClick={() => void startTicket()}
-                          disabled={isPostingMessage}
-                        >
-                          {isPostingMessage ? 'Starting…' : 'Start ticket'}
-                        </button>
-                      )}
+                     
                       <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
                         Join ticket
                       </button>
-                      <button
-                        type="button"
-                        className="link-button outline"
-                        onClick={() => void handleArchiveTicket()}
-                      >
-                        Archive
-                      </button>
-                      <button
-                        type="button"
-                        className="link-button"
-                        onClick={() => void handlePrivacyChange(selectedTicket.privacy === 'public' ? 'private' : 'public')}
-                      >
-                        Make {selectedTicket.privacy === 'public' ? 'private' : 'public'}
-                      </button>
+                      
                     </footer>
                   </article>
                 ) : lockedTicket ? (
