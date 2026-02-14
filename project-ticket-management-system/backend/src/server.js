@@ -1087,12 +1087,17 @@ app.get(
       return res.status(400).json({ message: 'userId is required' });
     }
     const { rows } = await query(
-      `SELECT n.id, n.message, n.is_read AS "isRead", n.created_at AS "createdAt", t.ticket_number AS "ticketNumber"
-       FROM notifications n
-       LEFT JOIN tickets t ON n.source_ticket_id = t.id
-       WHERE n.user_id = $1
-       ORDER BY n.created_at DESC
-       LIMIT 50`,
+      `SELECT n.id,
+              n.message,
+              n.is_read AS "isRead",
+              n.created_at AS "createdAt",
+              t.ticket_number AS "ticketNumber",
+              t.id AS "ticketId"
+         FROM notifications n
+         LEFT JOIN tickets t ON n.source_ticket_id = t.id
+        WHERE n.user_id = $1
+        ORDER BY n.created_at DESC
+        LIMIT 50`,
       [userId]
     );
     res.json(rows);

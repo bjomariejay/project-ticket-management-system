@@ -126,10 +126,12 @@ export class AppComponent implements OnInit, OnDestroy {
   projectReportsLoading = false;
   isGlobalReportView = false;
   hasUnseenGlobalReports = false;
+  hasActivityAttention = false;
   isDeleteProjectOpen = false;
   projectPendingDeletion: Project | null = null;
   readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
   private latestGlobalReportTimestamp: string | null = null;
+  private lastActivityViewTimestamp: string | null = null;
 
   private readonly handleSessionExpired = () => {
     this.handleLogout();
@@ -173,6 +175,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.selectedUserId && this.sessionUser) {
       this.selectedUserId = this.sessionUser.id;
     }
+    this.lastActivityViewTimestamp = this.restoreActivityViewTimestamp();
     if (!this.createTicketModel.projectId && this.projects.length) {
       this.createTicketModel.projectId = this.projects[0].id;
     }
@@ -257,6 +260,41 @@ export class AppComponent implements OnInit, OnDestroy {
     this.persistGlobalReportTimestamp(timestamp);
   }
 
+  private getActivityViewStorageKey(userId: string) {
+    return `activity:lastViewed:${userId}`;
+  }
+
+  private restoreActivityViewTimestamp(): string | null {
+    if (!this.selectedUserId) return null;
+    try {
+      return localStorage.getItem(this.getActivityViewStorageKey(this.selectedUserId));
+    } catch (error) {
+      console.error('Unable to read activity view timestamp', error);
+      return null;
+    }
+  }
+
+  private persistActivityViewTimestamp(timestamp: string | null) {
+    if (!this.selectedUserId) return;
+    const key = this.getActivityViewStorageKey(this.selectedUserId);
+    try {
+      if (timestamp) {
+        localStorage.setItem(key, timestamp);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.error('Unable to persist activity view timestamp', error);
+    }
+  }
+
+  private markActivityViewed(timestamp?: string) {
+    const value = timestamp || new Date().toISOString();
+    this.lastActivityViewTimestamp = value;
+    this.hasActivityAttention = false;
+    this.persistActivityViewTimestamp(value);
+  }
+
   private isTokenExpired(token: string): boolean {
     const segments = token.split('.');
     if (segments.length !== 3) {
@@ -322,6 +360,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.selectedProjectId = '';
     this.hasUnseenGlobalReports = false;
     this.latestGlobalReportTimestamp = null;
+    this.hasActivityAttention = false;
+    this.lastActivityViewTimestamp = null;
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
     }
@@ -687,9 +727,53 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private updateActivityAttention() {
+    if (!this.notifications.length) {
+      this.hasActivityAttention = false;
+      return;
+    }
+    const relevant = this.notifications.filter((notification) =>
+      this.isAttentionNotification(notification)
+    );
+    if (!relevant.length) {
+      this.hasActivityAttention = false;
+      return;
+    }
+    const lastViewedTime = this.lastActivityViewTimestamp
+      ? new Date(this.lastActivityViewTimestamp).getTime()
+      : NaN;
+    if (!Number.isFinite(lastViewedTime)) {
+      this.hasActivityAttention = true;
+      return;
+    }
+    this.hasActivityAttention = relevant.some((notification) => {
+      const createdAt = new Date(notification.createdAt).getTime();
+      return Number.isFinite(createdAt) && createdAt > lastViewedTime;
+    });
+  }
+
+  private isAttentionNotification(notification: NotificationItem): boolean {
+    const message = notification.message?.toLowerCase();
+    if (!message) return false;
+    if (message.includes('mentioned you') || message.includes('assigned you')) {
+      return true;
+    }
+    if (message.includes('assigned')) {
+      const displayName = this.sessionUser?.displayName?.toLowerCase();
+      if (displayName && message.includes(displayName)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   async loadNotifications() {
     if (!this.selectedUserId) return;
+    if (!this.lastActivityViewTimestamp) {
+      this.lastActivityViewTimestamp = this.restoreActivityViewTimestamp();
+    }
     this.notifications = await firstValueFrom(this.api.getNotifications(this.selectedUserId));
+    this.updateActivityAttention();
     void this.checkGlobalReports();
   }
 
@@ -1073,9 +1157,20 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.loadNotifications();
   }
 
+  async navigateToNotificationTicket(notification: NotificationItem) {
+    const ticketId = notification.ticketId;
+    if (!ticketId) return;
+    this.setActiveTab('home');
+    await this.selectTicket(ticketId);
+    if (!notification.isRead) {
+      await this.handleMarkNotification(notification);
+    }
+  }
+
   setActiveTab(tab: 'dashboard' | 'home' | 'dms' | 'activity') {
     this.activeTab = tab;
     if (tab === 'activity') {
+      this.markActivityViewed();
       void this.loadNotifications();
     } else if (tab === 'dms') {
       void this.loadDms();

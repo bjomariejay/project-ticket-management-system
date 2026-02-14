@@ -90,6 +90,13 @@
   border-color: rgba(161, 130, 255, 0.9);
 }
 
+.primary-nav button.has-alert {
+  background: rgba(255, 193, 71, 0.25);
+  border-color: rgba(255, 193, 71, 0.7);
+  color: #ffe9c0;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08) inset;
+}
+
 
 .sidebar__section {
   display: flex;
@@ -996,7 +1003,20 @@
   background: #fff;
 }
 
-.activity-panel button {
+.activity-panel .notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.activity-panel .notification-actions .link-button {
+  padding: 0.25rem 0.9rem;
+  border-radius: 999px;
+  box-shadow: none;
+}
+
+.activity-panel button.mark-read {
   align-self: flex-start;
   border: none;
   background: #611f69;

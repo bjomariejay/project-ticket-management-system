@@ -20,7 +20,12 @@
         <button type="button" (click)="setActiveTab('dms')" [class.active]="activeTab === 'dms'">
           DMs
         </button>
-        <button type="button" (click)="setActiveTab('activity')" [class.active]="activeTab === 'activity'">
+        <button
+          type="button"
+          (click)="setActiveTab('activity')"
+          [class.active]="activeTab === 'activity'"
+          [class.has-alert]="hasActivityAttention"
+        >
           Activity
         </button>
       </nav>
@@ -437,9 +442,24 @@
                 <small>{{ notification.createdAt | date: 'short' }}</small>
               </div>
               <p *ngIf="notification.ticketNumber">Ticket {{ notification.ticketNumber }}</p>
-              <button type="button" (click)="handleMarkNotification(notification)" [disabled]="notification.isRead">
-                Mark read
-              </button>
+              <div class="notification-actions">
+                <button
+                  type="button"
+                  class="link-button outline"
+                  *ngIf="notification.ticketId"
+                  (click)="navigateToNotificationTicket(notification)"
+                >
+                  View ticket
+                </button>
+                <button
+                  type="button"
+                  class="mark-read"
+                  (click)="handleMarkNotification(notification)"
+                  [disabled]="notification.isRead"
+                >
+                  Mark read
+                </button>
+              </div>
             </li>
           </ul>
         </section>

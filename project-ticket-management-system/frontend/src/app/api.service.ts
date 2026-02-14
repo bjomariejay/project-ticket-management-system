@@ -80,6 +80,7 @@ export interface NotificationItem {
   isRead: boolean;
   createdAt: string;
   ticketNumber?: string | null;
+  ticketId?: string | null;
 }
 
 export interface DmMessage {
