@@ -550,11 +550,11 @@
       </header>
       <form *ngIf="authMode === 'login'; else registerFormTpl" (ngSubmit)="handleLogin()">
         <label>
-          Handle
+          Username
           <input
             type="text"
-            name="handle"
-            [(ngModel)]="loginForm.handle"
+            name="username"
+            [(ngModel)]="loginForm.username"
             placeholder="ava"
             autocomplete="username"
             required
@@ -580,6 +580,10 @@
           <label>
             Full name
             <input type="text" name="displayName" [(ngModel)]="registerForm.displayName" required />
+          </label>
+          <label>
+            Username
+            <input type="text" name="username" [(ngModel)]="registerForm.username" required />
           </label>
           <label>
             Handle

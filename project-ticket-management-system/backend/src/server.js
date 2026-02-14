@@ -192,15 +192,17 @@ app.get(
 app.post(
   '/api/auth/login',
   asyncHandler(async (req, res) => {
-    const { handle, password } = req.body;
-    if (!handle || !password) {
-      return res.status(400).json({ message: 'handle and password are required' });
+    const rawIdentifier = (req.body?.username ?? req.body?.handle ?? '').trim().toLowerCase();
+    const { password } = req.body;
+    if (!rawIdentifier || !password) {
+      return res.status(400).json({ message: 'username and password are required' });
     }
     const {
       rows: [user],
-    } = await query('SELECT id, display_name, handle, location, password_hash FROM users WHERE handle = $1', [
-      handle,
-    ]);
+    } = await query(
+      'SELECT id, display_name, username, handle, location, password_hash FROM users WHERE username = $1',
+      [rawIdentifier]
+    );
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
@@ -214,6 +216,7 @@ app.post(
       user: {
         id: user.id,
         displayName: user.display_name,
+        username: user.username,
         handle: user.handle,
         location: user.location,
       },
@@ -224,7 +227,7 @@ app.post(
 app.post(
   '/api/auth/register',
   asyncHandler(async (req, res) => {
-    const { displayName, handle, email, password, location } = req.body;
+    const { displayName, handle, email, password, location, username } = req.body;
     if (!displayName || !handle || !email || !password) {
       return res
         .status(400)
@@ -234,9 +237,17 @@ app.post(
     const userId = uuidv4();
     try {
       await query(
-        `INSERT INTO users (id, display_name, handle, email, password_hash, location)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, displayName, handle.toLowerCase(), email.toLowerCase(), passwordHash, location]
+        `INSERT INTO users (id, display_name, username, handle, email, password_hash, location)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [
+          userId,
+          displayName,
+          (username || handle).toLowerCase(),
+          handle.toLowerCase(),
+          email.toLowerCase(),
+          passwordHash,
+          location,
+        ]
       );
     } catch (error) {
       if (error.code === '23505') {
@@ -254,6 +265,7 @@ app.post(
       user: {
         id: userId,
         displayName,
+        username: (username || handle).toLowerCase(),
         handle: handle.toLowerCase(),
         location,
       },
@@ -274,7 +286,7 @@ app.get(
   '/api/users',
   asyncHandler(async (req, res) => {
     const { rows } = await query(
-      'SELECT id, display_name AS "displayName", handle, location FROM users ORDER BY display_name'
+      'SELECT id, display_name AS "displayName", username, handle, location FROM users ORDER BY display_name'
     );
     res.json(rows);
   })
@@ -310,7 +322,7 @@ app.patch(
 
     params.push(userId);
     const queryText = `UPDATE users SET ${updates.join(', ')}
-      WHERE id = $${params.length} RETURNING id, display_name AS "displayName", handle, location`;
+      WHERE id = $${params.length} RETURNING id, display_name AS "displayName", username, handle, location`;
     try {
       const { rows } = await query(queryText, params);
       if (!rows.length) {

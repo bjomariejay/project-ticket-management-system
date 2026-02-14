@@ -95,11 +95,12 @@ export class AppComponent implements OnInit, OnDestroy {
   authLoading = false;
   loginError = '';
   loginForm = {
-    handle: '',
+    username: '',
     password: '',
   };
   registerForm = {
     displayName: '',
+    username: '',
     handle: '',
     email: '',
     password: '',
@@ -211,7 +212,12 @@ export class AppComponent implements OnInit, OnDestroy {
   private getStoredUser(): User | null {
     try {
       const raw = localStorage.getItem('authUser');
-      return raw ? (JSON.parse(raw) as User) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw) as User & { handle?: string };
+      if (!parsed.username && parsed.handle) {
+        parsed.username = parsed.handle;
+      }
+      return parsed;
     } catch (error) {
       return null;
     }
@@ -449,15 +455,15 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async handleLogin() {
-    if (!this.loginForm.handle || !this.loginForm.password) {
-      this.loginError = 'Handle and password are required.';
+    if (!this.loginForm.username || !this.loginForm.password) {
+      this.loginError = 'Username and password are required.';
       return;
     }
     this.authLoading = true;
     this.loginError = '';
     try {
       const response = await firstValueFrom(this.api.login({
-        handle: this.loginForm.handle.trim(),
+        username: this.loginForm.username.trim(),
         password: this.loginForm.password,
       }));
       this.persistSession(response.token, response.user);
@@ -468,7 +474,7 @@ export class AppComponent implements OnInit, OnDestroy {
       await this.bootstrapWorkspace();
     } catch (error) {
       console.error(error);
-      this.loginError = 'Invalid handle or password.';
+      this.loginError = 'Invalid username or password.';
     } finally {
       this.authLoading = false;
       this.loginForm.password = '';
@@ -518,6 +524,7 @@ export class AppComponent implements OnInit, OnDestroy {
   async handleRegister() {
     if (
       !this.registerForm.displayName ||
+      !this.registerForm.username ||
       !this.registerForm.handle ||
       !this.registerForm.email ||
       !this.registerForm.password
@@ -535,6 +542,7 @@ export class AppComponent implements OnInit, OnDestroy {
           email: this.registerForm.email.trim(),
           password: this.registerForm.password,
           location: this.registerForm.location.trim() || undefined,
+          username: this.registerForm.username.trim(),
         })
       );
       this.persistSession(response.token, response.user);
@@ -549,6 +557,7 @@ export class AppComponent implements OnInit, OnDestroy {
     } finally {
       this.authLoading = false;
       this.registerForm.password = '';
+      this.registerForm.username = '';
     }
   }
 

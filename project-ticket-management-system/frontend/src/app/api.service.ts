@@ -6,6 +6,7 @@ import { environment } from '../environments/environment';
 export interface User {
   id: string;
   displayName: string;
+  username: string;
   handle: string;
   location?: string | null;
 }
@@ -117,7 +118,7 @@ export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly baseUrl = environment.apiUrl;
 
-  login(payload: { handle: string; password: string }): Observable<{ token: string; user: User }> {
+  login(payload: { username: string; password: string }): Observable<{ token: string; user: User }> {
     return this.http.post<{ token: string; user: User }>(`${this.baseUrl}/auth/login`, payload);
   }
 
@@ -127,6 +128,7 @@ export class ApiService {
     email: string;
     password: string;
     location?: string;
+    username?: string;
   }): Observable<{ token: string; user: User }> {
     return this.http.post<{ token: string; user: User }>(`${this.baseUrl}/auth/register`, payload);
   }
