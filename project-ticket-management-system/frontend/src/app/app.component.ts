@@ -89,6 +89,15 @@ export class AppComponent implements OnInit, OnDestroy {
     handle: '',
     location: '',
   };
+  isAdminEditOpen = false;
+  adminEditSaving = false;
+  adminEditError = '';
+  adminEditUser: User | null = null;
+  adminEditForm = {
+    displayName: '',
+    handle: '',
+    location: '',
+  };
   hasDmAttention = false;
 
   isLoadingTickets = false;
@@ -514,6 +523,59 @@ export class AppComponent implements OnInit, OnDestroy {
     this.userSettingsSaving = false;
     this.userSettingsError = '';
     this.isUserSettingsOpen = true;
+  }
+
+  openAdminEdit(userId: string) {
+    if (!this.sessionUser || this.sessionUser.handle !== 'admin') return;
+    const target = this.users.find((user) => user.id === userId);
+    if (!target) return;
+    this.adminEditUser = target;
+    this.adminEditForm = {
+      displayName: target.displayName,
+      handle: target.handle,
+      location: target.location || '',
+    };
+    this.adminEditSaving = false;
+    this.adminEditError = '';
+    this.isAdminEditOpen = true;
+  }
+
+  closeAdminEdit() {
+    this.isAdminEditOpen = false;
+    this.adminEditUser = null;
+    this.adminEditSaving = false;
+    this.adminEditError = '';
+  }
+
+  async handleAdminEditSave() {
+    if (!this.adminEditUser) return;
+    const trimmedName = this.adminEditForm.displayName.trim();
+    const trimmedHandle = this.adminEditForm.handle.trim();
+    const trimmedLocation = this.adminEditForm.location.trim();
+    if (!trimmedName || !trimmedHandle) {
+      this.adminEditError = 'Display name and handle are required.';
+      return;
+    }
+    this.adminEditSaving = true;
+    this.adminEditError = '';
+    try {
+      await firstValueFrom(
+        this.api.updateUser(this.adminEditUser.id, {
+          displayName: trimmedName,
+          handle: trimmedHandle,
+          location: trimmedLocation || null,
+        })
+      );
+      await this.loadUsers();
+      await this.loadDashboard();
+      this.closeAdminEdit();
+      this.feedback = 'User updated.';
+    } catch (error: any) {
+      console.error(error);
+      this.adminEditError = error?.error?.message || 'Unable to update user.';
+    } finally {
+      this.adminEditSaving = false;
+    }
   }
 
   closeUserSettings() {

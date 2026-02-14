@@ -372,7 +372,7 @@ app.post(
             return res.status(409).json({ message: 'Username already exists' });
           case 'users_email_key':
             return res.status(409).json({ message: 'Email already exists' });
-          case 'users_workspace_id_handle_key':
+          case 'users_workspace_handle_unique':
             return res.status(409).json({ message: 'Handle already exists in this workspace' });
           default:
             return res.status(409).json({ message: 'Account already exists' });
@@ -439,8 +439,27 @@ app.patch(
   '/api/users/:userId',
   asyncHandler(async (req, res) => {
     const { userId } = req.params;
-    if (!req.user || req.user.userId !== userId) {
-      return res.status(403).json({ message: 'You can only update your own profile.' });
+    if (!req.user) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    const actorId = req.user.userId;
+    const actorHandle = req.user.handle;
+    const actorWorkspaceId = req.user.workspaceId;
+
+    const targetUser = await fetchUser(userId);
+    if (!targetUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const actorIsSelf = actorId === userId;
+    const actorIsAdmin = actorHandle === 'admin';
+    if (!actorIsSelf) {
+      if (!actorIsAdmin) {
+        return res.status(403).json({ message: 'You can only update your own profile.' });
+      }
+      if (targetUser.workspace_id !== actorWorkspaceId) {
+        return res.status(403).json({ message: 'Admins can only update users in their workspace.' });
+      }
     }
     const { displayName, handle, location } = req.body || {};
     const updates = [];
@@ -485,7 +504,7 @@ app.patch(
       }
       res.json(mapUser(rows[0]));
     } catch (error) {
-      if (error.code === '23505') {
+      if (error.code === '23505' && error.constraint === 'users_workspace_handle_unique') {
         return res.status(409).json({ message: 'Handle already in use in this workspace.' });
       }
       console.error('User update failed', error);

@@ -604,6 +604,23 @@
   gap: 1rem;
 }
 
+.dashboard-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.dashboard-card .icon-button {
+  border: none;
+  background: #f0f2fa;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+
 .dashboard-card ul {
   list-style: none;
   margin: 1rem 0 0;

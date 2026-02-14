@@ -15,9 +15,12 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   location TEXT,
   workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  UNIQUE (workspace_id, handle)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS users_workspace_handle_unique
+  ON users (workspace_id, LOWER(handle))
+  WHERE LOWER(handle) <> 'admin';
 
 CREATE TABLE IF NOT EXISTS projects (
   id UUID PRIMARY KEY,

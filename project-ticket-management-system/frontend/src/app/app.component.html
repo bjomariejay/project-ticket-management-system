@@ -109,8 +109,19 @@
         <section class="dashboard-grid" *ngIf="dashboard.length; else emptyDashboard">
           <article class="card dashboard-card" *ngFor="let entry of dashboard">
             <header>
-              <h3>{{ entry.displayName }}</h3>
-              <p>{{ entry.openCount + entry.inProgressCount + entry.archivedCount }} tickets</p>
+              <div>
+                <h3>{{ entry.displayName }}</h3>
+                <p>{{ entry.openCount + entry.inProgressCount + entry.archivedCount }} tickets</p>
+              </div>
+              <button
+                type="button"
+                class="icon-button"
+                *ngIf="sessionUser?.handle === 'admin'"
+                (click)="openAdminEdit(entry.id)"
+                title="Edit user"
+              >
+                ✎
+              </button>
             </header>
             <ul>
               <li>
@@ -768,6 +779,36 @@
       <footer>
         <button type="button" class="ghost" (click)="closeCreateTicket()">Cancel</button>
         <button type="submit">Create ticket</button>
+      </footer>
+    </form>
+  </section>
+</div>
+
+<div class="modal-backdrop" *ngIf="isAdminEditOpen" (click)="closeAdminEdit()">
+  <section class="modal" (click)="$event.stopPropagation()">
+    <header>
+      <h3>Edit user</h3>
+      <button type="button" (click)="closeAdminEdit()">✕</button>
+    </header>
+    <form (ngSubmit)="handleAdminEditSave()">
+      <label>
+        Full name
+        <input type="text" [(ngModel)]="adminEditForm.displayName" name="adminDisplayName" required />
+      </label>
+      <label>
+        Handle
+        <input type="text" [(ngModel)]="adminEditForm.handle" name="adminHandle" required />
+      </label>
+      <label>
+        Location
+        <input type="text" [(ngModel)]="adminEditForm.location" name="adminLocation" />
+      </label>
+      <p class="error" *ngIf="adminEditError">{{ adminEditError }}</p>
+      <footer>
+        <button type="button" class="ghost" (click)="closeAdminEdit()">Cancel</button>
+        <button type="submit" [disabled]="adminEditSaving">
+          {{ adminEditSaving ? 'Saving…' : 'Save changes' }}
+        </button>
       </footer>
     </form>
   </section>
