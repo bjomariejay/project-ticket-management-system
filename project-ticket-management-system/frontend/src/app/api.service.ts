@@ -10,7 +10,7 @@ export interface User {
   location?: string | null;
 }
 
-export interface Channel {
+export interface Project {
   id: string;
   name: string;
   slug: string;
@@ -28,7 +28,7 @@ export interface Ticket {
   title: string;
   description: string;
   status: string;
-  channelId: string;
+  projectId: string;
   creatorId: string;
   assigneeId?: string | null;
   estimatedHours?: number | null;
@@ -92,7 +92,7 @@ export interface DmMessage {
   recipientName: string;
 }
 
-export interface ChannelReportEntry {
+export interface ProjectReportEntry {
   id: string;
   message: string;
   createdAt: string;
@@ -134,13 +134,13 @@ export class ApiService {
     return this.http.get<User[]>(`${this.baseUrl}/users`);
   }
 
-  getChannels(): Observable<Channel[]> {
-    return this.http.get<Channel[]>(`${this.baseUrl}/channels`);
+  getProjects(): Observable<Project[]> {
+    return this.http.get<Project[]>(`${this.baseUrl}/projects`);
   }
 
-  getTickets(filters: { channelId?: string; creatorId?: string; assigneeId?: string }): Observable<Ticket[]> {
+  getTickets(filters: { projectId?: string; creatorId?: string; assigneeId?: string }): Observable<Ticket[]> {
     let params = new HttpParams();
-    if (filters.channelId) params = params.set('channelId', filters.channelId);
+    if (filters.projectId) params = params.set('projectId', filters.projectId);
     if (filters.creatorId) params = params.set('creatorId', filters.creatorId);
     if (filters.assigneeId) params = params.set('assigneeId', filters.assigneeId);
     return this.http.get<Ticket[]>(`${this.baseUrl}/tickets`, { params });
@@ -153,7 +153,7 @@ export class ApiService {
   createTicket(payload: {
     title: string;
     description: string;
-    channelId: string;
+    projectId: string;
     creatorId: string;
     estimatedHours?: number;
     privacy?: TicketPrivacy;
@@ -182,26 +182,26 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/settings`, payload);
   }
 
-  createChannel(
+  createProject(
     payload: { name: string; slug?: string; ticketPrefix: string; description?: string }
-  ): Observable<Channel & { nextNumber: number }> {
-    return this.http.post<Channel & { nextNumber: number }>(`${this.baseUrl}/channels`, payload);
+  ): Observable<Project & { nextNumber: number }> {
+    return this.http.post<Project & { nextNumber: number }>(`${this.baseUrl}/projects`, payload);
   }
 
-  deleteChannel(channelId: string) {
-    return this.http.delete(`${this.baseUrl}/channels/${channelId}`);
+  deleteProject(projectId: string) {
+    return this.http.delete(`${this.baseUrl}/projects/${projectId}`);
   }
 
   assignTicket(ticketId: string, assigneeId: string, actorId: string) {
     return this.http.post(`${this.baseUrl}/tickets/${ticketId}/assign`, { assigneeId, actorId });
   }
 
-  getChannelReports(channelId: string) {
-    return this.http.get<ChannelReportEntry[]>(`${this.baseUrl}/channels/${channelId}/reports`);
+  getProjectReports(projectId: string) {
+    return this.http.get<ProjectReportEntry[]>(`${this.baseUrl}/projects/${projectId}/reports`);
   }
 
   getAllReports() {
-    return this.http.get<ChannelReportEntry[]>(`${this.baseUrl}/reports`);
+    return this.http.get<ProjectReportEntry[]>(`${this.baseUrl}/reports`);
   }
 
   archiveTicket(ticketId: string, actorId: string) {

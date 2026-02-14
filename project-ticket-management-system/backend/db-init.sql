@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS channels (
+CREATE TABLE IF NOT EXISTS projects (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   slug TEXT UNIQUE NOT NULL,
@@ -19,8 +19,8 @@ CREATE TABLE IF NOT EXISTS channels (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS channel_sequences (
-  channel_id UUID PRIMARY KEY REFERENCES channels(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS project_sequences (
+  project_id UUID PRIMARY KEY REFERENCES projects(id) ON DELETE CASCADE,
   last_value INTEGER NOT NULL DEFAULT 0
 );
 
@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   title TEXT NOT NULL,
   description TEXT,
   status TEXT NOT NULL DEFAULT 'open',
-  channel_id UUID REFERENCES channels(id) ON DELETE SET NULL,
+  project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   creator_id UUID REFERENCES users(id) ON DELETE SET NULL,
   assignee_id UUID REFERENCES users(id) ON DELETE SET NULL,
   estimated_hours NUMERIC(6,2),
@@ -136,15 +136,15 @@ VALUES
   )
 ON CONFLICT (id) DO NOTHING;
 
--- seed channels
-INSERT INTO channels (id, name, slug, ticket_prefix, description)
+-- seed projects
+INSERT INTO projects (id, name, slug, ticket_prefix, description)
 VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 'Cyber X HRMS', 'cyber_x_hrms', 'HRMS', 'HR operations pod'),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 'Dev Ops Automation', 'dev_ops_automation', 'OPS', 'Automation squads')
 ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO channel_sequences (channel_id, last_value)
+INSERT INTO project_sequences (project_id, last_value)
 VALUES
   ('aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa', 0),
   ('bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb', 0)
-ON CONFLICT (channel_id) DO NOTHING;
+ON CONFLICT (project_id) DO NOTHING;

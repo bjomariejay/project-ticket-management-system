@@ -90,34 +90,6 @@
   border-color: rgba(161, 130, 255, 0.9);
 }
 
-.channels {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.channels button {
-  border: none;
-  background: transparent;
-  color: inherit;
-  padding: 0.4rem 0.2rem;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.1rem;
-  cursor: pointer;
-  border-radius: 0.4rem;
-}
-
-.channels button.active,
-.channels button:hover {
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.channels small {
-  color: #a296d9;
-  font-size: 0.75rem;
-}
 
 .sidebar__section {
   display: flex;
@@ -233,25 +205,25 @@
   gap: 0.8rem;
 }
 
-.channel-list {
+.project-list {
   display: flex;
   flex-direction: column;
   gap: 0.65rem;
 }
 
-.channel-panel {
+.project-panel {
   overflow: hidden;
   transition: max-height 0.35s ease, opacity 0.35s ease;
   max-height: 640px;
 }
 
-.channel-panel.is-collapsed {
+.project-panel.is-collapsed {
   max-height: 0;
   opacity: 0;
   pointer-events: none;
 }
 
-.channel-item {
+.project-item {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -261,13 +233,13 @@
   background: #fff;
 }
 
-.channel-row {
+.project-row {
   display: flex;
   align-items: center;
   gap: 0.35rem;
 }
 
-.channel-main {
+.project-main {
   border: none;
   background: transparent;
   display: flex;
@@ -278,27 +250,27 @@
   text-align: left;
 }
 
-.channel-main strong {
+.project-main strong {
   display: block;
 }
 
-.channel-main small {
+.project-main small {
   color: #6b6f82;
 }
 
-.channel-main.active {
+.project-main.active {
   color: #611f69;
 }
 
-.channel-main.active .channel-number {
+.project-main.active .project-number {
   color: #611f69;
 }
 
-.channel-number {
+.project-number {
   font-weight: 600;
 }
 
-.channel-delete {
+.project-delete {
   border: none;
   background: transparent;
   padding: 0.2rem;
@@ -310,19 +282,19 @@
   justify-content: center;
 }
 
-.channel-delete:hover,
-.channel-delete:focus-visible {
+.project-delete:hover,
+.project-delete:focus-visible {
   background: rgba(97, 31, 105, 0.08);
   color: #611f69;
 }
 
-.channel-delete svg {
+.project-delete svg {
   width: 1.1rem;
   height: 1.1rem;
   fill: currentColor;
 }
 
-.channel-ticket-groups {
+.project-ticket-groups {
   margin-top: 0.65rem;
   display: flex;
   flex-direction: column;
@@ -330,7 +302,7 @@
   animation: fadeIn 0.25s ease;
 }
 
-.channel-ticket-group {
+.project-ticket-group {
   border: 1px solid rgba(97, 31, 105, 0.12);
   border-radius: 0.9rem;
   padding: 0.6rem;
@@ -340,13 +312,13 @@
   gap: 0.4rem;
 }
 
-.channel-ticket-group header {
+.project-ticket-group header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.channel-ticket-group ul {
+.project-ticket-group ul {
   list-style: none;
   margin: 0;
   padding: 0;
@@ -355,7 +327,7 @@
   gap: 0.35rem;
 }
 
-.channel-ticket-group li button {
+.project-ticket-group li button {
   width: 100%;
   display: flex;
   justify-content: space-between;
@@ -369,15 +341,15 @@
   cursor: pointer;
 }
 
-.channel-ticket-group li button:hover {
+.project-ticket-group li button:hover {
   background: #f4f1ff;
 }
 
-.channel-ticket-group small {
+.project-ticket-group small {
   color: #6b6f82;
 }
 
-.channel-ticket-group .status {
+.project-ticket-group .status {
   text-transform: capitalize;
   font-size: 0.75rem;
   padding: 0.1rem 0.6rem;
@@ -385,7 +357,7 @@
   border: 1px solid #dfe3ef;
 }
 
-.channel-ticket-group .status.in-progress {
+.project-ticket-group .status.in-progress {
   background: rgba(97, 31, 105, 0.12);
   color: #611f69;
   border-color: transparent;
@@ -402,12 +374,12 @@
   }
 }
 
-.channel-main.active {
+.project-main.active {
   border-radius: 0.6rem;
   background: rgba(161, 130, 255, 0.12);
 }
 
-.report-channel .channel-main {
+.report-project .project-main {
   justify-content: space-between;
 }
 
@@ -448,28 +420,6 @@
   padding: 0.1rem 0.25rem;
 }
 
-.channel-form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.channel-form input,
-.channel-form textarea,
-.channel-form select {
-  border-radius: 0.6rem;
-  border: 1px solid #dfe3ef;
-  padding: 0.45rem 0.6rem;
-}
-
-.channel-form button {
-  align-self: flex-start;
-  border: none;
-  border-radius: 0.6rem;
-  padding: 0.45rem 1rem;
-  background: #611f69;
-  color: #fff;
-}
 
 .ticket-category {
   border: 1px solid #e4e7f2;
@@ -965,7 +915,7 @@
   cursor: pointer;
 }
 
-.channel-reports ul {
+.project-reports ul {
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
@@ -974,7 +924,7 @@
   gap: 0.75rem;
 }
 
-.channel-reports li {
+.project-reports li {
   border: 1px solid rgba(97, 31, 105, 0.15);
   border-radius: 0.75rem;
   padding: 0.6rem 0.8rem;

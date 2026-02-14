@@ -112,44 +112,45 @@
           <div class="home-layout__left">
             <article class="card home-card workspace-board">
               <section class="space-section">
-                    <div class="space-section__actions">
-                       <button type="button" class="link-button" (click)="openCreateTicket()">
-                      + Ticket
-                    </button>
-                    <button type="button" class="link-button" (click)="openCreateChannel()">
-                      + Project
-                    </button>
-                  </div>
-                <div class="space-section__header">
-                  <h4>Projects</h4>
-                  <span class="muted">{{ channels.length }} active</span>
-                  <button type="button" class="collapse-btn" (click)="toggleChannelsCollapsed()">
-                    {{ channelsCollapsed ? '▶' : '▼' }}
+                <div class="space-section__actions">
+                  <button type="button" class="link-button" (click)="openCreateProject()">
+                    + Project
+                  </button>
+                  <button type="button" class="link-button" (click)="openCreateTicket()">
+                    + Ticket
                   </button>
                 </div>
-                <div class="channel-panel" [class.is-collapsed]="channelsCollapsed">
-                  <div class="channel-list">
-                    <div class="channel-item" *ngFor="let channel of channels">
-                      <div class="channel-row">
+                <div class="space-section__header">
+                  <h4>Projects</h4>
+                  <span class="muted">{{ projects.length }} active</span>
+                  <button type="button" class="collapse-btn" (click)="toggleProjectsCollapsed()">
+                    {{ projectsCollapsed ? '▶' : '▼' }}
+                  </button>
+                </div>
+                <div class="project-panel" [class.is-collapsed]="projectsCollapsed">
+                  <div class="project-list">
+                    <div class="project-item" *ngFor="let project of projects">
+                      <div class="project-row">
                         <button
                           type="button"
-                          class="channel-main"
-                          (click)="handleChannelChange(channel.id)"
-                          [class.active]="channel.id === selectedChannelId"
+                          class="project-main"
+                          (click)="handleProjectChange(project.id)"
+                          [class.active]="project.id === selectedProjectId"
                         >
                           <div>
-                            <strong>{{ channel.name }}</strong>
+                            <strong>{{ project.name }}</strong>
+                            <small>#{{ project.slug }}</small>
                           </div>
-                          <span class="channel-number">
-                          {{ getChannelTicketCount(channel.id) }}
+                          <span class="project-number">
+                            total ticket: {{ getProjectTicketCount(project.id) }}
                           </span>
                         </button>
                         <button
                           type="button"
-                          class="channel-delete"
-                          title="Delete channel"
-                          aria-label="Delete channel"
-                          (click)="openDeleteChannelDialog(channel); $event.stopPropagation()"
+                          class="project-delete"
+                          title="Delete project"
+                          aria-label="Delete project"
+                          (click)="openDeleteProjectDialog(project); $event.stopPropagation()"
                         >
                           <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                             <path
@@ -159,13 +160,12 @@
                         </button>
                       </div>
                       <div
-                        class="channel-ticket-groups"
-                        *ngIf="expandedChannelId === channel.id"
+                        class="project-ticket-groups"
+                        *ngIf="expandedProjectId === project.id"
                       >
-                        <div class="channel-ticket-group" *ngFor="let category of getTicketsByCategory(channel.id)">
+                        <div class="project-ticket-group" *ngFor="let category of getTicketsByCategory(project.id)">
                           <header>
                             <strong>{{ category.label }}</strong>
-                            <small>{{ category.items.length }}</small>
                           </header>
                           <ul>
                             <li *ngFor="let ticket of category.items | slice:0:4">
@@ -173,7 +173,6 @@
                                 <div>
                                   <strong>{{ ticket.ticketNumber }}</strong>
                                 </div>
-                             
                               </button>
                             </li>
                             <li *ngIf="!category.items.length" class="muted">No tickets.</li>
@@ -181,18 +180,18 @@
                         </div>
                       </div>
                     </div>
-                    <div class="channel-item report-channel">
+                    <div class="project-item report-project">
                       <button
                         type="button"
-                        class="channel-main"
+                        class="project-main"
                         [class.active]="isGlobalReportView"
                         (click)="handleGlobalReportView($event)"
                       >
                         <div>
                           <strong>Report of work</strong>
-                          <small>All channels</small>
+                          <small>All projects</small>
                         </div>
-                        <span class="channel-number">View</span>
+                        <span class="project-number">View</span>
                       </button>
                     </div>
                   </div>
@@ -203,24 +202,24 @@
 
           </div>
 
-          <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket || viewingReportsForChannelId; else promptSelect">
-            <ng-container *ngIf="viewingReportsForChannelId; else rightContent">
-              <section class="card channel-reports">
+          <div class="home-layout__right" *ngIf="selectedTicket || lockedTicket || viewingReportsForProjectId; else promptSelect">
+            <ng-container *ngIf="viewingReportsForProjectId; else rightContent">
+              <section class="card project-reports">
                 <header>
                   <div>
                     <h3>Report of work</h3>
-                    <p>{{ viewingReportsForChannelName }}</p>
+                    <p>{{ viewingReportsForProjectName }}</p>
                   </div>
-                  <button type="button" class="ghost" (click)="closeChannelReports()">Close</button>
+                  <button type="button" class="ghost" (click)="closeProjectReports()">Close</button>
                 </header>
-                <section *ngIf="channelReportsLoading">
+                <section *ngIf="projectReportsLoading">
                   <p class="muted">Loading reports…</p>
                 </section>
-                <section *ngIf="!channelReportsLoading && !channelReportEntries.length">
+                <section *ngIf="!projectReportsLoading && !projectReportEntries.length">
                   <p class="muted">No ticket starts recorded yet.</p>
                 </section>
-                <ul *ngIf="!channelReportsLoading && channelReportEntries.length">
-                  <li *ngFor="let entry of channelReportEntries">
+                <ul *ngIf="!projectReportsLoading && projectReportEntries.length">
+                  <li *ngFor="let entry of projectReportEntries">
                     <div>
                       <strong>{{ entry.ticketNumber }}</strong>
                       <small>{{ entry.createdAt | date: 'short' }}</small>
@@ -532,32 +531,32 @@
   </div>
 </ng-template>
 
-<div class="modal-backdrop" *ngIf="isCreateChannelOpen" (click)="closeCreateChannel()">
+<div class="modal-backdrop" *ngIf="isCreateProjectOpen" (click)="closeCreateProject()">
   <section class="modal" (click)="$event.stopPropagation()">
     <header>
-      <h3>Create channel</h3>
-      <button type="button" (click)="closeCreateChannel()">✕</button>
+      <h3>Create project</h3>
+      <button type="button" (click)="closeCreateProject()">✕</button>
     </header>
-    <form (ngSubmit)="handleCreateChannel()">
+    <form (ngSubmit)="handleCreateProject()">
       <label>
         Name
-        <input type="text" name="channelName" [(ngModel)]="createChannelModel.name" required />
+        <input type="text" name="projectName" [(ngModel)]="createProjectModel.name" required />
       </label>
       <label>
         Slug
-        <input type="text" name="channelSlug" [(ngModel)]="createChannelModel.slug" placeholder="auto" />
+        <input type="text" name="projectSlug" [(ngModel)]="createProjectModel.slug" placeholder="auto" />
       </label>
       <label>
         Ticket prefix
-        <input type="text" name="channelPrefix" [(ngModel)]="createChannelModel.ticketPrefix" required />
+        <input type="text" name="projectPrefix" [(ngModel)]="createProjectModel.ticketPrefix" required />
       </label>
       <label>
         Description
-        <textarea name="channelDescription" rows="2" [(ngModel)]="createChannelModel.description"></textarea>
+        <textarea name="projectDescription" rows="2" [(ngModel)]="createProjectModel.description"></textarea>
       </label>
       <footer>
-        <button type="button" class="ghost" (click)="closeCreateChannel()">Cancel</button>
-        <button type="submit">Create channel</button>
+        <button type="button" class="ghost" (click)="closeCreateProject()">Cancel</button>
+        <button type="submit">Create project</button>
       </footer>
     </form>
   </section>
@@ -589,10 +588,10 @@
         />
       </label>
       <label>
-        Channel
-        <select [(ngModel)]="createTicketModel.channelId" name="channel">
-          <option *ngFor="let channel of channels" [value]="channel.id">
-            #{{ channel.slug }} ({{ channel.ticketPrefix }})
+        Project
+        <select [(ngModel)]="createTicketModel.projectId" name="project">
+          <option *ngFor="let project of projects" [value]="project.id">
+            #{{ project.slug }} ({{ project.ticketPrefix }})
           </option>
         </select>
       </label>
@@ -627,19 +626,19 @@
   </section>
 </div>
 
-<div class="modal-backdrop" *ngIf="isDeleteChannelOpen" (click)="closeDeleteChannelDialog()">
+<div class="modal-backdrop" *ngIf="isDeleteProjectOpen" (click)="closeDeleteProjectDialog()">
   <section class="modal" (click)="$event.stopPropagation()">
     <header>
-      <h3>Delete channel</h3>
-      <button type="button" (click)="closeDeleteChannelDialog()">✕</button>
+      <h3>Delete project</h3>
+      <button type="button" (click)="closeDeleteProjectDialog()">✕</button>
     </header>
     <p>
       Are you sure you want to delete
-      <strong>{{ channelPendingDeletion?.name }}</strong>? This cannot be undone.
+      <strong>{{ projectPendingDeletion?.name }}</strong>? This cannot be undone.
     </p>
     <footer>
-      <button type="button" class="ghost" (click)="closeDeleteChannelDialog()">No</button>
-      <button type="button" (click)="confirmDeleteChannel()">Yes, delete</button>
+      <button type="button" class="ghost" (click)="closeDeleteProjectDialog()">No</button>
+      <button type="button" (click)="confirmDeleteProject()">Yes, delete</button>
     </footer>
   </section>
 </div>

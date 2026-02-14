@@ -132,7 +132,7 @@ const mapTicket = (row, viewerIsMember = true) => {
     title: row.title,
     description: row.description,
     status: row.status,
-    channelId: row.channel_id,
+    projectId: row.project_id,
     creatorId: row.creator_id,
     assigneeId: row.assignee_id,
     estimatedHours: row.estimated_hours == null ? null : Number(row.estimated_hours),
@@ -154,8 +154,8 @@ const fetchUser = async (userId) => {
   return rows[0];
 };
 
-const fetchChannel = async (channelId) => {
-  const { rows } = await query('SELECT * FROM channels WHERE id = $1', [channelId]);
+const fetchProject = async (projectId) => {
+  const { rows } = await query('SELECT * FROM projects WHERE id = $1', [projectId]);
   return rows[0];
 };
 
@@ -280,89 +280,86 @@ app.get(
   })
 );
 
-app.get(
-  '/api/channels',
-  asyncHandler(async (req, res) => {
-    const { rows } = await query(
-      'SELECT c.*, cs.last_value FROM channels c LEFT JOIN channel_sequences cs ON c.id = cs.channel_id ORDER BY c.name'
+const listProjects = asyncHandler(async (req, res) => {
+  const { rows } = await query(
+    'SELECT p.*, ps.last_value FROM projects p LEFT JOIN project_sequences ps ON p.id = ps.project_id ORDER BY p.name'
+  );
+  res.json(
+    rows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      ticketPrefix: row.ticket_prefix,
+      nextNumber: (row.last_value || 0) + 1,
+    }))
+  );
+});
+
+const createProject = asyncHandler(async (req, res) => {
+  const { name, slug, ticketPrefix, description } = req.body;
+  if (!name || !ticketPrefix) {
+    return res.status(400).json({ message: 'name and ticketPrefix are required' });
+  }
+  const normalizedSlug = slugify(slug || name);
+  if (!normalizedSlug) {
+    return res.status(400).json({ message: 'Invalid slug' });
+  }
+  const prefix = String(ticketPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+  if (!prefix) {
+    return res.status(400).json({ message: 'Invalid ticket prefix' });
+  }
+
+  const projectId = uuidv4();
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      'INSERT INTO projects (id, name, slug, ticket_prefix, description) VALUES ($1, $2, $3, $4, $5)',
+      [projectId, name.trim(), normalizedSlug, prefix, description || null]
     );
-    res.json(
-      rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        slug: row.slug,
-        ticketPrefix: row.ticket_prefix,
-        nextNumber: (row.last_value || 0) + 1,
-      }))
-    );
-  })
-);
+    await client.query('INSERT INTO project_sequences (project_id, last_value) VALUES ($1, 0) ON CONFLICT (project_id) DO NOTHING', [
+      projectId,
+    ]);
+    await client.query('COMMIT');
+    res.status(201).json({
+      id: projectId,
+      name: name.trim(),
+      slug: normalizedSlug,
+      ticketPrefix: prefix,
+      description: description || null,
+      nextNumber: 1,
+    });
+  } catch (error) {
+    await client.query('ROLLBACK');
+    if (error.code === '23505') {
+      return res.status(409).json({ message: 'Project slug or prefix already exists' });
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
+});
 
-app.post(
-  '/api/channels',
-  asyncHandler(async (req, res) => {
-    const { name, slug, ticketPrefix, description } = req.body;
-    if (!name || !ticketPrefix) {
-      return res.status(400).json({ message: 'name and ticketPrefix are required' });
-    }
-    const normalizedSlug = slugify(slug || name);
-    if (!normalizedSlug) {
-      return res.status(400).json({ message: 'Invalid slug' });
-    }
-    const prefix = String(ticketPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
-    if (!prefix) {
-      return res.status(400).json({ message: 'Invalid ticket prefix' });
-    }
+app.get('/api/projects', listProjects);
+app.get('/api/channels', listProjects);
+app.post('/api/projects', createProject);
+app.post('/api/channels', createProject);
 
-    const channelId = uuidv4();
-    const client = await pool.connect();
-    try {
-      await client.query('BEGIN');
-      await client.query(
-        'INSERT INTO channels (id, name, slug, ticket_prefix, description) VALUES ($1, $2, $3, $4, $5)',
-        [channelId, name.trim(), normalizedSlug, prefix, description || null]
-      );
-      await client.query('INSERT INTO channel_sequences (channel_id, last_value) VALUES ($1, 0) ON CONFLICT (channel_id) DO NOTHING', [
-        channelId,
-      ]);
-      await client.query('COMMIT');
-      res.status(201).json({
-        id: channelId,
-        name: name.trim(),
-        slug: normalizedSlug,
-        ticketPrefix: prefix,
-        description: description || null,
-        nextNumber: 1,
-      });
-    } catch (error) {
-      await client.query('ROLLBACK');
-      if (error.code === '23505') {
-        return res.status(409).json({ message: 'Channel slug or prefix already exists' });
-      }
-      throw error;
-    } finally {
-      client.release();
-    }
-  })
-);
+const deleteProject = asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId || req.params.channelId;
+  const { rowCount } = await query('DELETE FROM projects WHERE id = $1', [projectId]);
+  if (!rowCount) {
+    return res.status(404).json({ message: 'Project not found' });
+  }
+  res.status(204).send();
+});
 
-app.delete(
-  '/api/channels/:channelId',
-  asyncHandler(async (req, res) => {
-    const { channelId } = req.params;
-    const { rowCount } = await query('DELETE FROM channels WHERE id = $1', [channelId]);
-    if (!rowCount) {
-      return res.status(404).json({ message: 'Channel not found' });
-    }
-    res.status(204).send();
-  })
-);
+app.delete('/api/projects/:projectId', deleteProject);
+app.delete('/api/channels/:channelId', deleteProject);
 
-app.get(
-  '/api/channels/:channelId/reports',
-  asyncHandler(async (req, res) => {
-    const { channelId } = req.params;
-    const { rows } = await query(
+const projectReportsHandler = asyncHandler(async (req, res) => {
+  const projectId = req.params.projectId || req.params.channelId;
+  const { rows } = await query(
       `SELECT tl.id,
               tl.message,
               tl.created_at,
@@ -372,24 +369,26 @@ app.get(
          FROM ticket_logs tl
          JOIN tickets t ON tl.ticket_id = t.id
          LEFT JOIN users u ON tl.created_by = u.id
-        WHERE t.channel_id = $1
+        WHERE t.project_id = $1
           AND LOWER(tl.message) LIKE '%start%'
         ORDER BY tl.created_at DESC
         LIMIT 200`,
-      [channelId]
-    );
-    res.json(
-      rows.map((row) => ({
-        id: row.id,
-        message: row.message,
-        createdAt: row.created_at,
-        actorName: row.actor_name,
-        ticketNumber: row.ticket_number,
-        ticketTitle: row.title,
-      }))
-    );
-  })
-);
+      [projectId]
+  );
+  res.json(
+    rows.map((row) => ({
+      id: row.id,
+      message: row.message,
+      createdAt: row.created_at,
+      actorName: row.actor_name,
+      ticketNumber: row.ticket_number,
+      ticketTitle: row.title,
+    }))
+  );
+});
+
+app.get('/api/projects/:projectId/reports', projectReportsHandler);
+app.get('/api/channels/:channelId/reports', projectReportsHandler);
 
 app.get(
   '/api/reports',
@@ -424,13 +423,14 @@ app.get(
 app.get(
   '/api/tickets',
   asyncHandler(async (req, res) => {
-    const { channelId, creatorId, assigneeId } = req.query;
+    const projectFilter = req.query.projectId || req.query.channelId;
+    const { creatorId, assigneeId } = req.query;
     const conditions = [];
     const params = [];
 
-    if (channelId) {
-      params.push(channelId);
-      conditions.push(`t.channel_id = $${params.length}`);
+    if (projectFilter) {
+      params.push(projectFilter);
+      conditions.push(`t.project_id = $${params.length}`);
     }
     if (creatorId) {
       params.push(creatorId);
@@ -526,9 +526,10 @@ app.get(
 app.post(
   '/api/tickets',
   asyncHandler(async (req, res) => {
-    const { title, description, channelId, creatorId, estimatedHours } = req.body;
-    if (!title || !channelId || !creatorId) {
-      return res.status(400).json({ message: 'title, channelId and creatorId are required' });
+    const { title, description, creatorId, estimatedHours } = req.body;
+    const projectId = req.body.projectId || req.body.channelId;
+    if (!title || !projectId || !creatorId) {
+      return res.status(400).json({ message: 'title, projectId and creatorId are required' });
     }
     const privacyValue = (req.body.privacy || 'public').toLowerCase();
     const allowedPrivacy = ['public', 'private'];
@@ -540,9 +541,9 @@ app.post(
       ? Array.from(new Set(req.body.additionalMemberIds)).filter((id) => id && id !== creatorId)
       : [];
 
-    const channel = await fetchChannel(channelId);
-    if (!channel) {
-      return res.status(404).json({ message: 'Channel not found' });
+    const project = await fetchProject(projectId);
+    if (!project) {
+      return res.status(404).json({ message: 'Project not found' });
     }
     const creator = await fetchUser(creatorId);
     if (!creator) {
@@ -553,26 +554,26 @@ app.post(
     try {
       await client.query('BEGIN');
       const sequenceResult = await client.query(
-        'UPDATE channel_sequences SET last_value = last_value + 1 WHERE channel_id = $1 RETURNING last_value',
-        [channelId]
+        'UPDATE project_sequences SET last_value = last_value + 1 WHERE project_id = $1 RETURNING last_value',
+        [projectId]
       );
       if (!sequenceResult.rowCount) {
-        throw new Error('Channel has no sequence configuration');
+        throw new Error('Project has no sequence configuration');
       }
       const nextNumber = sequenceResult.rows[0].last_value;
-      const ticketNumber = `${channel.ticket_prefix.toLowerCase()}-${padTicketNumber(nextNumber)}`;
+      const ticketNumber = `${project.ticket_prefix.toLowerCase()}-${padTicketNumber(nextNumber)}`;
       const ticketId = uuidv4();
 
       const insertTicket = await client.query(
         `INSERT INTO tickets (
-          id, ticket_number, title, description, channel_id, creator_id, estimated_hours, privacy, priority
+          id, ticket_number, title, description, project_id, creator_id, estimated_hours, privacy, priority
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
         [
           ticketId,
           ticketNumber,
           title,
           description || '',
-          channelId,
+          projectId,
           creatorId,
           estimatedHours || null,
           privacy,

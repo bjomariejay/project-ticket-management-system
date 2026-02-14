@@ -5,8 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { SESSION_EXPIRED_EVENT } from './auth.interceptor';
 import {
   ApiService,
-  Channel,
-  ChannelReportEntry,
+  Project,
+  ProjectReportEntry,
   DashboardEntry,
   DmMessage,
   NotificationItem,
@@ -26,14 +26,14 @@ import {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
-  readonly globalReportChannelId = 'global-reports';
+  readonly globalReportProjectId = 'global-reports';
   @ViewChild('messageInput') messageInputRef?: ElementRef<HTMLTextAreaElement>;
 
   title = 'Project and Ticket Management System';
   workspaceLabel = 'Mission Control Workspace';
 
   users: User[] = [];
-  channels: Channel[] = [];
+  projects: Project[] = [];
   tickets: Ticket[] = [];
   dashboard: DashboardEntry[] = [];
   notifications: NotificationItem[] = [];
@@ -45,11 +45,11 @@ export class AppComponent implements OnInit, OnDestroy {
   ] as const;
 
   selectedUserId = '';
-  selectedChannelId = '';
+  selectedProjectId = '';
   selectedTicket: TicketDetail | null = null;
   lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null = null;
   activeTab: 'dashboard' | 'home' | 'dms' | 'activity' = 'home';
-  channelsCollapsed = false;
+  projectsCollapsed = false;
 
   ticketSearch = '';
   messageDraft = '';
@@ -61,13 +61,13 @@ export class AppComponent implements OnInit, OnDestroy {
   createTicketModel = {
     title: '',
     description: '',
-    channelId: '',
+    projectId: '',
     estimatedHours: 1,
     privacy: 'public' as TicketPrivacy,
     inviteeIds: [] as string[],
     priority: 'normal' as TicketPriority,
   };
-  createChannelModel = {
+  createProjectModel = {
     name: '',
     slug: '',
     ticketPrefix: '',
@@ -113,20 +113,20 @@ export class AppComponent implements OnInit, OnDestroy {
     estimatedHours: null as number | null | '',
   };
   selectedLog: TicketLog | null = null;
-  isCreateChannelOpen = false;
+  isCreateProjectOpen = false;
   isCreateTicketOpen = false;
-  expandedChannelId = '';
+  expandedProjectId = '';
   private mentionReplaceRange: { start: number; end: number } | null = null;
   private slashReplaceRange: { start: number; end: number } | null = null;
   private messageCursorIndex = 0;
   private suggestionHideTimeout: number | null = null;
-  channelReportEntries: ChannelReportEntry[] = [];
-  viewingReportsForChannelId = '';
-  viewingReportsForChannelName = '';
-  channelReportsLoading = false;
+  projectReportEntries: ProjectReportEntry[] = [];
+  viewingReportsForProjectId = '';
+  viewingReportsForProjectName = '';
+  projectReportsLoading = false;
   isGlobalReportView = false;
-  isDeleteChannelOpen = false;
-  channelPendingDeletion: Channel | null = null;
+  isDeleteProjectOpen = false;
+  projectPendingDeletion: Project | null = null;
   readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
 
   private readonly handleSessionExpired = () => {
@@ -167,14 +167,12 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async bootstrapWorkspace() {
     if (!this.isAuthenticated) return;
-    await Promise.all([this.loadUsers(), this.loadChannels()]);
+    await Promise.all([this.loadUsers(), this.loadProjects()]);
     if (!this.selectedUserId && this.sessionUser) {
       this.selectedUserId = this.sessionUser.id;
     }
-    if (this.channels.length) {
-      this.selectedChannelId = this.channels[0].id;
-      this.expandedChannelId = this.channels[0].id;
-      this.createTicketModel.channelId = this.channels[0].id;
+    if (!this.createTicketModel.projectId && this.projects.length) {
+      this.createTicketModel.projectId = this.projects[0].id;
     }
     await this.loadTickets();
     await Promise.all([this.loadDashboard(), this.loadNotifications(), this.loadDms()]);
@@ -246,7 +244,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private resetWorkspaceState(clearUserSelection = false) {
     this.users = [];
-    this.channels = [];
+    this.projects = [];
     this.tickets = [];
     this.dashboard = [];
     this.notifications = [];
@@ -256,13 +254,13 @@ export class AppComponent implements OnInit, OnDestroy {
     this.activeTab = 'home';
     this.ticketSearch = '';
     this.messageDraft = '';
-    this.channelsCollapsed = false;
+    this.projectsCollapsed = false;
     this.resetMentionSuggestions();
     this.resetSlashSuggestions();
     this.createTicketModel = {
       title: '',
       description: '',
-      channelId: '',
+      projectId: '',
       estimatedHours: 1,
       privacy: 'public',
       inviteeIds: [],
@@ -277,13 +275,13 @@ export class AppComponent implements OnInit, OnDestroy {
       priority: 'normal',
       estimatedHours: null,
     };
-    this.isCreateChannelOpen = false;
+    this.isCreateProjectOpen = false;
     this.isCreateTicketOpen = false;
     this.selectedLog = null;
-    this.expandedChannelId = '';
+    this.expandedProjectId = '';
+    this.selectedProjectId = '';
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
-      this.selectedChannelId = '';
     }
   }
 
@@ -376,11 +374,11 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
-  getTicketsByCategory(channelId: string) {
+  getTicketsByCategory(projectId: string) {
     return this.ticketCategoryConfig.map((category) => ({
       ...category,
       items: this.tickets.filter(
-        (ticket) => ticket.channelId === channelId && ticket.status === category.key
+        (ticket) => ticket.projectId === projectId && ticket.status === category.key
       ),
     }));
   }
@@ -412,8 +410,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.users = await firstValueFrom(this.api.getUsers());
   }
 
-  async loadChannels() {
-    this.channels = await firstValueFrom(this.api.getChannels());
+  async loadProjects() {
+    this.projects = await firstValueFrom(this.api.getProjects());
   }
 
   async loadTickets() {
@@ -433,9 +431,7 @@ export class AppComponent implements OnInit, OnDestroy {
           this.lockedTicket = null;
         }
       }
-      if (!this.selectedTicket && this.tickets.length) {
-        await this.selectTicket(this.tickets[0].id);
-      } else if (this.selectedTicket) {
+      if (this.selectedTicket || this.lockedTicket) {
         await this.refreshTicketDetail();
       }
     } finally {
@@ -510,41 +506,41 @@ export class AppComponent implements OnInit, OnDestroy {
       .substring(0, 64);
   }
 
-  async handleCreateChannel() {
-    if (!this.createChannelModel.name || !this.createChannelModel.ticketPrefix) {
-      this.feedback = 'Channel name and prefix are required.';
+  async handleCreateProject() {
+    if (!this.createProjectModel.name || !this.createProjectModel.ticketPrefix) {
+      this.feedback = 'Project name and prefix are required.';
       return;
     }
-    const slug = this.slugify(this.createChannelModel.slug || this.createChannelModel.name);
+    const slug = this.slugify(this.createProjectModel.slug || this.createProjectModel.name);
     if (!slug) {
-      this.feedback = 'Unable to generate a valid channel slug.';
+      this.feedback = 'Unable to generate a valid project slug.';
       return;
     }
     try {
       const response: any = await firstValueFrom(
-        this.api.createChannel({
-          name: this.createChannelModel.name.trim(),
+        this.api.createProject({
+          name: this.createProjectModel.name.trim(),
           slug,
-          ticketPrefix: this.createChannelModel.ticketPrefix.trim(),
-          description: this.createChannelModel.description.trim() || undefined,
+          ticketPrefix: this.createProjectModel.ticketPrefix.trim(),
+          description: this.createProjectModel.description.trim() || undefined,
         })
       );
-      this.createChannelModel = {
+      this.createProjectModel = {
         name: '',
         slug: '',
         ticketPrefix: '',
         description: '',
       };
-      await this.loadChannels();
+      await this.loadProjects();
       if (response?.id) {
-        this.selectedChannelId = response.id;
-        this.createTicketModel.channelId = response.id;
+        this.selectedProjectId = response.id;
+        this.createTicketModel.projectId = response.id;
         await this.loadTickets();
       }
-      this.feedback = 'Channel created.';
+      this.feedback = 'Project created.';
     } catch (error: any) {
       console.error(error);
-      this.feedback = error?.error?.message || 'Channel creation failed.';
+      this.feedback = error?.error?.message || 'Project creation failed.';
     }
   }
 
@@ -576,12 +572,12 @@ export class AppComponent implements OnInit, OnDestroy {
     await this.updateTicketSettings({ estimatedHours: hours });
   }
 
-  openCreateChannel() {
-    this.isCreateChannelOpen = true;
+  openCreateProject() {
+    this.isCreateProjectOpen = true;
   }
 
-  closeCreateChannel() {
-    this.isCreateChannelOpen = false;
+  closeCreateProject() {
+    this.isCreateProjectOpen = false;
   }
 
   openCreateTicket() {
@@ -600,31 +596,31 @@ export class AppComponent implements OnInit, OnDestroy {
     this.selectedLog = null;
   }
 
-  closeChannelReports() {
-    this.channelReportEntries = [];
-    this.viewingReportsForChannelId = '';
-    this.viewingReportsForChannelName = '';
-    this.channelReportsLoading = false;
+  closeProjectReports() {
+    this.projectReportEntries = [];
+    this.viewingReportsForProjectId = '';
+    this.viewingReportsForProjectName = '';
+    this.projectReportsLoading = false;
     this.isGlobalReportView = false;
   }
 
   async handleGlobalReportView(event?: Event) {
     event?.stopPropagation();
     event?.preventDefault();
-    this.channelReportsLoading = true;
+    this.projectReportsLoading = true;
     try {
-      this.viewingReportsForChannelId = this.globalReportChannelId;
-      this.viewingReportsForChannelName = 'All channels';
+      this.viewingReportsForProjectId = this.globalReportProjectId;
+      this.viewingReportsForProjectName = 'All projects';
       this.isGlobalReportView = true;
-      this.channelReportEntries = await firstValueFrom(this.api.getAllReports());
+      this.projectReportEntries = await firstValueFrom(this.api.getAllReports());
       this.selectedTicket = null;
       this.lockedTicket = null;
       this.selectedLog = null;
     } catch (error) {
       console.error(error);
-      this.closeChannelReports();
+      this.closeProjectReports();
     } finally {
-      this.channelReportsLoading = false;
+      this.projectReportsLoading = false;
     }
   }
 
@@ -640,7 +636,7 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async selectTicket(ticketId: string) {
     this.lockedTicket = null;
-    this.closeChannelReports();
+    this.closeProjectReports();
     try {
       this.selectedTicket = await firstValueFrom(this.api.getTicket(ticketId));
       this.messageDraft = '';
@@ -682,19 +678,19 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async handleCreateTicket() {
-    if (!this.selectedUserId || !this.createTicketModel.title || !this.createTicketModel.channelId) {
+    if (!this.selectedUserId || !this.createTicketModel.title || !this.createTicketModel.projectId) {
       this.feedback = 'Please complete the ticket form.';
       return;
     }
     try {
-      const selectedChannel = this.createTicketModel.channelId;
+      const selectedProject = this.createTicketModel.projectId;
       const selectedPrivacy = this.createTicketModel.privacy;
       const selectedPriority = this.createTicketModel.priority;
       const ticket = await firstValueFrom(
         this.api.createTicket({
           title: this.createTicketModel.title,
           description: this.createTicketModel.description,
-          channelId: this.createTicketModel.channelId,
+          projectId: this.createTicketModel.projectId,
           creatorId: this.selectedUserId,
           estimatedHours: this.createTicketModel.estimatedHours,
           privacy: this.createTicketModel.privacy,
@@ -705,7 +701,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.createTicketModel = {
         title: '',
         description: '',
-        channelId: selectedChannel,
+        projectId: selectedProject,
         estimatedHours: 1,
         privacy: selectedPrivacy,
         inviteeIds: [],
@@ -1026,67 +1022,68 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
-  openDeleteChannelDialog(channel: Channel) {
-    this.channelPendingDeletion = channel;
-    this.isDeleteChannelOpen = true;
+  openDeleteProjectDialog(project: Project) {
+    this.projectPendingDeletion = project;
+    this.isDeleteProjectOpen = true;
   }
 
-  closeDeleteChannelDialog() {
-    this.channelPendingDeletion = null;
-    this.isDeleteChannelOpen = false;
+  closeDeleteProjectDialog() {
+    this.projectPendingDeletion = null;
+    this.isDeleteProjectOpen = false;
   }
 
-  async confirmDeleteChannel() {
-    if (!this.channelPendingDeletion) return;
-    const { id: channelId, name } = this.channelPendingDeletion;
-    this.closeDeleteChannelDialog();
+  async confirmDeleteProject() {
+    if (!this.projectPendingDeletion) return;
+    const { id: projectId, name } = this.projectPendingDeletion;
+    this.closeDeleteProjectDialog();
     try {
-      await firstValueFrom(this.api.deleteChannel(channelId));
-      this.feedback = `Channel "${name}" deleted.`;
-      await this.loadChannels();
-      if (this.selectedChannelId === channelId) {
-        this.selectedChannelId = this.channels[0]?.id || '';
-        this.createTicketModel.channelId = this.selectedChannelId || '';
+      await firstValueFrom(this.api.deleteProject(projectId));
+      this.feedback = `Project "${name}" deleted.`;
+      await this.loadProjects();
+      if (this.selectedProjectId === projectId) {
+        this.selectedProjectId = '';
+        this.expandedProjectId = '';
+        this.createTicketModel.projectId = '';
         this.selectedTicket = null;
         this.lockedTicket = null;
       }
       await this.loadTickets();
     } catch (error: any) {
       console.error(error);
-      this.feedback = error?.error?.message || 'Unable to delete channel.';
+      this.feedback = error?.error?.message || 'Unable to delete project.';
     }
   }
 
-  handleChannelChange(channelId: string) {
-    if (this.expandedChannelId === channelId) {
-      this.expandedChannelId = '';
+  handleProjectChange(projectId: string) {
+    if (this.expandedProjectId === projectId) {
+      this.expandedProjectId = '';
       return;
     }
-    this.selectedChannelId = channelId;
-    this.expandedChannelId = channelId;
-    this.createTicketModel.channelId = channelId;
+    this.selectedProjectId = projectId;
+    this.expandedProjectId = projectId;
+    this.createTicketModel.projectId = projectId;
     this.selectedTicket = null;
     this.lockedTicket = null;
     this.syncTicketSettings(null);
-    this.closeChannelReports();
+    this.closeProjectReports();
     void this.loadTickets();
   }
 
-  getChannelTicketCount(channelId: string): number {
-    return this.tickets.filter((ticket) => ticket.channelId === channelId).length;
+  getProjectTicketCount(projectId: string): number {
+    return this.tickets.filter((ticket) => ticket.projectId === projectId).length;
   }
 
-  toggleChannelsCollapsed() {
-    this.channelsCollapsed = !this.channelsCollapsed;
+  toggleProjectsCollapsed() {
+    this.projectsCollapsed = !this.projectsCollapsed;
   }
 
   get activityUnreadCount(): number {
     return this.notifications.filter((notification) => !notification.isRead).length;
   }
 
-  get channelLabel(): string {
-    const channel = this.channels.find((chan) => chan.id === this.selectedChannelId);
-    return channel ? channel.name : 'Select channel';
+  get projectLabel(): string {
+    const project = this.projects.find((chan) => chan.id === this.selectedProjectId);
+    return project ? project.name : 'Select project';
   }
 
   get headerTitle(): string {
@@ -1094,13 +1091,13 @@ export class AppComponent implements OnInit, OnDestroy {
       case 'dashboard':
         return 'Dashboard overview';
       case 'home':
-        return this.channelLabel;
+        return this.projectLabel;
       case 'dms':
         return 'Direct messages';
       case 'activity':
         return 'Activity';
       default:
-        return this.channelLabel;
+        return this.projectLabel;
     }
   }
 

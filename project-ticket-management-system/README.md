@@ -1,12 +1,12 @@
 # Project and Ticket Management System
 
-A Slack-inspired collaboration workspace that combines an Angular frontend with a Node.js/Express API, PostgreSQL storage, and Dockerized infrastructure. Teams can spin up channels, create tickets with automatic numbering per channel, manage ticket membership, log "report of work" updates (including the special `start ticket` trigger), send mentions that feed an activity center, and exchange direct messages.
+A Slack-inspired collaboration workspace that combines an Angular frontend with a Node.js/Express API, PostgreSQL storage, and Dockerized infrastructure. Teams can spin up projects, create tickets with automatic numbering per project, manage ticket membership, log "report of work" updates (including the special `start ticket` trigger), send mentions that feed an activity center, and exchange direct messages.
 
 ## Tech Stack
 
 - **Frontend**: Angular 18 (standalone APIs, SCSS, HttpClient)
 - **Backend**: Node.js 20, Express 5, PostgreSQL driver (`pg`)
-- **Database**: PostgreSQL with relational schema for users, channels, tickets, logs, notifications, and DMs
+- **Database**: PostgreSQL with relational schema for users, projects, tickets, logs, notifications, and DMs
 - **Containerization**: Docker + Docker Compose (backend API and PostgreSQL only)
 
 ## Running the backend with Docker Compose
@@ -20,7 +20,7 @@ Services:
 - Express API on <http://localhost:4000>
 - PostgreSQL exposed on port `5432` (credentials: postgres/postgres, database `project_ticket_management`)
 
-The database container automatically runs `backend/db-init.sql` on first boot to create tables, triggers, and seed users/channels so ticket numbering like `hrms-0001` works immediately.
+The database container automatically runs `backend/db-init.sql` on first boot to create tables, triggers, and seed users/projects so ticket numbering like `hrms-0001` works immediately.
 
 ## Local Development (without Docker)
 
@@ -44,8 +44,8 @@ The Angular app points to `http://localhost:4000/api` by default (see `src/envir
 
 ## Feature Highlights
 
-- Slack-like workspace chrome with dark sidebar, channel list, and tabs for **Home**, **DMs**, and **Activity**.
-- Ticket creation per channel automatically generates prefixes (e.g., HRMS-0001) based on configurable channel sequences.
+- Slack-like workspace chrome with dark sidebar, project list, and tabs for **Home**, **DMs**, and **Activity**.
+- Ticket creation per project automatically generates prefixes (e.g., HRMS-0001) based on configurable project sequences.
 - Ticket membership enforcement: creators can work immediately, other teammates click *Join ticket* before contributing. Joining is logged in the report-of-work feed.
 - Conversation threads with `@mentions` (or `@cebu` to notify every Cebu-based teammate) feed activity notifications. Typing `start ticket` updates ticket status and logs the work start.
 - Dashboard cards summarizing each teammate's open/in-progress/archived counts and estimated hours closed.
