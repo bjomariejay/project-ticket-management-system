@@ -217,6 +217,10 @@ interface WorkspaceContextValue {
   handleDmRecipientChange: (userId: string) => void;
   markNotification: (notificationId: string) => Promise<void>;
   navigateToNotification: (notification: NotificationItem) => Promise<void>;
+  updateUserInfo: (
+    userId: string,
+    payload: { displayName?: string; handle?: string; location?: string | null },
+  ) => Promise<void>;
 }
 
 const ACTIVITY_VIEW_KEY = (userId: string) => `tsfe:activity:lastViewed:${userId}`;
@@ -853,6 +857,25 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ selectedDmRecipientId: userId, dmForm: { ...stateRef.current.dmForm, recipientId: userId } });
   };
 
+  const updateUserInfo = async (
+    userId: string,
+    payload: { displayName?: string; handle?: string; location?: string | null },
+  ) => {
+    const updatedUser = await apiClient.updateUser(userId, payload);
+    mergeState({
+      users: stateRef.current.users.map((u) => (u.id === userId ? { ...u, ...updatedUser } : u)),
+    });
+    if (stateRef.current.selectedTicket) {
+      const updatedTicket = {
+        ...stateRef.current.selectedTicket,
+        members: stateRef.current.selectedTicket.members.map((member) =>
+          member.userId === userId ? { ...member, displayName: updatedUser.displayName, handle: updatedUser.handle } : member,
+        ),
+      };
+      mergeState({ selectedTicket: updatedTicket });
+    }
+  };
+
   const markNotification = async (notificationId: string) => {
     await apiClient.markNotificationRead(notificationId);
     await loadNotifications();
@@ -908,6 +931,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       handleDmRecipientChange,
       markNotification,
       navigateToNotification,
+      updateUserInfo,
     }),
     [state],
   );

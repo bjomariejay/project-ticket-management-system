@@ -1,9 +1,9 @@
-import { FormEvent, useMemo } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import clsx from 'clsx';
 import Loader from '../components/Loader';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
-import { NotificationItem, Ticket } from '../types/api';
+import { NotificationItem, Ticket, User } from '../types/api';
 
 const ticketCategoryConfig = [
   { key: 'open', label: 'Available' },
@@ -48,6 +48,7 @@ const WorkspacePage = () => {
     closeCreateTicket,
     handleGlobalReportView,
     closeProjectReports,
+    updateUserInfo,
   } = useWorkspace();
 
   const {
@@ -91,6 +92,11 @@ const WorkspacePage = () => {
     userSettingsError,
     userSettingsSaving,
   } = state;
+
+  const [adminEditUser, setAdminEditUser] = useState<User | null>(null);
+  const [adminEditForm, setAdminEditForm] = useState({ displayName: '', handle: '', location: '' });
+  const [adminEditError, setAdminEditError] = useState('');
+  const [adminEditSaving, setAdminEditSaving] = useState(false);
 
   const filteredTickets = useMemo(() => {
     const search = ticketSearch.trim().toLowerCase();
@@ -175,6 +181,62 @@ const WorkspacePage = () => {
     if (!selectedTicket) return;
     if (!value || value === selectedTicket.assigneeId) return;
     void handleAssign(value);
+  };
+
+  const openAdminEdit = (targetUserId: string) => {
+    const target = users.find((item) => item.id === targetUserId);
+    if (!target) return;
+    setAdminEditUser(target);
+    setAdminEditForm({
+      displayName: target.displayName,
+      handle: target.handle,
+      location: target.location || '',
+    });
+    setAdminEditError('');
+  };
+
+  const closeAdminEdit = () => {
+    setAdminEditUser(null);
+    setAdminEditForm({ displayName: '', handle: '', location: '' });
+    setAdminEditError('');
+    setAdminEditSaving(false);
+  };
+
+  const handleAdminFieldChange = (field: keyof typeof adminEditForm, value: string) => {
+    setAdminEditForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAdminSave = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!adminEditUser) return;
+    const trimmedName = adminEditForm.displayName.trim();
+    const trimmedHandle = adminEditForm.handle.trim();
+    const trimmedLocation = adminEditForm.location.trim();
+    const payload: { displayName?: string; handle?: string; location?: string | null } = {};
+    if (trimmedName && trimmedName !== adminEditUser.displayName) {
+      payload.displayName = trimmedName;
+    }
+    if (trimmedHandle && trimmedHandle !== adminEditUser.handle) {
+      payload.handle = trimmedHandle;
+    }
+    if (trimmedLocation !== (adminEditUser.location || '')) {
+      payload.location = trimmedLocation || null;
+    }
+    if (!Object.keys(payload).length) {
+      setAdminEditError('No changes to save.');
+      return;
+    }
+    setAdminEditSaving(true);
+    setAdminEditError('');
+    try {
+      await updateUserInfo(adminEditUser.id, payload);
+      closeAdminEdit();
+    } catch (error: any) {
+      console.error('Unable to update user', error);
+      setAdminEditError(error?.response?.data?.message || 'Unable to update user.');
+    } finally {
+      setAdminEditSaving(false);
+    }
   };
 
   const getUserName = (userId?: string | null) => {
@@ -269,6 +331,16 @@ const WorkspacePage = () => {
                   <h3>{entry.displayName}</h3>
                   <p>{entry.openCount + entry.inProgressCount + entry.archivedCount} tickets</p>
                 </div>
+                {user?.handle === 'admin' && (
+                  <button
+                    type="button"
+                    className="icon-button"
+                    onClick={() => openAdminEdit(entry.id)}
+                    aria-label="Edit user"
+                  >
+                    ✎
+                  </button>
+                )}
               </header>
               <ul>
                 <li>
@@ -871,6 +943,57 @@ const WorkspacePage = () => {
     );
   };
 
+  const renderAdminEditModal = () => {
+    if (!adminEditUser) return null;
+    return (
+      <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <article className="modal">
+          <header>
+            <h3>Edit {adminEditUser.displayName}</h3>
+            <button type="button" onClick={closeAdminEdit} aria-label="Close admin edit">
+              ×
+            </button>
+          </header>
+          <form onSubmit={handleAdminSave}>
+            <label>
+              Display name
+              <input
+                type="text"
+                value={adminEditForm.displayName}
+                onChange={(event) => handleAdminFieldChange('displayName', event.target.value)}
+              />
+            </label>
+            <label>
+              Handle
+              <input
+                type="text"
+                value={adminEditForm.handle}
+                onChange={(event) => handleAdminFieldChange('handle', event.target.value)}
+              />
+            </label>
+            <label>
+              Location
+              <input
+                type="text"
+                value={adminEditForm.location}
+                onChange={(event) => handleAdminFieldChange('location', event.target.value)}
+              />
+            </label>
+            {adminEditError && <p className="error">{adminEditError}</p>}
+            <footer>
+              <button type="button" className="link-button outline" onClick={closeAdminEdit}>
+                Cancel
+              </button>
+              <button className="link-button" type="submit" disabled={adminEditSaving}>
+                {adminEditSaving ? 'Saving…' : 'Save changes'}
+              </button>
+            </footer>
+          </form>
+        </article>
+      </div>
+    );
+  };
+
   return (
     <div className="workspace">
       <aside className="workspace__sidebar">
@@ -986,11 +1109,12 @@ const WorkspacePage = () => {
         {isBootstrapping && <Loader label="Loading workspace…" />}
       {renderContent()}
     </main>
-    {renderCreateTicketModal()}
-    {renderCreateProjectModal()}
-    {renderUserSettingsModal()}
-  </div>
-);
+      {renderCreateTicketModal()}
+      {renderCreateProjectModal()}
+      {renderAdminEditModal()}
+      {renderUserSettingsModal()}
+    </div>
+  );
 };
 
 export default WorkspacePage;
