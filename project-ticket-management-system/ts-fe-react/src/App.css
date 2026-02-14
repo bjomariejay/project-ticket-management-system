@@ -984,9 +984,23 @@ textarea {
   align-items: flex-start;
 }
 
-.composer-input {
+
+.message-input {
   position: relative;
   flex: 1;
+}
+
+.message-input textarea {
+  width: 100%;
+  border-radius: 0.8rem;
+  border: 1px solid #dfe3ef;
+  padding: 0.5rem 0.8rem;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.message-form {
+  position: relative;
 }
 
 .composer-input textarea {
@@ -1021,10 +1035,10 @@ textarea {
 .mention-suggestions,
 .slash-suggestions {
   position: absolute;
-  top: 100%;
   left: 0;
   width: 100%;
-  margin-top: 0.25rem;
+  margin-top: 0.05rem;
+  top: calc(100% + 2px);
   background: #fff;
   border: 1px solid #e2e5f1;
   border-radius: 0.75rem;
@@ -1039,7 +1053,7 @@ textarea {
 }
 
 .slash-suggestions {
-  margin-top: 3rem;
+  top: calc(100% + 2px);
 }
 
 .mention-suggestions button,

@@ -98,6 +98,13 @@ const WorkspacePage = () => {
   const [adminEditError, setAdminEditError] = useState('');
   const [adminEditSaving, setAdminEditSaving] = useState(false);
 
+  const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
+  const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
+  const [slashSuggestions, setSlashSuggestions] = useState<string[]>([]);
+  const [showSlashSuggestions, setShowSlashSuggestions] = useState(false);
+  const [mentionRange, setMentionRange] = useState<{ start: number; end: number } | null>(null);
+  const [slashRange, setSlashRange] = useState<{ start: number; end: number } | null>(null);
+
   const filteredTickets = useMemo(() => {
     const search = ticketSearch.trim().toLowerCase();
     if (!search) return tickets;
@@ -242,6 +249,10 @@ const WorkspacePage = () => {
   const getUserName = (userId?: string | null) => {
     if (!userId) return 'Unassigned';
     return users.find((item) => item.id === userId)?.displayName || 'Unknown';
+  };
+
+  const buildSlashSuggestions = () => {
+    return ['/start', '/archive', '/a-@username', '/e-hours'];
   };
 
   const isDmNotification = (notification: NotificationItem) => {
@@ -563,31 +574,117 @@ const WorkspacePage = () => {
                         ))}
                       </ul>
                     </section>
-                    <section className="ticket-thread">
-                      <h4>Messages</h4>
-                      <div className="message-list">
-                        {selectedTicket.messages.map((message) => (
-                          <article key={message.id} className="message-item">
-                            <header>
-                              <strong>{message.displayName || 'Unknown user'}</strong>
-                              <small>{new Date(message.createdAt).toLocaleString()}</small>
-                            </header>
-                            <p>{message.body}</p>
-                          </article>
-                        ))}
-                      </div>
-                      <form onSubmit={handleMessageSubmit} className="message-form">
-                        <textarea
-                          rows={3}
-                          value={messageDraft}
-                          placeholder="Write an update…"
-                          onChange={(event) => setMessageDraft(event.target.value)}
-                        />
-                        <button className="link-button" type="submit" disabled={isPostingMessage}>
-                          {isPostingMessage ? 'Posting…' : 'Post update'}
-                        </button>
-                      </form>
-                    </section>
+                    {isTicketMember ? (
+                      <section className="ticket-thread">
+                        <h4>Messages</h4>
+                        <div className="message-list">
+                          {selectedTicket.messages.map((message) => (
+                            <article key={message.id} className="message-item">
+                              <header>
+                                <strong>{message.displayName || 'Unknown user'}</strong>
+                                <small>{new Date(message.createdAt).toLocaleString()}</small>
+                              </header>
+                              <p>{message.body}</p>
+                            </article>
+                          ))}
+                        </div>
+                        <form onSubmit={handleMessageSubmit} className="message-form">
+                          <div className="message-input">
+                            <textarea
+                              rows={3}
+                              value={messageDraft}
+                              placeholder="Write an update…"
+                              onChange={(event) => setMessageDraft(event.target.value)}
+                              onInput={(event) => {
+                                const target = event.target as HTMLTextAreaElement;
+                                const caretIndex = target.selectionStart ?? target.value.length;
+                                const before = target.value.slice(0, caretIndex);
+                                const slashMatch = before.match(/(?:^|\s)\/([\w]*)$/);
+                                if (slashMatch) {
+                                  setSlashSuggestions(buildSlashSuggestions());
+                                  setSlashRange({ start: caretIndex - slashMatch[0].length, end: caretIndex });
+                                  setShowSlashSuggestions(true);
+                                } else {
+                                  setSlashRange(null);
+                                  setShowSlashSuggestions(false);
+                                }
+                                const mentionMatch = before.match(/(?:^|\s)@([\w-]*)$/i);
+                                if (mentionMatch) {
+                                  const query = mentionMatch[1].toLowerCase();
+                                  const suggestions = users.filter((u) =>
+                                    u.username.toLowerCase().includes(query) ||
+                                    u.handle.toLowerCase().includes(query),
+                                  );
+                                  setMentionRange({ start: caretIndex - mentionMatch[0].length, end: caretIndex });
+                                  setMentionSuggestions(suggestions.slice(0, 5));
+                                  setShowMentionSuggestions(suggestions.length > 0);
+                                } else {
+                                  setMentionRange(null);
+                                  setShowMentionSuggestions(false);
+                                }
+                              }}
+                            />
+                            {showMentionSuggestions && mentionSuggestions.length > 0 && (
+                              <div className="mention-suggestions">
+                                {mentionSuggestions.map((suggestion) => (
+                                  <button
+                                    type="button"
+                                    key={suggestion.id}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      const normalized = (suggestion.username || suggestion.handle).trim();
+                                      const insertion = `@${normalized} `;
+                                      if (mentionRange) {
+                                        const before = messageDraft.slice(0, mentionRange.start);
+                                        const after = messageDraft.slice(mentionRange.end);
+                                        setMessageDraft(`${before}${insertion}${after}`);
+                                      } else {
+                                        setMessageDraft((prev) => `${prev}${insertion}`);
+                                      }
+                                      setShowMentionSuggestions(false);
+                                    }}
+                                  >
+                                    <strong>@{suggestion.username}</strong>
+                                    <small>{suggestion.displayName} · {suggestion.handle}</small>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                            {showSlashSuggestions && slashSuggestions.length > 0 && (
+                              <div className="slash-suggestions">
+                                {slashSuggestions.map((command) => (
+                                  <button
+                                    type="button"
+                                    key={command}
+                                    onMouseDown={(e) => e.preventDefault()}
+                                    onClick={() => {
+                                      if (slashRange) {
+                                        const before = messageDraft.slice(0, slashRange.start);
+                                        const after = messageDraft.slice(slashRange.end);
+                                        setMessageDraft(`${before}${command} ${after}`);
+                                      } else {
+                                        setMessageDraft((prev) => `${prev}${command} `);
+                                      }
+                                      setShowSlashSuggestions(false);
+                                    }}
+                                  >
+                                    <strong>{command}</strong>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <button className="link-button" type="submit" disabled={isPostingMessage}>
+                            {isPostingMessage ? 'Posting…' : 'Post update'}
+                          </button>
+                        </form>
+                      </section>
+                    ) : (
+                      <section className="card join-card">
+                        <p>You’re not part of this ticket yet. Join to read and post updates.</p>
+                        <button type="button" onClick={() => void handleJoinTicket()}>Join ticket</button>
+                      </section>
+                    )}
                     <footer className="ticket-actions">
                       {isTicketMember && selectedTicket.status !== 'archived' && (
                         <button
