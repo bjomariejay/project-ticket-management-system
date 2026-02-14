@@ -130,6 +130,7 @@ export class AppComponent implements OnInit, OnDestroy {
   hasActivityAttention = false;
   isDeleteProjectOpen = false;
   projectPendingDeletion: Project | null = null;
+  isLogoutConfirmOpen = false;
   readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
   private latestGlobalReportTimestamp: string | null = null;
   private lastActivityViewTimestamp: string | null = null;
@@ -381,6 +382,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.latestGlobalReportTimestamp = null;
     this.hasActivityAttention = false;
     this.lastActivityViewTimestamp = null;
+    this.isLogoutConfirmOpen = false;
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
     }
@@ -414,11 +416,20 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   handleLogout() {
+    this.isLogoutConfirmOpen = false;
     this.clearSessionStorage();
     this.sessionUser = null;
     this.isAuthenticated = false;
     this.resetWorkspaceState(true);
     this.lockedTicket = null;
+  }
+
+  openLogoutConfirm() {
+    this.isLogoutConfirmOpen = true;
+  }
+
+  closeLogoutConfirm() {
+    this.isLogoutConfirmOpen = false;
   }
 
   switchAuthMode(mode: 'login' | 'register') {

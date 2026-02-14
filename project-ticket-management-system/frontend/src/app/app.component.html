@@ -40,7 +40,9 @@
         <div class="header__actions" *ngIf="activeTab === 'home'">
           <input type="search" placeholder="Search tickets" [(ngModel)]="ticketSearch" />
         </div>
-        <button type="button" class="ghost" (click)="handleLogout()">Sign out</button>
+        <button type="button" class="sign-out-btn" (click)="openLogoutConfirm()">
+          <span>Sign out</span>
+        </button>
       </header>
 
       <section *ngIf="feedback" class="inline-feedback">{{ feedback }}</section>
@@ -475,6 +477,16 @@
         </section>
       </section>
     </main>
+  </div>
+  <div class="modal-backdrop" *ngIf="isLogoutConfirmOpen">
+    <section class="modal logout-modal">
+      <h3>Sign out?</h3>
+      <p class="muted">You're about to leave the workspace. Continue?</p>
+      <div class="modal-actions">
+        <button type="button" class="link-button outline" (click)="closeLogoutConfirm()">No</button>
+        <button type="button" class="link-button" (click)="handleLogout()">OK</button>
+      </div>
+    </section>
   </div>
 </ng-container>
 
