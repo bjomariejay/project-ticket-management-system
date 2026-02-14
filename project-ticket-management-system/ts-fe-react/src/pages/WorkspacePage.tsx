@@ -41,6 +41,8 @@ const WorkspacePage = () => {
     closeUserSettings,
     saveUserSettings,
     updateUserSettingsField,
+    openCreateProject,
+    closeCreateProject,
   } = useWorkspace();
 
   const {
@@ -72,6 +74,7 @@ const WorkspacePage = () => {
     dashboardEndDate,
     projectsCollapsed,
     showUserSettings,
+    showCreateProject,
     userSettingsForm,
     userSettingsError,
     userSettingsSaving,
@@ -291,6 +294,9 @@ const WorkspacePage = () => {
                 <button className="link-button" type="button" onClick={() => selectProject('')}>
                   All projects
                 </button>
+                <button className="link-button outline" type="button" onClick={openCreateProject}>
+                  + Project
+                </button>
               </div>
               <div className="space-section__header">
                 <h4>Projects</h4>
@@ -359,48 +365,6 @@ const WorkspacePage = () => {
                 </div>
               </div>
             </section>
-          </article>
-          <article className="card">
-            <h4>Create project</h4>
-            <form onSubmit={handleProjectSubmit} className="create-project">
-              <label>
-                Name
-                <input
-                  type="text"
-                  value={createProjectModel.name}
-                  onChange={(event) => updateCreateProjectField('name', event.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Slug
-                <input
-                  type="text"
-                  value={createProjectModel.slug}
-                  onChange={(event) => updateCreateProjectField('slug', event.target.value)}
-                />
-              </label>
-              <label>
-                Ticket prefix
-                <input
-                  type="text"
-                  value={createProjectModel.ticketPrefix}
-                  onChange={(event) => updateCreateProjectField('ticketPrefix', event.target.value)}
-                  required
-                />
-              </label>
-              <label>
-                Description
-                <textarea
-                  rows={3}
-                  value={createProjectModel.description}
-                  onChange={(event) => updateCreateProjectField('description', event.target.value)}
-                />
-              </label>
-              <button className="link-button" type="submit">
-                Save project
-              </button>
-            </form>
           </article>
         </section>
         <section className="home-layout__right">
@@ -749,6 +713,66 @@ const WorkspacePage = () => {
     );
   };
 
+  const renderCreateProjectModal = () => {
+    if (!showCreateProject) return null;
+    return (
+      <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <article className="modal">
+          <header>
+            <h3>Create project</h3>
+            <button type="button" onClick={closeCreateProject} aria-label="Close create project form">
+              ×
+            </button>
+          </header>
+          <form onSubmit={handleProjectSubmit} className="create-project">
+            <label>
+              Name
+              <input
+                type="text"
+                value={createProjectModel.name}
+                onChange={(event) => updateCreateProjectField('name', event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Slug
+              <input
+                type="text"
+                value={createProjectModel.slug}
+                onChange={(event) => updateCreateProjectField('slug', event.target.value)}
+              />
+            </label>
+            <label>
+              Ticket prefix
+              <input
+                type="text"
+                value={createProjectModel.ticketPrefix}
+                onChange={(event) => updateCreateProjectField('ticketPrefix', event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Description
+              <textarea
+                rows={3}
+                value={createProjectModel.description}
+                onChange={(event) => updateCreateProjectField('description', event.target.value)}
+              />
+            </label>
+            <footer>
+              <button type="button" className="link-button outline" onClick={closeCreateProject}>
+                Cancel
+              </button>
+              <button type="submit" className="link-button">
+                Create project
+              </button>
+            </footer>
+          </form>
+        </article>
+      </div>
+    );
+  };
+
   return (
     <div className="workspace">
       <aside className="workspace__sidebar">
@@ -862,6 +886,7 @@ const WorkspacePage = () => {
         {isBootstrapping && <Loader label="Loading workspace…" />}
         {renderContent()}
       </main>
+      {renderCreateProjectModal()}
       {renderUserSettingsModal()}
     </div>
   );

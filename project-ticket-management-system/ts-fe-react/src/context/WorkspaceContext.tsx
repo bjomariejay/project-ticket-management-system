@@ -89,6 +89,7 @@ interface WorkspaceState {
   showUserSettings: boolean;
   lastDmViewTimestamp: string | null;
   lastActivityViewTimestamp: string | null;
+  showCreateProject: boolean;
 }
 
 const defaultTicketModel: CreateTicketModel = {
@@ -156,6 +157,7 @@ const initialState: WorkspaceState = {
   showUserSettings: false,
   lastDmViewTimestamp: null,
   lastActivityViewTimestamp: null,
+  showCreateProject: false,
 };
 
 interface WorkspaceContextValue {
@@ -188,6 +190,8 @@ interface WorkspaceContextValue {
   closeUserSettings: () => void;
   saveUserSettings: () => Promise<void>;
   updateUserSettingsField: (key: keyof UserSettingsForm, value: string) => void;
+  openCreateProject: () => void;
+  closeCreateProject: () => void;
   handleDmRecipientChange: (userId: string) => void;
   markNotification: (notificationId: string) => Promise<void>;
   navigateToNotification: (notification: NotificationItem) => Promise<void>;
@@ -497,6 +501,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         createProjectModel: defaultProjectModel,
         selectedProjectId: response.id,
         createTicketModel: { ...stateRef.current.createTicketModel, projectId: response.id },
+        showCreateProject: false,
       });
       await loadProjects();
       await loadTickets();
@@ -635,6 +640,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ showUserSettings: false, userSettingsForm: defaultUserSettings, userSettingsError: '' });
   };
 
+  const openCreateProject = () => {
+    mergeState({ showCreateProject: true });
+  };
+
+  const closeCreateProject = () => {
+    mergeState({ showCreateProject: false });
+  };
+
   const saveUserSettings = async () => {
     if (!user) return;
     const { displayName, handle, location } = stateRef.current.userSettingsForm;
@@ -752,6 +765,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       closeUserSettings,
       saveUserSettings,
       updateUserSettingsField,
+      openCreateProject,
+      closeCreateProject,
       handleDmRecipientChange,
       markNotification,
       navigateToNotification,
