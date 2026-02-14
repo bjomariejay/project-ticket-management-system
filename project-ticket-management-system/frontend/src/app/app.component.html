@@ -52,7 +52,18 @@
           <p>{{ headerSubtitle }}</p>
         </div>
         <div class="header__actions" *ngIf="activeTab === 'home'">
-          <input type="search" placeholder="Search tickets" [(ngModel)]="ticketSearch" />
+          <input type="search" placeholder="Search tickets Or Title" [(ngModel)]="ticketSearch" />
+          <div class="search-results" *ngIf="ticketSearchResults.length">
+            <p class="muted">{{ ticketSearchResults.length }} result{{ ticketSearchResults.length === 1 ? '' : 's' }}</p>
+            <ul>
+              <li *ngFor="let result of ticketSearchResults">
+                <button type="button" (click)="handleSearchNavigate(result.ticket.id)">
+                  <strong>{{ result.ticket.ticketNumber }} · {{ result.ticket.title }}</strong>
+                  <span *ngFor="let match of result.matches">{{ match }}</span>
+                </button>
+              </li>
+            </ul>
+          </div>
         </div>
         <button type="button" class="sign-out-btn" (click)="openLogoutConfirm()">
           <span>Sign out</span>

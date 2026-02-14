@@ -587,6 +587,30 @@ export class AppComponent implements OnInit, OnDestroy {
     });
   }
 
+  get ticketSearchResults() {
+    const query = this.ticketSearch.trim().toLowerCase();
+    if (!query) return [] as Array<{ ticket: Ticket; matches: string[] }>;
+    return this.tickets
+      .map((ticket) => {
+        const matches: string[] = [];
+        if (ticket.ticketNumber.toLowerCase().includes(query)) {
+          matches.push(`Matches ticket number ${ticket.ticketNumber}`);
+        }
+        if (ticket.title.toLowerCase().includes(query)) {
+          matches.push(`Title: ${this.extractSnippet(ticket.title, query)}`);
+        }
+        if (ticket.description && ticket.description.toLowerCase().includes(query)) {
+          matches.push(`Description: ${this.extractSnippet(ticket.description, query)}`);
+        }
+        if (ticket.status?.toLowerCase().includes(query)) {
+          matches.push(`Status: ${ticket.status.replace('_', ' ')}`);
+        }
+        return matches.length ? { ticket, matches } : null;
+      })
+      .filter((value): value is { ticket: Ticket; matches: string[] } => Boolean(value))
+      .slice(0, 5);
+  }
+
   getTicketsByCategory(projectId: string) {
     return this.ticketCategoryConfig.map((category) => ({
       ...category,
@@ -617,6 +641,13 @@ export class AppComponent implements OnInit, OnDestroy {
   getUserName(userId?: string | null): string {
     if (!userId) return 'Unassigned';
     return this.users.find((user) => user.id === userId)?.displayName || 'Unknown';
+  }
+
+  async handleSearchNavigate(ticketId: string) {
+    this.ticketSearch = '';
+    await this.selectTicket(ticketId);
+    this.showMentionSuggestions = false;
+    this.showSlashSuggestions = false;
   }
 
   async loadUsers() {
@@ -1304,6 +1335,17 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private escapeRegExp(value: string) {
     return value.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+  }
+
+  private extractSnippet(text: string, query: string) {
+    const lower = text.toLowerCase();
+    const index = lower.indexOf(query);
+    if (index === -1) return text.substring(0, 50);
+    const start = Math.max(0, index - 15);
+    const end = Math.min(text.length, index + query.length + 15);
+    const prefix = start > 0 ? '…' : '';
+    const suffix = end < text.length ? '…' : '';
+    return `${prefix}${text.substring(start, end)}${suffix}`;
   }
 
   handleStartTicketClick() {
