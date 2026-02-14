@@ -1335,13 +1335,9 @@ app.get(
   asyncHandler(async (req, res) => {
     const workspaceId = requireWorkspaceContext(req, res);
     if (!workspaceId) return;
-    const { userId } = req.query;
     const authUserId = req.user?.userId;
     if (!authUserId) {
       return res.status(403).json({ message: 'Unauthorized' });
-    }
-    if (userId && userId !== authUserId) {
-      return res.status(403).json({ message: 'Forbidden' });
     }
     const { rows } = await query(
       `SELECT n.id,
@@ -1423,13 +1419,9 @@ app.get(
   asyncHandler(async (req, res) => {
     const workspaceId = requireWorkspaceContext(req, res);
     if (!workspaceId) return;
-    const { userId } = req.query;
     const authUserId = req.user?.userId;
     if (!authUserId) {
       return res.status(403).json({ message: 'Unauthorized' });
-    }
-    if (userId && userId !== authUserId) {
-      return res.status(403).json({ message: 'Forbidden' });
     }
     const { rows } = await query(
       `SELECT d.id, d.body, d.created_at AS "createdAt", d.sender_id AS "senderId", d.recipient_id AS "recipientId",

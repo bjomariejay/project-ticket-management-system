@@ -942,7 +942,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.lastActivityViewTimestamp) {
       this.lastActivityViewTimestamp = this.restoreActivityViewTimestamp();
     }
-    this.notifications = await firstValueFrom(this.api.getNotifications(this.selectedUserId));
+    this.notifications = await firstValueFrom(this.api.getNotifications());
     this.updateActivityAttention();
     void this.checkGlobalReports();
   }
@@ -952,7 +952,7 @@ export class AppComponent implements OnInit, OnDestroy {
     if (!this.lastDmViewTimestamp) {
       this.lastDmViewTimestamp = this.restoreDmViewTimestamp();
     }
-    this.dms = await firstValueFrom(this.api.getDms(this.selectedUserId));
+    this.dms = await firstValueFrom(this.api.getDms());
     if (this.selectedDmRecipientId) {
       this.dmForm.recipientId = this.selectedDmRecipientId;
     } else {

@@ -226,9 +226,8 @@ export class ApiService {
     return this.http.get<TicketLog[]>(`${this.baseUrl}/tickets/${ticketId}/logs`);
   }
 
-  getNotifications(userId: string) {
-    const params = new HttpParams().set('userId', userId);
-    return this.http.get<NotificationItem[]>(`${this.baseUrl}/notifications`, { params });
+  getNotifications() {
+    return this.http.get<NotificationItem[]>(`${this.baseUrl}/notifications`);
   }
 
   markNotificationRead(notificationId: string) {
@@ -239,9 +238,8 @@ export class ApiService {
     return this.http.post(`${this.baseUrl}/dms`, payload);
   }
 
-  getDms(userId: string) {
-    const params = new HttpParams().set('userId', userId);
-    return this.http.get<DmMessage[]>(`${this.baseUrl}/dms`, { params });
+  getDms() {
+    return this.http.get<DmMessage[]>(`${this.baseUrl}/dms`);
   }
 
   getDashboard(filters?: { startDate?: string | null; endDate?: string | null }) {
