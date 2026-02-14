@@ -707,39 +707,16 @@ const WorkspacePage = () => {
                       </section>
                     )}
                     <footer className="ticket-actions">
-                      {selectedTicket.status === 'archived' ? (
+                      {selectedTicket.status === 'archived' && (
                         <button type="button" className="link-button" onClick={() => void restoreArchivedTicket()}>
                           Unarchive ticket
                         </button>
-                      ) : (
-                        isTicketMember && (
-                          <button
-                            type="button"
-                            className="link-button"
-                            onClick={() => void startTicket()}
-                            disabled={isPostingMessage}
-                          >
-                            {isPostingMessage ? 'Starting…' : 'Start ticket'}
-                          </button>
-                        )
-                      )}
+                      ) }
                       {!isTicketMember && selectedTicket.status !== 'archived' && (
                         <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
                           Join ticket
                         </button>
                       )}
-                      {selectedTicket.status !== 'archived' && (
-                        <button type="button" className="link-button outline" onClick={() => void handleArchiveTicket()}>
-                          Archive
-                        </button>
-                      )}
-                      <button
-                        type="button"
-                        className="link-button"
-                        onClick={() => void handlePrivacyChange(selectedTicket.privacy === 'public' ? 'private' : 'public')}
-                      >
-                        Make {selectedTicket.privacy === 'public' ? 'private' : 'public'}
-                      </button>
                     </footer>
                   </article>
                 ) : lockedTicket ? (
