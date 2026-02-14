@@ -90,6 +90,7 @@ interface WorkspaceState {
   lastDmViewTimestamp: string | null;
   lastActivityViewTimestamp: string | null;
   showCreateProject: boolean;
+  showCreateTicket: boolean;
 }
 
 const defaultTicketModel: CreateTicketModel = {
@@ -158,6 +159,7 @@ const initialState: WorkspaceState = {
   lastDmViewTimestamp: null,
   lastActivityViewTimestamp: null,
   showCreateProject: false,
+  showCreateTicket: false,
 };
 
 interface WorkspaceContextValue {
@@ -192,6 +194,10 @@ interface WorkspaceContextValue {
   updateUserSettingsField: (key: keyof UserSettingsForm, value: string) => void;
   openCreateProject: () => void;
   closeCreateProject: () => void;
+  openCreateTicket: () => void;
+  closeCreateTicket: () => void;
+  openCreateTicket: () => void;
+  closeCreateTicket: () => void;
   handleDmRecipientChange: (userId: string) => void;
   markNotification: (notificationId: string) => Promise<void>;
   navigateToNotification: (notification: NotificationItem) => Promise<void>;
@@ -531,6 +537,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           inviteeIds: [],
         },
         feedback: `${ticket.ticketNumber} created.`,
+        showCreateTicket: false,
       });
       await loadTickets();
       await selectTicket(ticket.id);
@@ -646,6 +653,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const closeCreateProject = () => {
     mergeState({ showCreateProject: false });
+  };
+
+  const openCreateTicket = () => {
+    mergeState({ showCreateTicket: true });
+  };
+
+  const closeCreateTicket = () => {
+    mergeState({ showCreateTicket: false });
   };
 
   const saveUserSettings = async () => {
@@ -767,6 +782,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       updateUserSettingsField,
       openCreateProject,
       closeCreateProject,
+      openCreateTicket,
+      closeCreateTicket,
       handleDmRecipientChange,
       markNotification,
       navigateToNotification,

@@ -43,6 +43,8 @@ const WorkspacePage = () => {
     updateUserSettingsField,
     openCreateProject,
     closeCreateProject,
+    openCreateTicket,
+    closeCreateTicket,
   } = useWorkspace();
 
   const {
@@ -75,6 +77,7 @@ const WorkspacePage = () => {
     projectsCollapsed,
     showUserSettings,
     showCreateProject,
+    showCreateTicket,
     userSettingsForm,
     userSettingsError,
     userSettingsSaving,
@@ -291,11 +294,11 @@ const WorkspacePage = () => {
           <article className="card home-card workspace-board">
             <section className="space-section">
               <div className="space-section__actions">
-                <button className="link-button" type="button" onClick={() => selectProject('')}>
-                  All projects
-                </button>
                 <button className="link-button outline" type="button" onClick={openCreateProject}>
                   + Project
+                </button>
+                <button className="link-button outline" type="button" onClick={openCreateTicket}>
+                  + Ticket
                 </button>
               </div>
               <div className="space-section__header">
@@ -369,77 +372,6 @@ const WorkspacePage = () => {
         </section>
         <section className="home-layout__right">
           <article className="card ticket-panel">
-            <div className="ticket-panel__left">
-              <section className="create-ticket">
-                <h4>New ticket</h4>
-                <form onSubmit={handleTicketSubmit}>
-                  <label>
-                    Title
-                    <input
-                      type="text"
-                      value={createTicketModel.title}
-                      onChange={(event) => updateCreateTicketField('title', event.target.value)}
-                      required
-                    />
-                  </label>
-                  <label>
-                    Description
-                    <textarea
-                      rows={3}
-                      value={createTicketModel.description}
-                      onChange={(event) => updateCreateTicketField('description', event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Project
-                    <select
-                      value={createTicketModel.projectId}
-                      onChange={(event) => updateCreateTicketField('projectId', event.target.value)}
-                      required
-                    >
-                      <option value="">Select project</option>
-                      {projects.map((project) => (
-                        <option key={project.id} value={project.id}>
-                          {project.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label>
-                    Estimated hours
-                    <input
-                      type="number"
-                      min={0}
-                      value={createTicketModel.estimatedHours}
-                      onChange={(event) => updateCreateTicketField('estimatedHours', Number(event.target.value))}
-                    />
-                  </label>
-                  <label>
-                    Priority
-                    <select
-                      value={createTicketModel.priority}
-                      onChange={(event) => updateCreateTicketField('priority', event.target.value as any)}
-                    >
-                      <option value="normal">Normal</option>
-                      <option value="priority">Priority</option>
-                    </select>
-                  </label>
-                  <label>
-                    Privacy
-                    <select
-                      value={createTicketModel.privacy}
-                      onChange={(event) => updateCreateTicketField('privacy', event.target.value as any)}
-                    >
-                      <option value="public">Public</option>
-                      <option value="private">Private</option>
-                    </select>
-                  </label>
-                  <button className="link-button" type="submit">
-                    Create ticket
-                  </button>
-                </form>
-              </section>
-            </div>
             <div className="ticket-panel__right">
               {selectedTicket ? (
                 <article className="ticket-detail">
@@ -713,6 +645,93 @@ const WorkspacePage = () => {
     );
   };
 
+  const renderCreateTicketModal = () => {
+    if (!showCreateTicket) return null;
+    return (
+      <div className="modal-backdrop" role="dialog" aria-modal="true">
+        <article className="modal">
+          <header>
+            <h3>Create ticket</h3>
+            <button type="button" onClick={closeCreateTicket} aria-label="Close create ticket form">
+              ×
+            </button>
+          </header>
+          <form onSubmit={handleTicketSubmit}>
+            <label>
+              Title
+              <input
+                type="text"
+                value={createTicketModel.title}
+                onChange={(event) => updateCreateTicketField('title', event.target.value)}
+                required
+              />
+            </label>
+            <label>
+              Description
+              <textarea
+                rows={3}
+                value={createTicketModel.description}
+                onChange={(event) => updateCreateTicketField('description', event.target.value)}
+              />
+            </label>
+            <label>
+              Project
+              <select
+                value={createTicketModel.projectId}
+                onChange={(event) => updateCreateTicketField('projectId', event.target.value)}
+                required
+              >
+                <option value="">Select project</option>
+                {projects.map((project) => (
+                  <option key={project.id} value={project.id}>
+                    {project.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Estimated hours
+              <input
+                type="number"
+                min={0}
+                value={createTicketModel.estimatedHours}
+                onChange={(event) => updateCreateTicketField('estimatedHours', Number(event.target.value))}
+              />
+            </label>
+            <label>
+              Priority
+              <select
+                value={createTicketModel.priority}
+                onChange={(event) => updateCreateTicketField('priority', event.target.value as any)}
+              >
+                <option value="normal">Normal</option>
+                <option value="priority">Priority</option>
+              </select>
+            </label>
+            <label>
+              Privacy
+              <select
+                value={createTicketModel.privacy}
+                onChange={(event) => updateCreateTicketField('privacy', event.target.value as any)}
+              >
+                <option value="public">Public</option>
+                <option value="private">Private</option>
+              </select>
+            </label>
+            <footer>
+              <button type="button" className="link-button outline" onClick={closeCreateTicket}>
+                Cancel
+              </button>
+              <button className="link-button" type="submit">
+                Create ticket
+              </button>
+            </footer>
+          </form>
+        </article>
+      </div>
+    );
+  };
+
   const renderCreateProjectModal = () => {
     if (!showCreateProject) return null;
     return (
@@ -884,12 +903,13 @@ const WorkspacePage = () => {
         </header>
         {feedback && <section className="inline-feedback">{feedback}</section>}
         {isBootstrapping && <Loader label="Loading workspace…" />}
-        {renderContent()}
-      </main>
-      {renderCreateProjectModal()}
-      {renderUserSettingsModal()}
-    </div>
-  );
+      {renderContent()}
+    </main>
+    {renderCreateTicketModal()}
+    {renderCreateProjectModal()}
+    {renderUserSettingsModal()}
+  </div>
+);
 };
 
 export default WorkspacePage;
