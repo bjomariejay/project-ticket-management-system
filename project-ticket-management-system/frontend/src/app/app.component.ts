@@ -26,11 +26,12 @@ import {
   styleUrls: ['./app.component.scss']
 })
 export class AppComponent implements OnInit, OnDestroy {
+  private readonly defaultWorkspaceLabel = 'Mission Control Workspace';
   readonly globalReportProjectId = 'global-reports';
   @ViewChild('messageInput') messageInputRef?: ElementRef<HTMLTextAreaElement>;
 
   title = 'Project and Ticket Management System';
-  workspaceLabel = 'Mission Control Workspace';
+  workspaceLabel = this.defaultWorkspaceLabel;
 
   users: User[] = [];
   projects: Project[] = [];
@@ -105,6 +106,7 @@ export class AppComponent implements OnInit, OnDestroy {
     email: '',
     password: '',
     location: '',
+    workspaceName: '',
   };
   authMode: 'login' | 'register' = 'login';
   sessionUser: User | null = null;
@@ -168,6 +170,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sessionUser = storedUser;
       this.selectedUserId = storedUser.id;
       this.isAuthenticated = true;
+      this.updateWorkspaceLabel(storedUser.workspaceName);
       await this.bootstrapWorkspace();
       return;
     }
@@ -238,6 +241,10 @@ export class AppComponent implements OnInit, OnDestroy {
     } catch (error) {
       console.error('Unable to persist user profile', error);
     }
+  }
+
+  private updateWorkspaceLabel(workspaceName?: string | null) {
+    this.workspaceLabel = workspaceName?.trim() || this.defaultWorkspaceLabel;
   }
 
   private clearSessionStorage() {
@@ -470,6 +477,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sessionUser = response.user;
       this.selectedUserId = response.user.id;
       this.isAuthenticated = true;
+      this.updateWorkspaceLabel(response.user.workspaceName);
       this.resetWorkspaceState();
       await this.bootstrapWorkspace();
     } catch (error) {
@@ -488,6 +496,7 @@ export class AppComponent implements OnInit, OnDestroy {
     this.isAuthenticated = false;
     this.resetWorkspaceState(true);
     this.lockedTicket = null;
+    this.updateWorkspaceLabel();
   }
 
   openUserSettings() {
@@ -522,12 +531,14 @@ export class AppComponent implements OnInit, OnDestroy {
   }
 
   async handleRegister() {
+    const workspaceName = this.registerForm.workspaceName.trim();
     if (
       !this.registerForm.displayName ||
       !this.registerForm.username ||
       !this.registerForm.handle ||
       !this.registerForm.email ||
-      !this.registerForm.password
+      !this.registerForm.password ||
+      !workspaceName
     ) {
       this.loginError = 'All fields are required.';
       return;
@@ -543,12 +554,14 @@ export class AppComponent implements OnInit, OnDestroy {
           password: this.registerForm.password,
           location: this.registerForm.location.trim() || undefined,
           username: this.registerForm.username.trim(),
+          workspaceName,
         })
       );
       this.persistSession(response.token, response.user);
       this.sessionUser = response.user;
       this.selectedUserId = response.user.id;
       this.isAuthenticated = true;
+      this.updateWorkspaceLabel(response.user.workspaceName);
       this.resetWorkspaceState();
       await this.bootstrapWorkspace();
     } catch (error: any) {
@@ -1355,6 +1368,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.sessionUser = { ...this.sessionUser, ...updatedUser };
       this.selectedUserId = updatedUser.id;
       this.persistUserProfile(updatedUser);
+      this.updateWorkspaceLabel(this.sessionUser.workspaceName);
       this.users = this.users.map((user) => (user.id === updatedUser.id ? updatedUser : user));
       await this.loadUsers();
       this.feedback = 'Profile updated.';

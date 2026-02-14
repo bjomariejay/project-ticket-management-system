@@ -9,6 +9,8 @@ export interface User {
   username: string;
   handle: string;
   location?: string | null;
+  workspaceId?: string;
+  workspaceName?: string;
 }
 
 export interface Project {
@@ -129,6 +131,7 @@ export class ApiService {
     password: string;
     location?: string;
     username?: string;
+    workspaceName: string;
   }): Observable<{ token: string; user: User }> {
     return this.http.post<{ token: string; user: User }>(`${this.baseUrl}/auth/register`, payload);
   }

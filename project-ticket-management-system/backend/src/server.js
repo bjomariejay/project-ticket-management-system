@@ -149,14 +149,55 @@ const mapTicket = (row, viewerIsMember = true) => {
   };
 };
 
+const mapUser = (row) =>
+  row
+    ? {
+        id: row.id,
+        displayName: row.display_name,
+        username: row.username,
+        handle: row.handle,
+        location: row.location,
+        workspaceId: row.workspace_id,
+        workspaceName: row.workspace_name,
+      }
+    : null;
+
 const fetchUser = async (userId) => {
-  const { rows } = await query('SELECT * FROM users WHERE id = $1', [userId]);
+  const { rows } = await query(
+    `SELECT u.*, w.name AS workspace_name
+       FROM users u
+       LEFT JOIN workspaces w ON u.workspace_id = w.id
+      WHERE u.id = $1`,
+    [userId]
+  );
   return rows[0];
 };
 
-const fetchProject = async (projectId) => {
-  const { rows } = await query('SELECT * FROM projects WHERE id = $1', [projectId]);
+const fetchProject = async (projectId, workspaceId) => {
+  const params = workspaceId ? [projectId, workspaceId] : [projectId];
+  const workspaceClause = workspaceId ? ' AND workspace_id = $2' : '';
+  const { rows } = await query(
+    `SELECT * FROM projects WHERE id = $1${workspaceClause}`,
+    params
+  );
   return rows[0];
+};
+
+const fetchTicketForWorkspace = async (ticketId, workspaceId) => {
+  const { rows } = await query(
+    'SELECT * FROM tickets WHERE id = $1 AND workspace_id = $2',
+    [ticketId, workspaceId]
+  );
+  return rows[0];
+};
+
+const requireWorkspaceContext = (req, res) => {
+  const workspaceId = req.user?.workspaceId;
+  if (!workspaceId) {
+    res.status(403).json({ message: 'Workspace context is required' });
+    return null;
+  }
+  return workspaceId;
 };
 
 const ensureTicketMember = async (ticketId, userId) => {
@@ -200,7 +241,17 @@ app.post(
     const {
       rows: [user],
     } = await query(
-      'SELECT id, display_name, username, handle, location, password_hash FROM users WHERE username = $1',
+      `SELECT u.id,
+              u.display_name,
+              u.username,
+              u.handle,
+              u.location,
+              u.password_hash,
+              u.workspace_id,
+              w.name AS workspace_name
+         FROM users u
+         LEFT JOIN workspaces w ON u.workspace_id = w.id
+        WHERE u.username = $1`,
       [rawIdentifier]
     );
     if (!user || !verifyPassword(password, user.password_hash)) {
@@ -209,6 +260,7 @@ app.post(
     const token = signToken({
       userId: user.id,
       handle: user.handle,
+      workspaceId: user.workspace_id,
       exp: createExpiryClaim(),
     });
     res.json({
@@ -219,6 +271,8 @@ app.post(
         username: user.username,
         handle: user.handle,
         location: user.location,
+        workspaceId: user.workspace_id,
+        workspaceName: user.workspace_name,
       },
     });
   })
@@ -227,18 +281,55 @@ app.post(
 app.post(
   '/api/auth/register',
   asyncHandler(async (req, res) => {
-    const { displayName, handle, email, password, location, username } = req.body;
-    if (!displayName || !handle || !email || !password) {
-      return res
-        .status(400)
-        .json({ message: 'displayName, handle, email and password are required' });
+    const { displayName, handle, email, password, location, username, workspaceName } = req.body;
+    if (!displayName || !handle || !email || !password || !workspaceName) {
+      return res.status(400).json({
+        message: 'displayName, handle, email, password and workspaceName are required',
+      });
+    }
+    const normalizedWorkspaceName = workspaceName.trim().toLowerCase();
+    if (!normalizedWorkspaceName) {
+      return res.status(400).json({ message: 'workspaceName is required' });
     }
     const passwordHash = hashPassword(password);
     const userId = uuidv4();
+    const client = await pool.connect();
+    let workspaceId = '';
+    let workspaceDisplayName = normalizedWorkspaceName;
     try {
-      await query(
-        `INSERT INTO users (id, display_name, username, handle, email, password_hash, location)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      await client.query('BEGIN');
+      const existingWorkspace = await client.query('SELECT id, name FROM workspaces WHERE name = $1', [
+        normalizedWorkspaceName,
+      ]);
+      if (existingWorkspace.rowCount) {
+        workspaceId = existingWorkspace.rows[0].id;
+        workspaceDisplayName = existingWorkspace.rows[0].name;
+      } else {
+        workspaceId = uuidv4();
+        try {
+          await client.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [
+            workspaceId,
+            normalizedWorkspaceName,
+          ]);
+        } catch (workspaceError) {
+          if (workspaceError.code === '23505') {
+            const fallback = await client.query('SELECT id, name FROM workspaces WHERE name = $1', [
+              normalizedWorkspaceName,
+            ]);
+            if (fallback.rowCount) {
+              workspaceId = fallback.rows[0].id;
+              workspaceDisplayName = fallback.rows[0].name;
+            } else {
+              throw workspaceError;
+            }
+          } else {
+            throw workspaceError;
+          }
+        }
+      }
+      await client.query(
+        `INSERT INTO users (id, display_name, username, handle, email, password_hash, location, workspace_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
         [
           userId,
           displayName,
@@ -247,17 +338,23 @@ app.post(
           email.toLowerCase(),
           passwordHash,
           location,
+          workspaceId,
         ]
       );
+      await client.query('COMMIT');
     } catch (error) {
+      await client.query('ROLLBACK');
       if (error.code === '23505') {
-        return res.status(409).json({ message: 'Handle or email already exists' });
+        return res.status(409).json({ message: 'Handle, username or email already exists' });
       }
       throw error;
+    } finally {
+      client.release();
     }
     const token = signToken({
       userId,
       handle: handle.toLowerCase(),
+      workspaceId,
       exp: createExpiryClaim(),
     });
     res.status(201).json({
@@ -268,6 +365,8 @@ app.post(
         username: (username || handle).toLowerCase(),
         handle: handle.toLowerCase(),
         location,
+        workspaceId,
+        workspaceName: workspaceDisplayName,
       },
     });
   })
@@ -285,10 +384,23 @@ app.use((req, res, next) => {
 app.get(
   '/api/users',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { rows } = await query(
-      'SELECT id, display_name AS "displayName", username, handle, location FROM users ORDER BY display_name'
+      `SELECT u.id,
+              u.display_name,
+              u.username,
+              u.handle,
+              u.location,
+              u.workspace_id,
+              w.name AS workspace_name
+         FROM users u
+         LEFT JOIN workspaces w ON u.workspace_id = w.id
+        WHERE u.workspace_id = $1
+        ORDER BY u.display_name`,
+      [workspaceId]
     );
-    res.json(rows);
+    res.json(rows.map(mapUser));
   })
 );
 
@@ -321,14 +433,26 @@ app.patch(
     }
 
     params.push(userId);
-    const queryText = `UPDATE users SET ${updates.join(', ')}
-      WHERE id = $${params.length} RETURNING id, display_name AS "displayName", username, handle, location`;
+    const queryText = `WITH updated AS (
+        UPDATE users SET ${updates.join(', ')}
+        WHERE id = $${params.length}
+        RETURNING id, display_name, username, handle, location, workspace_id
+      )
+      SELECT updated.id,
+             updated.display_name,
+             updated.username,
+             updated.handle,
+             updated.location,
+             updated.workspace_id,
+             w.name AS workspace_name
+        FROM updated
+        LEFT JOIN workspaces w ON updated.workspace_id = w.id`;
     try {
       const { rows } = await query(queryText, params);
       if (!rows.length) {
         return res.status(404).json({ message: 'User not found.' });
       }
-      res.json(rows[0]);
+      res.json(mapUser(rows[0]));
     } catch (error) {
       if (error.code === '23505') {
         return res.status(409).json({ message: 'Handle already in use.' });
@@ -340,8 +464,15 @@ app.patch(
 );
 
 const listProjects = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
   const { rows } = await query(
-    'SELECT p.*, ps.last_value FROM projects p LEFT JOIN project_sequences ps ON p.id = ps.project_id ORDER BY p.name'
+    `SELECT p.*, ps.last_value
+       FROM projects p
+       LEFT JOIN project_sequences ps ON p.id = ps.project_id
+      WHERE p.workspace_id = $1
+      ORDER BY p.name`,
+    [workspaceId]
   );
   res.json(
     rows.map((row) => ({
@@ -355,6 +486,8 @@ const listProjects = asyncHandler(async (req, res) => {
 });
 
 const createProject = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
   const { name, slug, ticketPrefix, description } = req.body;
   if (!name || !ticketPrefix) {
     return res.status(400).json({ message: 'name and ticketPrefix are required' });
@@ -373,8 +506,8 @@ const createProject = asyncHandler(async (req, res) => {
   try {
     await client.query('BEGIN');
     await client.query(
-      'INSERT INTO projects (id, name, slug, ticket_prefix, description) VALUES ($1, $2, $3, $4, $5)',
-      [projectId, name.trim(), normalizedSlug, prefix, description || null]
+      'INSERT INTO projects (id, name, slug, ticket_prefix, description, workspace_id) VALUES ($1, $2, $3, $4, $5, $6)',
+      [projectId, name.trim(), normalizedSlug, prefix, description || null, workspaceId]
     );
     await client.query('INSERT INTO project_sequences (project_id, last_value) VALUES ($1, 0) ON CONFLICT (project_id) DO NOTHING', [
       projectId,
@@ -405,8 +538,13 @@ app.post('/api/projects', createProject);
 app.post('/api/channels', createProject);
 
 const deleteProject = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
   const projectId = req.params.projectId || req.params.channelId;
-  const { rowCount } = await query('DELETE FROM projects WHERE id = $1', [projectId]);
+  const { rowCount } = await query('DELETE FROM projects WHERE id = $1 AND workspace_id = $2', [
+    projectId,
+    workspaceId,
+  ]);
   if (!rowCount) {
     return res.status(404).json({ message: 'Project not found' });
   }
@@ -417,6 +555,8 @@ app.delete('/api/projects/:projectId', deleteProject);
 app.delete('/api/channels/:channelId', deleteProject);
 
 const projectReportsHandler = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
   const projectId = req.params.projectId || req.params.channelId;
   const { rows } = await query(
       `SELECT tl.id,
@@ -427,12 +567,14 @@ const projectReportsHandler = asyncHandler(async (req, res) => {
               t.title
          FROM ticket_logs tl
          JOIN tickets t ON tl.ticket_id = t.id
+         JOIN projects p ON t.project_id = p.id
          LEFT JOIN users u ON tl.created_by = u.id
         WHERE t.project_id = $1
+          AND p.workspace_id = $2
           AND LOWER(tl.message) LIKE '%start%'
         ORDER BY tl.created_at DESC
         LIMIT 200`,
-      [projectId]
+      [projectId, workspaceId]
   );
   res.json(
     rows.map((row) => ({
@@ -452,6 +594,8 @@ app.get('/api/channels/:channelId/reports', projectReportsHandler);
 app.get(
   '/api/reports',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { rows } = await query(
       `SELECT tl.id,
               tl.message,
@@ -461,10 +605,13 @@ app.get(
               t.title
          FROM ticket_logs tl
          JOIN tickets t ON tl.ticket_id = t.id
+         JOIN projects p ON t.project_id = p.id
          LEFT JOIN users u ON tl.created_by = u.id
         WHERE LOWER(tl.message) LIKE '%start%'
+          AND p.workspace_id = $1
         ORDER BY tl.created_at DESC
-        LIMIT 200`
+        LIMIT 200`,
+      [workspaceId]
     );
     res.json(
       rows.map((row) => ({
@@ -482,10 +629,15 @@ app.get(
 app.get(
   '/api/tickets',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const projectFilter = req.query.projectId || req.query.channelId;
     const { creatorId, assigneeId } = req.query;
     const conditions = [];
     const params = [];
+
+    params.push(workspaceId);
+    conditions.push(`t.workspace_id = $${params.length}`);
 
     if (projectFilter) {
       params.push(projectFilter);
@@ -524,12 +676,13 @@ app.get(
 app.get(
   '/api/tickets/:ticketId',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
-    const { rows } = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
-    if (!rows.length) {
+    const ticketRow = await fetchTicketForWorkspace(ticketId, workspaceId);
+    if (!ticketRow) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    const ticketRow = rows[0];
     const viewerId = req.user?.userId || null;
     const isMember = viewerId ? await ensureTicketMember(ticketId, viewerId) : false;
     if (ticketRow.privacy === 'private' && !isMember) {
@@ -585,6 +738,8 @@ app.get(
 app.post(
   '/api/tickets',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { title, description, creatorId, estimatedHours } = req.body;
     const projectId = req.body.projectId || req.body.channelId;
     if (!title || !projectId || !creatorId) {
@@ -600,12 +755,12 @@ app.post(
       ? Array.from(new Set(req.body.additionalMemberIds)).filter((id) => id && id !== creatorId)
       : [];
 
-    const project = await fetchProject(projectId);
+    const project = await fetchProject(projectId, workspaceId);
     if (!project) {
       return res.status(404).json({ message: 'Project not found' });
     }
     const creator = await fetchUser(creatorId);
-    if (!creator) {
+    if (!creator || creator.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'Creator not found' });
     }
 
@@ -625,8 +780,8 @@ app.post(
 
       const insertTicket = await client.query(
         `INSERT INTO tickets (
-          id, ticket_number, title, description, project_id, creator_id, estimated_hours, privacy, priority
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+          id, ticket_number, title, description, project_id, creator_id, estimated_hours, privacy, priority, workspace_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
         [
           ticketId,
           ticketNumber,
@@ -637,6 +792,7 @@ app.post(
           estimatedHours || null,
           privacy,
           priority,
+          workspaceId,
         ]
       );
 
@@ -647,7 +803,7 @@ app.post(
 
       for (const memberId of additionalMemberIds) {
         const teammate = await fetchUser(memberId);
-        if (!teammate) continue;
+        if (!teammate || teammate.workspace_id !== workspaceId) continue;
         const memberCheck = await client.query(
           'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
           [ticketId, memberId]
@@ -683,6 +839,8 @@ app.post(
 app.post(
   '/api/tickets/:ticketId/join',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const actorId = req.body.actorId || req.user?.userId;
     const targetUserId = req.body.userId || actorId;
@@ -690,11 +848,10 @@ app.post(
       return res.status(400).json({ message: 'actorId or user context is required' });
     }
 
-    const { rows: ticketRows } = await query('SELECT * FROM tickets WHERE id = $1', [ticketId]);
-    if (!ticketRows.length) {
+    const ticket = await fetchTicketForWorkspace(ticketId, workspaceId);
+    if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    const ticket = ticketRows[0];
 
     const [actor, targetUser] = await Promise.all([
       fetchUser(actorId),
@@ -702,6 +859,9 @@ app.post(
     ]);
     const resolvedTarget = actorId === targetUserId ? actor : targetUser;
     if (!actor || !resolvedTarget) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    if (actor.workspace_id !== workspaceId || resolvedTarget.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -752,22 +912,23 @@ app.post(
 app.post(
   '/api/tickets/:ticketId/settings',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const { actorId, status, priority, estimatedHours } = req.body;
     if (!actorId) {
       return res.status(400).json({ message: 'actorId is required' });
     }
-    const [actor, ticketResult] = await Promise.all([
+    const [actor, ticket] = await Promise.all([
       fetchUser(actorId),
-      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+      fetchTicketForWorkspace(ticketId, workspaceId),
     ]);
-    if (!actor) {
+    if (!actor || actor.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'User not found' });
     }
-    if (!ticketResult.rows.length) {
+    if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    const ticket = ticketResult.rows[0];
     const isMember = await ensureTicketMember(ticketId, actorId);
     if (!isMember) {
       return res.status(403).json({ message: 'Only members can update ticket details.' });
@@ -843,6 +1004,8 @@ app.post(
 app.post(
   '/api/tickets/:ticketId/privacy',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const requestedPrivacy = (req.body.privacy || '').toLowerCase();
     const allowedPrivacy = ['public', 'private'];
@@ -854,21 +1017,20 @@ app.post(
       return res.status(400).json({ message: 'actorId is required' });
     }
 
-    const [ticketResult, actor] = await Promise.all([
-      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+    const [ticket, actor] = await Promise.all([
+      fetchTicketForWorkspace(ticketId, workspaceId),
       fetchUser(actorId),
     ]);
-    if (!ticketResult.rows.length) {
+    if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    if (!actor) {
+    if (!actor || actor.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'User not found' });
     }
     const isMember = await ensureTicketMember(ticketId, actorId);
     if (!isMember) {
       return res.status(403).json({ message: 'Only ticket members can update privacy.' });
     }
-    const ticket = ticketResult.rows[0];
     if (ticket.privacy === requestedPrivacy) {
       return res.json({ message: `Ticket already ${requestedPrivacy}` });
     }
@@ -900,22 +1062,29 @@ app.post(
 app.post(
   '/api/tickets/:ticketId/assign',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const { assigneeId, actorId } = req.body;
     if (!assigneeId || !actorId) {
       return res.status(400).json({ message: 'assigneeId and actorId are required' });
     }
 
-    const [ticketResult, assignee, actor] = await Promise.all([
-      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+    const [ticket, assignee, actor] = await Promise.all([
+      fetchTicketForWorkspace(ticketId, workspaceId),
       fetchUser(assigneeId),
       fetchUser(actorId),
     ]);
 
-    if (!ticketResult.rows.length) {
+    if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    if (!assignee || !actor) {
+    if (
+      !assignee ||
+      !actor ||
+      assignee.workspace_id !== workspaceId ||
+      actor.workspace_id !== workspaceId
+    ) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -957,14 +1126,23 @@ app.post(
 app.post(
   '/api/tickets/:ticketId/archive',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const { actorId } = req.body;
+    const ticket = await fetchTicketForWorkspace(ticketId, workspaceId);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
     const actor = actorId ? await fetchUser(actorId) : null;
+    if (actor && actor.workspace_id !== workspaceId) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    const result = await query('UPDATE tickets SET archived_at = now(), status = $1 WHERE id = $2 RETURNING *', [
-      'archived',
-      ticketId,
-    ]);
+    const result = await query(
+      'UPDATE tickets SET archived_at = now(), status = $1 WHERE id = $2 AND workspace_id = $3 RETURNING *',
+      ['archived', ticketId, workspaceId]
+    );
     if (!result.rowCount) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
@@ -985,7 +1163,7 @@ const parseMentions = (text = '') => {
   return matches.map((mention) => mention.replace('@', '').toLowerCase());
 };
 
-const resolveMentionRecipients = async (client, mentionHandles, authorId) => {
+const resolveMentionRecipients = async (client, mentionHandles, authorId, workspaceId) => {
   if (!mentionHandles.length) return [];
   const usersToNotify = new Map();
 
@@ -993,8 +1171,8 @@ const resolveMentionRecipients = async (client, mentionHandles, authorId) => {
   for (const handle of uniqueHandles) {
     if (handle === 'cebu') {
       const { rows } = await client.query(
-        'SELECT id, display_name FROM users WHERE LOWER(location) LIKE $1',
-        ['%cebu%']
+        'SELECT id, display_name FROM users WHERE workspace_id = $1 AND LOWER(location) LIKE $2',
+        [workspaceId, '%cebu%']
       );
       rows.forEach((row) => {
         if (row.id !== authorId) {
@@ -1003,9 +1181,10 @@ const resolveMentionRecipients = async (client, mentionHandles, authorId) => {
       });
       continue;
     }
-    const { rows } = await client.query('SELECT id, display_name FROM users WHERE LOWER(handle) = $1', [
-      handle,
-    ]);
+    const { rows } = await client.query(
+      'SELECT id, display_name FROM users WHERE workspace_id = $1 AND LOWER(handle) = $2',
+      [workspaceId, handle]
+    );
     if (rows.length && rows[0].id !== authorId) {
       usersToNotify.set(rows[0].id, rows[0]);
     }
@@ -1017,23 +1196,24 @@ const resolveMentionRecipients = async (client, mentionHandles, authorId) => {
 app.post(
   '/api/tickets/:ticketId/messages',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
     const { userId, body } = req.body;
     if (!userId || !body) {
       return res.status(400).json({ message: 'userId and body are required' });
     }
 
-    const [ticketResult, user] = await Promise.all([
-      query('SELECT * FROM tickets WHERE id = $1', [ticketId]),
+    const [ticket, user] = await Promise.all([
+      fetchTicketForWorkspace(ticketId, workspaceId),
       fetchUser(userId),
     ]);
-    if (!ticketResult.rows.length) {
+    if (!ticket) {
       return res.status(404).json({ message: 'Ticket not found' });
     }
-    if (!user) {
+    if (!user || user.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'User not found' });
     }
-    const ticket = ticketResult.rows[0];
 
     const isMember = await ensureTicketMember(ticketId, userId);
     if (!isMember) {
@@ -1070,7 +1250,7 @@ app.post(
         }
       }
 
-      const recipients = await resolveMentionRecipients(client, mentions, userId);
+      const recipients = await resolveMentionRecipients(client, mentions, userId, workspaceId);
       if (recipients.length) {
         for (const recipient of recipients) {
           const membership = await client.query(
@@ -1113,7 +1293,13 @@ app.post(
 app.get(
   '/api/tickets/:ticketId/messages',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
+    const ticket = await fetchTicketForWorkspace(ticketId, workspaceId);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
     const { rows } = await query(
       `SELECT tm.id, tm.body, tm.created_at AS "createdAt", tm.mentions, u.display_name AS "displayName", u.handle
        FROM ticket_messages tm LEFT JOIN users u ON tm.user_id = u.id
@@ -1127,7 +1313,13 @@ app.get(
 app.get(
   '/api/tickets/:ticketId/logs',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { ticketId } = req.params;
+    const ticket = await fetchTicketForWorkspace(ticketId, workspaceId);
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
     const { rows } = await query(
       `SELECT tl.id, tl.message, tl.created_at AS "createdAt", u.display_name AS "actorName"
        FROM ticket_logs tl LEFT JOIN users u ON tl.created_by = u.id
@@ -1141,9 +1333,15 @@ app.get(
 app.get(
   '/api/notifications',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
+    const authUserId = req.user?.userId;
+    if (!authUserId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    if (userId && userId !== authUserId) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
     const { rows } = await query(
       `SELECT n.id,
@@ -1157,7 +1355,7 @@ app.get(
         WHERE n.user_id = $1
         ORDER BY n.created_at DESC
         LIMIT 50`,
-      [userId]
+      [authUserId]
     );
     res.json(rows);
   })
@@ -1166,8 +1364,20 @@ app.get(
 app.post(
   '/api/notifications/:notificationId/read',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const authUserId = req.user?.userId;
+    if (!authUserId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
     const { notificationId } = req.params;
-    await query('UPDATE notifications SET is_read = true WHERE id = $1', [notificationId]);
+    const result = await query('UPDATE notifications SET is_read = true WHERE id = $1 AND user_id = $2', [
+      notificationId,
+      authUserId,
+    ]);
+    if (!result.rowCount) {
+      return res.status(404).json({ message: 'Notification not found' });
+    }
     res.json({ message: 'Notification updated' });
   })
 );
@@ -1175,13 +1385,23 @@ app.post(
 app.post(
   '/api/dms',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { senderId, recipientId, body } = req.body;
     if (!senderId || !recipientId || !body) {
       return res.status(400).json({ message: 'senderId, recipientId and body are required' });
     }
+    if (req.user?.userId && senderId !== req.user.userId) {
+      return res.status(403).json({ message: 'You can only send messages as yourself.' });
+    }
     const sender = await fetchUser(senderId);
     const recipient = await fetchUser(recipientId);
-    if (!sender || !recipient) {
+    if (
+      !sender ||
+      !recipient ||
+      sender.workspace_id !== workspaceId ||
+      recipient.workspace_id !== workspaceId
+    ) {
       return res.status(404).json({ message: 'User not found' });
     }
 
@@ -1201,9 +1421,15 @@ app.post(
 app.get(
   '/api/dms',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { userId } = req.query;
-    if (!userId) {
-      return res.status(400).json({ message: 'userId is required' });
+    const authUserId = req.user?.userId;
+    if (!authUserId) {
+      return res.status(403).json({ message: 'Unauthorized' });
+    }
+    if (userId && userId !== authUserId) {
+      return res.status(403).json({ message: 'Forbidden' });
     }
     const { rows } = await query(
       `SELECT d.id, d.body, d.created_at AS "createdAt", d.sender_id AS "senderId", d.recipient_id AS "recipientId",
@@ -1211,9 +1437,11 @@ app.get(
        FROM dms d
        LEFT JOIN users su ON su.id = d.sender_id
        LEFT JOIN users ru ON ru.id = d.recipient_id
-       WHERE d.sender_id = $1 OR d.recipient_id = $1
+       WHERE (d.sender_id = $1 OR d.recipient_id = $1)
+         AND su.workspace_id = $2
+         AND ru.workspace_id = $2
        ORDER BY d.created_at DESC LIMIT 50`,
-      [userId]
+      [authUserId, workspaceId]
     );
     res.json(rows);
   })
@@ -1222,8 +1450,10 @@ app.get(
 app.get(
   '/api/dashboard/overview',
   asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
     const { startDate, endDate } = req.query;
-    const params = [];
+    const params = [workspaceId];
     const conditions = [];
 
     const parseDate = (value) => {
@@ -1248,8 +1478,8 @@ app.get(
     }
 
     const joinCondition = conditions.length
-      ? `t.assignee_id = u.id AND ${conditions.join(' AND ')}`
-      : 't.assignee_id = u.id';
+      ? `t.assignee_id = u.id AND t.workspace_id = $1 AND ${conditions.join(' AND ')}`
+      : 't.assignee_id = u.id AND t.workspace_id = $1';
 
     const queryText = `SELECT
         u.id,
@@ -1261,6 +1491,7 @@ app.get(
         COALESCE(SUM(t.actual_hours), 0)::float AS "actualTotal"
       FROM users u
       LEFT JOIN tickets t ON ${joinCondition}
+      WHERE u.workspace_id = $1
       GROUP BY u.id, u.display_name
       ORDER BY u.display_name`;
 

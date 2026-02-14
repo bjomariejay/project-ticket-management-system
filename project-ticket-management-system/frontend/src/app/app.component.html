@@ -590,6 +590,17 @@
             <input type="text" name="handle" [(ngModel)]="registerForm.handle" required />
           </label>
           <label>
+            Workspace name
+            <input
+              type="text"
+              name="workspaceName"
+              [(ngModel)]="registerForm.workspaceName"
+              placeholder="ajoya-room"
+              required
+            />
+            <small class="muted">Workspace data stays private per name.</small>
+          </label>
+          <label>
             Email
             <input type="email" name="email" [(ngModel)]="registerForm.email" required />
           </label>
