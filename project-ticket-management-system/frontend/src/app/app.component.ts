@@ -78,6 +78,7 @@ export class AppComponent implements OnInit, OnDestroy {
     body: '',
   };
   selectedDmRecipientId = '';
+  hasDmAttention = false;
 
   isLoadingTickets = false;
   isPostingMessage = false;
@@ -134,6 +135,7 @@ export class AppComponent implements OnInit, OnDestroy {
   readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
   private latestGlobalReportTimestamp: string | null = null;
   private lastActivityViewTimestamp: string | null = null;
+  private lastDmViewTimestamp: string | null = null;
 
   private readonly handleSessionExpired = () => {
     this.handleLogout();
@@ -178,6 +180,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.selectedUserId = this.sessionUser.id;
     }
     this.lastActivityViewTimestamp = this.restoreActivityViewTimestamp();
+    this.lastDmViewTimestamp = this.restoreDmViewTimestamp();
     if (!this.createTicketModel.projectId && this.projects.length) {
       this.createTicketModel.projectId = this.projects[0].id;
     }
@@ -297,6 +300,42 @@ export class AppComponent implements OnInit, OnDestroy {
     this.persistActivityViewTimestamp(value);
   }
 
+  private getDmViewStorageKey(userId: string) {
+    return `dms:lastViewed:${userId}`;
+  }
+
+  private restoreDmViewTimestamp(): string | null {
+    if (!this.selectedUserId) return null;
+    try {
+      return localStorage.getItem(this.getDmViewStorageKey(this.selectedUserId));
+    } catch (error) {
+      console.error('Unable to read DM view timestamp', error);
+      return null;
+    }
+  }
+
+  private persistDmViewTimestamp(timestamp: string | null) {
+    if (!this.selectedUserId) return;
+    const key = this.getDmViewStorageKey(this.selectedUserId);
+    try {
+      if (timestamp) {
+        localStorage.setItem(key, timestamp);
+      } else {
+        localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.error('Unable to persist DM view timestamp', error);
+    }
+  }
+
+  private markDmViewed(timestamp?: string) {
+    const latest = timestamp || this.getLatestIncomingDmTimestamp();
+    const value = latest || new Date().toISOString();
+    this.lastDmViewTimestamp = value;
+    this.hasDmAttention = false;
+    this.persistDmViewTimestamp(value);
+  }
+
   private ensureDmRecipientSelection() {
     if (this.selectedDmRecipientId || !this.dms.length) return;
     const nextConversation = this.dms.find((dm) => this.resolveDmPartnerId(dm));
@@ -368,6 +407,8 @@ export class AppComponent implements OnInit, OnDestroy {
       body: '',
     };
     this.selectedDmRecipientId = '';
+    this.hasDmAttention = false;
+    this.lastDmViewTimestamp = null;
     this.feedback = '';
     this.ticketSettings = {
       priority: 'normal',
@@ -797,6 +838,38 @@ export class AppComponent implements OnInit, OnDestroy {
     return false;
   }
 
+  private getLatestIncomingDmTimestamp(): string | null {
+    if (!this.selectedUserId) return null;
+    const incoming = this.dms
+      .filter((dm) => dm.senderId !== this.selectedUserId)
+      .map((dm) => dm.createdAt);
+    if (!incoming.length) return null;
+    return incoming.reduce((latest, current) =>
+      new Date(current).getTime() > new Date(latest).getTime() ? current : latest
+    );
+  }
+
+  private updateDmAttention(latestIncoming?: string | null) {
+    if (!this.selectedUserId) {
+      this.hasDmAttention = false;
+      return;
+    }
+    const latest = latestIncoming ?? this.getLatestIncomingDmTimestamp();
+    if (!latest) {
+      this.hasDmAttention = false;
+      return;
+    }
+    const lastViewedTime = this.lastDmViewTimestamp
+      ? new Date(this.lastDmViewTimestamp).getTime()
+      : NaN;
+    if (!Number.isFinite(lastViewedTime)) {
+      this.hasDmAttention = true;
+      return;
+    }
+    const latestTime = new Date(latest).getTime();
+    this.hasDmAttention = Number.isFinite(latestTime) && latestTime > lastViewedTime;
+  }
+
   async loadNotifications() {
     if (!this.selectedUserId) return;
     if (!this.lastActivityViewTimestamp) {
@@ -809,11 +882,20 @@ export class AppComponent implements OnInit, OnDestroy {
 
   async loadDms() {
     if (!this.selectedUserId) return;
+    if (!this.lastDmViewTimestamp) {
+      this.lastDmViewTimestamp = this.restoreDmViewTimestamp();
+    }
     this.dms = await firstValueFrom(this.api.getDms(this.selectedUserId));
     if (this.selectedDmRecipientId) {
       this.dmForm.recipientId = this.selectedDmRecipientId;
     } else {
       this.ensureDmRecipientSelection();
+    }
+    const latestIncoming = this.getLatestIncomingDmTimestamp();
+    if (this.activeTab === 'dms') {
+      this.markDmViewed(latestIncoming || undefined);
+    } else {
+      this.updateDmAttention(latestIncoming);
     }
   }
 
@@ -1225,6 +1307,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.markActivityViewed();
       void this.loadNotifications();
     } else if (tab === 'dms') {
+      this.markDmViewed();
       void this.loadDms();
     } else if (tab === 'dashboard') {
       void this.loadDashboard();

@@ -17,7 +17,12 @@
         <button type="button" (click)="setActiveTab('home')" [class.active]="activeTab === 'home'">
           Home
         </button>
-        <button type="button" (click)="setActiveTab('dms')" [class.active]="activeTab === 'dms'">
+        <button
+          type="button"
+          (click)="setActiveTab('dms')"
+          [class.active]="activeTab === 'dms'"
+          [class.has-alert]="hasDmAttention"
+        >
           DMs
         </button>
         <button
