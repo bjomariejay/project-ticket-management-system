@@ -266,6 +266,18 @@
   color: #611f69;
 }
 
+.project-main.has-updates {
+  background: rgba(255, 193, 71, 0.22);
+  border-radius: 0.65rem;
+  padding: 0.35rem 0.4rem;
+  box-shadow: 0 0 0 1px rgba(255, 193, 71, 0.35);
+}
+
+.project-main.has-updates strong,
+.project-main.has-updates .project-number {
+  color: #b45309;
+}
+
 .project-number {
   font-weight: 600;
 }

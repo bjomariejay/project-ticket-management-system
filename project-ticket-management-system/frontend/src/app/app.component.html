@@ -185,6 +185,7 @@
                         type="button"
                         class="project-main"
                         [class.active]="isGlobalReportView"
+                        [class.has-updates]="hasUnseenGlobalReports"
                         (click)="handleGlobalReportView($event)"
                       >
                         <div>

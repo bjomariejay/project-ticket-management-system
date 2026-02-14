@@ -125,9 +125,11 @@ export class AppComponent implements OnInit, OnDestroy {
   viewingReportsForProjectName = '';
   projectReportsLoading = false;
   isGlobalReportView = false;
+  hasUnseenGlobalReports = false;
   isDeleteProjectOpen = false;
   projectPendingDeletion: Project | null = null;
   readonly slashCommands = ['/start', '/archive', '/assign', '/addTime'];
+  private latestGlobalReportTimestamp: string | null = null;
 
   private readonly handleSessionExpired = () => {
     this.handleLogout();
@@ -217,6 +219,44 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private getGlobalReportStorageKey(userId: string) {
+    return `globalReports:lastSeen:${userId}`;
+  }
+
+  private getLastSeenGlobalReportTimestamp(): string | null {
+    if (!this.selectedUserId) return null;
+    try {
+      return localStorage.getItem(this.getGlobalReportStorageKey(this.selectedUserId));
+    } catch (error) {
+      console.error('Unable to read report-of-work state', error);
+      return null;
+    }
+  }
+
+  private persistGlobalReportTimestamp(timestamp: string | null) {
+    if (!this.selectedUserId) return;
+    const storageKey = this.getGlobalReportStorageKey(this.selectedUserId);
+    try {
+      if (timestamp) {
+        localStorage.setItem(storageKey, timestamp);
+      } else {
+        localStorage.removeItem(storageKey);
+      }
+    } catch (error) {
+      console.error('Unable to persist report-of-work state', error);
+    }
+  }
+
+  private markGlobalReportsSeen(timestamp: string | null) {
+    this.hasUnseenGlobalReports = false;
+    if (!timestamp) {
+      this.persistGlobalReportTimestamp(null);
+      return;
+    }
+    this.latestGlobalReportTimestamp = timestamp;
+    this.persistGlobalReportTimestamp(timestamp);
+  }
+
   private isTokenExpired(token: string): boolean {
     const segments = token.split('.');
     if (segments.length !== 3) {
@@ -280,6 +320,8 @@ export class AppComponent implements OnInit, OnDestroy {
     this.selectedLog = null;
     this.expandedProjectId = '';
     this.selectedProjectId = '';
+    this.hasUnseenGlobalReports = false;
+    this.latestGlobalReportTimestamp = null;
     if (clearUserSelection) {
       this.selectedUserId = this.sessionUser?.id || '';
     }
@@ -616,6 +658,7 @@ export class AppComponent implements OnInit, OnDestroy {
       this.selectedTicket = null;
       this.lockedTicket = null;
       this.selectedLog = null;
+      this.markGlobalReportsSeen(this.projectReportEntries[0]?.createdAt || null);
     } catch (error) {
       console.error(error);
       this.closeProjectReports();
@@ -624,9 +667,30 @@ export class AppComponent implements OnInit, OnDestroy {
     }
   }
 
+  private async checkGlobalReports() {
+    if (!this.selectedUserId) return;
+    try {
+      const reports = await firstValueFrom(this.api.getAllReports());
+      const latest = reports[0]?.createdAt || null;
+      this.latestGlobalReportTimestamp = latest;
+      if (!latest) {
+        this.hasUnseenGlobalReports = false;
+        return;
+      }
+      const lastSeen = this.getLastSeenGlobalReportTimestamp();
+      const latestTime = new Date(latest).getTime();
+      const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : NaN;
+      this.hasUnseenGlobalReports =
+        !lastSeen || !Number.isFinite(lastSeenTime) || latestTime > lastSeenTime;
+    } catch (error) {
+      console.error('Unable to check report-of-work updates', error);
+    }
+  }
+
   async loadNotifications() {
     if (!this.selectedUserId) return;
     this.notifications = await firstValueFrom(this.api.getNotifications(this.selectedUserId));
+    void this.checkGlobalReports();
   }
 
   async loadDms() {
