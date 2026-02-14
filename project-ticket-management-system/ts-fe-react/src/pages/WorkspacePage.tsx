@@ -28,6 +28,7 @@ const WorkspacePage = () => {
     createTicket,
     postTicketMessage,
     sendDm,
+    startTicket,
     handleAssign,
     handleJoinTicket,
     handleArchiveTicket,
@@ -99,6 +100,14 @@ const WorkspacePage = () => {
       return haystack.includes(search);
     });
   }, [ticketSearch, tickets]);
+
+  const isTicketMember = useMemo(() => {
+    if (!selectedTicket || !user?.id) return false;
+    if (typeof selectedTicket.viewerIsMember === 'boolean') {
+      return selectedTicket.viewerIsMember;
+    }
+    return selectedTicket.members.some((member) => member.userId === user.id);
+  }, [selectedTicket, user?.id]);
 
   const ticketSearchResults = useMemo(() => {
     const query = ticketSearch.trim().toLowerCase();
@@ -508,6 +517,16 @@ const WorkspacePage = () => {
                       </form>
                     </section>
                     <footer className="ticket-actions">
+                      {isTicketMember && selectedTicket.status !== 'archived' && (
+                        <button
+                          type="button"
+                          className="link-button"
+                          onClick={() => void startTicket()}
+                          disabled={isPostingMessage}
+                        >
+                          {isPostingMessage ? 'Starting…' : 'Start ticket'}
+                        </button>
+                      )}
                       <button type="button" className="link-button outline" onClick={() => void handleJoinTicket()}>
                         Join ticket
                       </button>
@@ -864,9 +883,6 @@ const WorkspacePage = () => {
             <span>Logged in</span>
             <strong>{user.displayName}</strong>
             <small>@{user.handle}</small>
-            <button type="button" className="user-settings-btn" onClick={openUserSettings}>
-              ⚙
-            </button>
           </div>
         )}
         <nav className="primary-nav">
@@ -901,24 +917,29 @@ const WorkspacePage = () => {
             Activity
           </button>
         </nav>
-        {users.length > 0 && (
-          <section className="sidebar__team">
-            <h4>Team</h4>
-            <ul>
-              {users.map((teammate) => (
-                <li key={teammate.id}>
-                  <span>
-                    <strong>{teammate.displayName}</strong>
-                    <small>@{teammate.handle}</small>
-                  </span>
-                  <span className={clsx('badge', { active: teammate.isActive })}>
-                    {teammate.isActive ? 'Active' : 'Away'}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+        <div className="sidebar__footer">
+          {users.length > 0 && (
+            <section className="sidebar__team">
+              <h4>Team</h4>
+              <ul>
+                {users.map((teammate) => (
+                  <li key={teammate.id}>
+                    <span>
+                      <strong>{teammate.displayName}</strong>
+                      <small>@{teammate.handle}</small>
+                    </span>
+                    <span className={clsx('badge', { active: teammate.isActive })}>
+                      {teammate.isActive ? 'Active' : 'Away'}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <button type="button" className="user-settings-btn" onClick={openUserSettings}>
+            ⚙
+          </button>
+        </div>
       </aside>
       <main className="workspace__main">
         <header className="main__header">

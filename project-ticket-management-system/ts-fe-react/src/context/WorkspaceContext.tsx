@@ -197,6 +197,7 @@ interface WorkspaceContextValue {
   createTicket: () => Promise<void>;
   postTicketMessage: (body?: string) => Promise<void>;
   sendDm: () => Promise<void>;
+  startTicket: () => Promise<void>;
   handleAssign: (userId: string) => Promise<void>;
   handleJoinTicket: (targetUserId?: string) => Promise<void>;
   handleArchiveTicket: () => Promise<void>;
@@ -679,6 +680,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const startTicket = async () => {
+    await postTicketMessage('start ticket');
+  };
+
   const sendDm = async () => {
     const { recipientId, body } = stateRef.current.dmForm;
     const senderId = stateRef.current.selectedUserId;
@@ -882,6 +887,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       createProject,
       createTicket,
       postTicketMessage,
+      startTicket,
       sendDm,
       handleAssign,
       handleJoinTicket,
