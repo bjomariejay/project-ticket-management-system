@@ -195,6 +195,17 @@ const WorkspacePage = () => {
       );
   }, [dms, selectedDmRecipientId, user?.id]);
 
+  const assigneeUsername = useMemo(() => {
+    if (!selectedTicket?.assigneeId) return '';
+    const teammate = users.find((candidate) => candidate.id === selectedTicket.assigneeId);
+    if (teammate?.username) return teammate.username;
+    if (teammate?.handle) return teammate.handle;
+    const member = selectedTicket.members.find((entry) => entry.userId === selectedTicket.assigneeId);
+    if (member?.username) return member.username;
+    if (member?.handle) return member.handle;
+    return member?.displayName || '';
+  }, [selectedTicket, users]);
+
   const handleProjectSubmit = (event: FormEvent) => {
     event.preventDefault();
     void createProject();
@@ -239,12 +250,6 @@ const WorkspacePage = () => {
   const handleDmSubmit = (event: FormEvent) => {
     event.preventDefault();
     void sendDm();
-  };
-
-  const handleAssigneeChange = (value: string) => {
-    if (!selectedTicket) return;
-    if (!value || value === selectedTicket.assigneeId) return;
-    void handleAssign(value);
   };
 
   const openAdminEdit = (targetUserId: string) => {
@@ -694,19 +699,17 @@ const WorkspacePage = () => {
                     <section className="ticket-info">
                       <div>
                         <label>Assignee</label>
-                        <select
-                          value={selectedTicket.assigneeId || ""}
-                          onChange={(event) =>
-                            handleAssigneeChange(event.target.value)
-                          }
-                        >
-                          <option value="">Unassigned</option>
-                          {users.map((teammate) => (
-                            <option key={teammate.id} value={teammate.id}>
-                              {teammate.displayName}
-                            </option>
-                          ))}
-                        </select>
+                        <p>
+                          <span
+                            className={clsx(
+                              "privacy-badge",
+                              selectedTicket.assigneeId,
+                            )}
+                          >
+                            {assigneeUsername || 'Unassigned'}
+                          </span>
+                        </p>
+                        
                       </div>
                       <div>
                         <label>Privacy</label>
@@ -921,8 +924,23 @@ const WorkspacePage = () => {
                               className="link-button"
                               type="submit"
                               disabled={isPostingMessage}
+                              aria-label="Post update"
+                              style={{float:"right"}}
                             >
-                              {isPostingMessage ? "Posting…" : "Post update"}
+                              {isPostingMessage ? (
+                                'Posting…'
+                              ) : (
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  role="img"
+                                  aria-hidden="true"
+                                  focusable="false"
+                                  width="20"
+                                  height="20"
+                                >
+                                  <path d="M2 21l21-9L2 3v7l15 2-15 2z" fill="currentColor" />
+                                </svg>
+                              )}
                             </button>
                           </form>
                         </section>
