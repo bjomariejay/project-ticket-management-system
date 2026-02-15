@@ -986,7 +986,7 @@ textarea {
   gap: 0.5rem;
 }
 
-.thread__messages {
+.message-list {
   max-height: 260px;
   overflow-y: auto;
   display: flex;
@@ -995,22 +995,31 @@ textarea {
   margin-bottom: 0.8rem;
 }
 
-.thread__messages article {
+.message-item {
   background: #f6f6fb;
   border-radius: 0.8rem;
   padding: 0.65rem 0.9rem;
 }
 
-.thread__messages article small {
+.message-item header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.message-item header small {
   color: #7b7f92;
 }
 
-.thread__composer {
-  display: flex;
-  gap: 0.6rem;
-  align-items: flex-start;
+.message-item--viewer {
+  background: rgba(79, 70, 229, 0.12);
+  border: 1px solid rgba(79, 70, 229, 0.2);
 }
 
+.message-item--teammate {
+  background: rgba(15, 23, 42, 0.06);
+}
 
 .message-input {
   position: relative;

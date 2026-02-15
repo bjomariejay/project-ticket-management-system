@@ -793,24 +793,24 @@ const WorkspacePage = () => {
                         <section className="ticket-thread">
                           <h4>Messages</h4>
                           <div className="message-list">
-                            {selectedTicket.messages.map((message) => (
-                              <article
-                                key={message.id}
-                                className="message-item"
-                              >
-                                <header>
-                                  <strong>
-                                    {message.displayName || "Unknown user"}
-                                  </strong>
-                                  <small>
-                                    {new Date(
-                                      message.createdAt,
-                                    ).toLocaleString()}
-                                  </small>
-                                </header>
-                                <p>{message.body}</p>
-                              </article>
-                            ))}
+                            {selectedTicket.messages.map((message) => {
+                              const isViewer = message.displayName === user?.displayName;
+                              return (
+                                <article
+                                  key={message.id}
+                                  className={clsx('message-item', {
+                                    'message-item--viewer': isViewer,
+                                    'message-item--teammate': !isViewer,
+                                  })}
+                                >
+                                  <header>
+                                    <strong>{message.displayName || 'Unknown user'}</strong>
+                                    <small>{new Date(message.createdAt).toLocaleString()}</small>
+                                  </header>
+                                  <p>{message.body}</p>
+                                </article>
+                              );
+                            })}
                           </div>
                           <form
                             onSubmit={handleMessageSubmit}
