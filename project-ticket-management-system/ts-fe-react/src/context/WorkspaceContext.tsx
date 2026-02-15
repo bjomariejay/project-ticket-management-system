@@ -216,6 +216,7 @@ interface WorkspaceContextValue {
   sendDm: () => Promise<void>;
   startTicket: () => Promise<void>;
   handleAssign: (userId: string) => Promise<void>;
+  updateTicketEstimate: (hours: number) => Promise<void>;
   handleJoinTicket: (targetUserId?: string) => Promise<void>;
   handleArchiveTicket: () => Promise<void>;
   handlePrivacyChange: (privacy: TicketPrivacy) => Promise<void>;
@@ -826,6 +827,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     await refreshTicketDetail(ticketId);
   };
 
+  const updateTicketEstimate = async (hours: number) => {
+    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
+    await apiClient.updateTicketSettings(stateRef.current.selectedTicket.id, {
+      actorId: stateRef.current.selectedUserId,
+      estimatedHours: hours,
+    });
+    await refreshTicketDetail(stateRef.current.selectedTicket.id);
+    await loadTickets();
+  };
+
   const handleArchiveTicket = async () => {
     if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
     const ticketId = stateRef.current.selectedTicket.id;
@@ -1040,6 +1051,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       startTicket,
       sendDm,
       handleAssign,
+      updateTicketEstimate,
       handleJoinTicket,
       handleArchiveTicket,
       handlePrivacyChange,

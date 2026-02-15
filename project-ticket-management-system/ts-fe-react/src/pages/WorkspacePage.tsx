@@ -32,6 +32,7 @@ const WorkspacePage = () => {
     sendDm,
     startTicket,
     handleAssign,
+    updateTicketEstimate,
     handleJoinTicket,
     handleArchiveTicket,
     handlePrivacyChange,
@@ -206,6 +207,24 @@ const WorkspacePage = () => {
     return member?.displayName || '';
   }, [selectedTicket, users]);
 
+  const formatEstimatedHours = (value?: number | null) => {
+    if (value === null || value === undefined) return '—';
+    const totalMinutes = Math.round(value * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const parts: string[] = [];
+    if (hours) {
+      parts.push(`${hours}h`);
+    }
+    if (minutes) {
+      parts.push(`${minutes}m`);
+    }
+    if (!parts.length) {
+      return '0m';
+    }
+    return parts.join(' ');
+  };
+
   const handleProjectSubmit = (event: FormEvent) => {
     event.preventDefault();
     void createProject();
@@ -226,6 +245,17 @@ const WorkspacePage = () => {
     }
     if (payload === "/archive") {
       void handleArchiveTicket();
+      return;
+    }
+    const estimateMatch = payload.match(/^\/e[-\s]?([0-9]+(?:\.[0-9]+)?)$/i);
+    if (estimateMatch) {
+      const hours = Number(estimateMatch[1]);
+      if (!Number.isNaN(hours)) {
+        setMessageDraft("");
+        setShowSlashSuggestions(false);
+        setSlashRange(null);
+        void updateTicketEstimate(hours);
+      }
       return;
     }
     const assignMatch = payload.match(/^\/a-@?([\w.-]+)$/i);
@@ -726,7 +756,7 @@ const WorkspacePage = () => {
                       </div>
                       <div>
                         <label>Estimated hrs</label>
-                        <p>{selectedTicket.estimatedHours ?? "—"}</p>
+                        <p>{formatEstimatedHours(selectedTicket.estimatedHours)}</p>
                       </div>
                     </section>
                     <section
