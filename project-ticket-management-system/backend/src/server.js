@@ -623,53 +623,64 @@ const updateProject = asyncHandler(async (req, res) => {
   const projectId = req.params.projectId || req.params.channelId;
   const { name, slug, ticketPrefix, description } = req.body || {};
 
-  const updates = [];
-  const params = [];
+  const { rows: existingRows } = await query(
+    'SELECT id, name, slug, ticket_prefix, description FROM projects WHERE id = $1 AND workspace_id = $2',
+    [projectId, workspaceId]
+  );
+  if (!existingRows.length) {
+    return res.status(404).json({ message: 'Project not found' });
+  }
+  const current = existingRows[0];
 
-  if (typeof name === 'string' && name.trim()) {
-    params.push(name.trim());
-    updates.push(`name = $${params.length}`);
+  const trimmedName = typeof name === 'string' && name.trim() ? name.trim() : current.name;
+  if (!trimmedName) {
+    return res.status(400).json({ message: 'Project name is required' });
   }
 
+  let normalizedSlug = current.slug;
   if (typeof slug === 'string') {
-    const normalizedSlug = slugify(slug || name || '');
-    if (!normalizedSlug) {
-      return res.status(400).json({ message: 'Invalid slug' });
+    const slugInput = slug.trim();
+    if (!slugInput) {
+      normalizedSlug = current.slug;
+    } else {
+      normalizedSlug = slugify(slugInput);
+      if (!normalizedSlug) {
+        return res.status(400).json({ message: 'Invalid slug' });
+      }
     }
-    params.push(normalizedSlug);
-    updates.push(`slug = $${params.length}`);
   }
 
+  let sanitizedPrefix = current.ticket_prefix;
   if (typeof ticketPrefix === 'string') {
-    const prefix = String(ticketPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
-    if (!prefix) {
-      return res.status(400).json({ message: 'Invalid ticket prefix' });
-    }
-    params.push(prefix);
-    updates.push(`ticket_prefix = $${params.length}`);
+    const prefixInput = ticketPrefix.trim();
+    sanitizedPrefix = prefixInput
+      ? prefixInput.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10)
+      : current.ticket_prefix;
+  }
+  if (!sanitizedPrefix) {
+    return res.status(400).json({ message: 'Invalid ticket prefix' });
   }
 
+  let nextDescription = current.description;
   if (description !== undefined) {
-    params.push(description && description.trim() ? description.trim() : null);
-    updates.push(`description = $${params.length}`);
+    if (description === null) {
+      nextDescription = null;
+    } else if (typeof description === 'string') {
+      const trimmedDescription = description.trim();
+      nextDescription = trimmedDescription || null;
+    }
   }
-
-  if (!updates.length) {
-    return res.status(400).json({ message: 'Provide at least one field to update.' });
-  }
-
-  params.push(projectId);
-  const projectParamIndex = params.length;
-  params.push(workspaceId);
-  const workspaceParamIndex = params.length;
 
   try {
     const { rows } = await query(
       `WITH updated AS (
          UPDATE projects
-            SET ${updates.join(', ')}, updated_at = NOW()
-          WHERE id = $${projectParamIndex}
-            AND workspace_id = $${workspaceParamIndex}
+            SET name = $1,
+                slug = $2,
+                ticket_prefix = $3,
+                description = $4
+          WHERE id = $5
+            AND workspace_id = $6
           RETURNING id, name, slug, ticket_prefix, description
        )
        SELECT u.id,
@@ -680,7 +691,7 @@ const updateProject = asyncHandler(async (req, res) => {
               ps.last_value
          FROM updated u
          LEFT JOIN project_sequences ps ON u.id = ps.project_id`,
-      params
+      [trimmedName, normalizedSlug, sanitizedPrefix, nextDescription, projectId, workspaceId]
     );
     if (!rows.length) {
       return res.status(404).json({ message: 'Project not found' });
