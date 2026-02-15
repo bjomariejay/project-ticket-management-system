@@ -402,7 +402,7 @@ const WorkspacePage = () => {
   }, [activityNotifications]);
 
   const showActivityTabAlert =
-    activeTab !== "activity" && (hasActivityAttention || activityUnreadCount > 0);
+    activeTab !== "activity" && activityUnreadCount > 0;
 
   const headerTitle = useMemo(() => {
     switch (activeTab) {
