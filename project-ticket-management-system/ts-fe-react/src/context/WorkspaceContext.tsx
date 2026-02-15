@@ -276,7 +276,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ isBootstrapping: true, feedback: '' });
     try {
       const [users, projects] = await Promise.all([apiClient.getUsers(), apiClient.getProjects()]);
-      const selectedProjectId = stateRef.current.selectedProjectId || projects[0]?.id || '';
+      const retainedProjectId = stateRef.current.selectedProjectId;
+      const selectedProjectId =
+        retainedProjectId && projects.some((project) => project.id === retainedProjectId)
+          ? retainedProjectId
+          : '';
       mergeState({
         workspaceLabel: user.workspaceName?.trim() || defaultWorkspaceLabel,
         selectedUserId: user.id,
