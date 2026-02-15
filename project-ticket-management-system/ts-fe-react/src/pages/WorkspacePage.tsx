@@ -235,8 +235,7 @@ const WorkspacePage = () => {
     void createTicket();
   };
 
-  const handleMessageSubmit = (event: FormEvent) => {
-    event.preventDefault();
+  const submitMessage = () => {
     const payload = messageDraft.trim();
     if (!payload) return;
     if (payload === "/start") {
@@ -275,6 +274,11 @@ const WorkspacePage = () => {
       return;
     }
     void postTicketMessage();
+  };
+
+  const handleMessageSubmit = (event: FormEvent) => {
+    event.preventDefault();
+    submitMessage();
   };
 
   const handleDmSubmit = (event: FormEvent) => {
@@ -730,12 +734,7 @@ const WorkspacePage = () => {
                       <div>
                         <label>Assignee</label>
                         <p>
-                          <span
-                            className={clsx(
-                              "privacy-badge",
-                              selectedTicket.assigneeId,
-                            )}
-                          >
+                          <span className="assignee-badge">
                             {assigneeUsername || 'Unassigned'}
                           </span>
                         </p>
@@ -756,7 +755,11 @@ const WorkspacePage = () => {
                       </div>
                       <div>
                         <label>Estimated hrs</label>
-                        <p>{formatEstimatedHours(selectedTicket.estimatedHours)}</p>
+                        <p>
+                          <span className="estimated-badge">
+                            {formatEstimatedHours(selectedTicket.estimatedHours)}
+                          </span>
+                        </p>
                       </div>
                     </section>
                     <section
@@ -818,12 +821,18 @@ const WorkspacePage = () => {
                                 rows={3}
                                 value={messageDraft}
                                 placeholder="Write an update…"
-                                onChange={(event) =>
-                                  setMessageDraft(event.target.value)
+                              onChange={(event) =>
+                                setMessageDraft(event.target.value)
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key === 'Enter' && !event.shiftKey) {
+                                  event.preventDefault();
+                                  submitMessage();
                                 }
-                                onInput={(event) => {
-                                  const target =
-                                    event.target as HTMLTextAreaElement;
+                              }}
+                              onInput={(event) => {
+                                const target =
+                                  event.target as HTMLTextAreaElement;
                                   const caretIndex =
                                     target.selectionStart ??
                                     target.value.length;
