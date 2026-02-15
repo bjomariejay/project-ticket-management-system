@@ -1034,7 +1034,6 @@ const WorkspacePage = () => {
                     </p>
                   </article>
                 )}
-              </div>
             </article>
           )}
         </section>
