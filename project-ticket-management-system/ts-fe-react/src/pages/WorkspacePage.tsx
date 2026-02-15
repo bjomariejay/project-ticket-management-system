@@ -401,6 +401,9 @@ const WorkspacePage = () => {
       .length;
   }, [activityNotifications]);
 
+  const showActivityTabAlert =
+    activeTab !== "activity" && (hasActivityAttention || activityUnreadCount > 0);
+
   const headerTitle = useMemo(() => {
     switch (activeTab) {
       case "dashboard":
@@ -1694,7 +1697,7 @@ const WorkspacePage = () => {
             type="button"
             className={clsx({
               active: activeTab === "activity",
-              "has-alert": hasActivityAttention,
+              "has-alert": showActivityTabAlert,
             })}
             onClick={() => setActiveTab("activity")}
           >

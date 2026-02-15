@@ -435,16 +435,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const updateActivityAttention = useCallback(() => {
-    const userId = stateRef.current.selectedUserId;
-    if (!userId) return;
-    const lastViewed =
-      stateRef.current.lastActivityViewTimestamp ?? restoreTimestamp(ACTIVITY_VIEW_KEY(userId));
-    const unread = stateRef.current.notifications.filter((notification) => !notification.isRead);
-    const hasUnread = unread.some((notification) => {
-      if (!lastViewed) return true;
-      return new Date(notification.createdAt).getTime() > new Date(lastViewed).getTime();
-    });
-    mergeState({ hasActivityAttention: hasUnread, lastActivityViewTimestamp: lastViewed });
+    const hasUnread = stateRef.current.notifications.some(
+      (notification) => !notification.isRead && Boolean(notification.ticketId),
+    );
+    mergeState({ hasActivityAttention: hasUnread });
   }, [mergeState]);
 
   const updateDmAttention = useCallback(() => {
