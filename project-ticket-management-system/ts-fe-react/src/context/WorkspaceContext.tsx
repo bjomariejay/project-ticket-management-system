@@ -441,6 +441,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ hasActivityAttention: hasUnread });
   }, [mergeState]);
 
+  const markAllTicketNotificationsRead = useCallback(async () => {
+    const unread = stateRef.current.notifications.filter(
+      (notification) => !notification.isRead && Boolean(notification.ticketId),
+    );
+    if (!unread.length) return;
+    const unreadIds = new Set(unread.map((notification) => notification.id));
+    try {
+      await Promise.all(
+        unread.map((notification) => apiClient.markNotificationRead(notification.id)),
+      );
+      mergeState({
+        notifications: stateRef.current.notifications.map((notification) =>
+          unreadIds.has(notification.id) ? { ...notification, isRead: true } : notification,
+        ),
+      });
+      updateActivityAttention();
+    } catch (error) {
+      console.error('Unable to mark notifications read', error);
+    }
+  }, [mergeState, updateActivityAttention]);
+
   const updateDmAttention = useCallback(() => {
     const userId = stateRef.current.selectedUserId;
     if (!userId) return;
@@ -968,7 +989,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         persistTimestamp(ACTIVITY_VIEW_KEY(userId), timestamp);
       }
       mergeState({ hasActivityAttention: false, lastActivityViewTimestamp: timestamp });
-      void loadNotifications();
+      void (async () => {
+        await markAllTicketNotificationsRead();
+        await loadNotifications();
+      })();
     } else if (tab === 'dms') {
       const timestamp = new Date().toISOString();
       const userId = stateRef.current.selectedUserId;

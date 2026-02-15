@@ -1176,8 +1176,8 @@ const WorkspacePage = () => {
               >
                 <strong>{notification.ticketNumber}</strong>
                 <p>{notification.message}</p>
-                <div className="notification-actions">
-                  {notification.ticketId && (
+                {notification.ticketId && (
+                  <div className="notification-actions">
                     <button
                       type="button"
                       className="link-button outline"
@@ -1185,17 +1185,8 @@ const WorkspacePage = () => {
                     >
                       Open ticket
                     </button>
-                  )}
-                  {!notification.isRead && (
-                    <button
-                      type="button"
-                      className="link-button"
-                      onClick={() => void markNotification(notification.id)}
-                    >
-                      Mark read
-                    </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </li>
             ))
           ) : (
