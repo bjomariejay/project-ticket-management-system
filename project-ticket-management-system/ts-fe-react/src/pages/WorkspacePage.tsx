@@ -208,14 +208,29 @@ const WorkspacePage = () => {
   const handleMessageSubmit = (event: FormEvent) => {
     event.preventDefault();
     const payload = messageDraft.trim();
+    if (!payload) return;
     if (payload === "/start") {
-      event.preventDefault();
       void startTicket();
       return;
     }
     if (payload === "/archive") {
-      event.preventDefault();
       void handleArchiveTicket();
+      return;
+    }
+    const assignMatch = payload.match(/^\/a-@?([\w.-]+)$/i);
+    if (assignMatch) {
+      const identifier = assignMatch[1].toLowerCase();
+      const targetUser = users.find((candidate) => {
+        const username = candidate.username?.toLowerCase();
+        const handle = candidate.handle?.toLowerCase();
+        return username === identifier || handle === identifier;
+      });
+      if (targetUser) {
+        setMessageDraft("");
+        setShowSlashSuggestions(false);
+        setSlashRange(null);
+        void handleAssign(targetUser.id);
+      }
       return;
     }
     void postTicketMessage();
