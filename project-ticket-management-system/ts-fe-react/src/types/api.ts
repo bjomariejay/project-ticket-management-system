@@ -14,6 +14,7 @@ export interface Project {
   name: string;
   slug: string;
   ticketPrefix: string;
+  description?: string | null;
   nextNumber: number;
 }
 
@@ -152,6 +153,13 @@ export interface CreateProjectPayload {
   slug?: string;
   ticketPrefix: string;
   description?: string;
+}
+
+export interface UpdateProjectPayload {
+  name?: string;
+  slug?: string;
+  ticketPrefix?: string;
+  description?: string | null;
 }
 
 export interface PostTicketMessagePayload {

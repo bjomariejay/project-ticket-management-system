@@ -65,6 +65,7 @@ interface WorkspaceState {
   dms: DmMessage[];
   selectedUserId: string;
   selectedProjectId: string;
+  expandedProjectId: string;
   selectedTicket: TicketDetail | null;
   lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null;
   activeTab: WorkspaceTab;
@@ -73,6 +74,7 @@ interface WorkspaceState {
   messageDraft: string;
   createTicketModel: CreateTicketModel;
   createProjectModel: CreateProjectModel;
+  projectEditorModel: CreateProjectModel;
   dmForm: DmForm;
   selectedDmRecipientId: string;
   feedback: string;
@@ -92,6 +94,10 @@ interface WorkspaceState {
   lastActivityViewTimestamp: string | null;
   showCreateProject: boolean;
   showCreateTicket: boolean;
+  showProjectEditor: boolean;
+  projectEditorProjectId: string;
+  projectEditorSaving: boolean;
+  projectEditorDeleting: boolean;
   projectReportEntries: ProjectReportEntry[];
   viewingReportsForProjectId: string;
   viewingReportsForProjectName: string;
@@ -141,6 +147,7 @@ const initialState: WorkspaceState = {
   dms: [],
   selectedUserId: '',
   selectedProjectId: '',
+  expandedProjectId: '',
   selectedTicket: null,
   lockedTicket: null,
   activeTab: 'home',
@@ -149,6 +156,7 @@ const initialState: WorkspaceState = {
   messageDraft: '',
   createTicketModel: defaultTicketModel,
   createProjectModel: defaultProjectModel,
+  projectEditorModel: defaultProjectModel,
   dmForm: defaultDmForm,
   selectedDmRecipientId: '',
   feedback: '',
@@ -168,6 +176,10 @@ const initialState: WorkspaceState = {
   lastActivityViewTimestamp: null,
   showCreateProject: false,
   showCreateTicket: false,
+  showProjectEditor: false,
+  projectEditorProjectId: '',
+  projectEditorSaving: false,
+  projectEditorDeleting: false,
   projectReportEntries: [],
   viewingReportsForProjectId: '',
   viewingReportsForProjectName: '',
@@ -192,8 +204,13 @@ interface WorkspaceContextValue {
   loadDms: () => Promise<void>;
   updateCreateTicketField: <K extends keyof CreateTicketModel>(key: K, value: CreateTicketModel[K]) => void;
   updateCreateProjectField: <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => void;
+  updateProjectEditorField: <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => void;
   updateDmFormField: <K extends keyof DmForm>(key: K, value: DmForm[K]) => void;
   createProject: () => Promise<void>;
+  saveProjectEditor: () => Promise<void>;
+  openProjectEditor: (projectId: string) => void;
+  closeProjectEditor: () => void;
+  removeProject: (projectId?: string) => Promise<void>;
   createTicket: () => Promise<void>;
   postTicketMessage: (body?: string) => Promise<void>;
   sendDm: () => Promise<void>;
@@ -269,6 +286,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           projectId: selectedProjectId,
         },
         selectedProjectId,
+        expandedProjectId: selectedProjectId,
       });
       await loadTickets();
       await Promise.all([loadDashboard(), loadNotifications(), loadDms()]);
@@ -535,8 +553,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   }, [checkGlobalReports, mergeState, updateActivityAttention]);
 
   const selectProject = (projectId: string) => {
+    if (stateRef.current.expandedProjectId === projectId) {
+      mergeState({ expandedProjectId: '' });
+      return;
+    }
     mergeState({
       selectedProjectId: projectId,
+      expandedProjectId: projectId,
       createTicketModel: { ...stateRef.current.createTicketModel, projectId },
       selectedTicket: null,
       lockedTicket: null,
@@ -601,6 +624,91 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ dmForm: { ...stateRef.current.dmForm, [key]: value } });
   };
 
+  const openProjectEditor = (projectId: string) => {
+    const project = stateRef.current.projects.find((item) => item.id === projectId);
+    if (!project) return;
+    mergeState({
+      showProjectEditor: true,
+      projectEditorProjectId: projectId,
+      projectEditorModel: {
+        name: project.name,
+        slug: project.slug,
+        ticketPrefix: project.ticketPrefix,
+        description: project.description || '',
+      },
+    });
+  };
+
+  const closeProjectEditor = () => {
+    mergeState({
+      showProjectEditor: false,
+      projectEditorProjectId: '',
+      projectEditorModel: defaultProjectModel,
+      projectEditorSaving: false,
+      projectEditorDeleting: false,
+    });
+  };
+
+  const updateProjectEditorField = <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => {
+    mergeState({ projectEditorModel: { ...stateRef.current.projectEditorModel, [key]: value } });
+  };
+
+  const saveProjectEditor = async () => {
+    const projectId = stateRef.current.projectEditorProjectId;
+    if (!projectId) return;
+    const { name, ticketPrefix, slug, description } = stateRef.current.projectEditorModel;
+    if (!name.trim() || !ticketPrefix.trim()) {
+      mergeState({ feedback: 'Project name and prefix are required.' });
+      return;
+    }
+    mergeState({ projectEditorSaving: true });
+    try {
+      await apiClient.updateProject(projectId, {
+        name: name.trim(),
+        slug: slug.trim(),
+        ticketPrefix: ticketPrefix.trim(),
+        description: description.trim() || undefined,
+      });
+      mergeState({ feedback: 'Project updated.' });
+      closeProjectEditor();
+      await loadProjects();
+    } catch (error: any) {
+      console.error('Unable to update project', error);
+      mergeState({ feedback: error?.response?.data?.message || 'Project update failed.' });
+    } finally {
+      mergeState({ projectEditorSaving: false });
+    }
+  };
+
+  const removeProject = async (projectId?: string) => {
+    const targetId = projectId || stateRef.current.projectEditorProjectId;
+    if (!targetId) return;
+    mergeState({ projectEditorDeleting: true });
+    try {
+      await apiClient.deleteProject(targetId);
+      mergeState({ feedback: 'Project deleted.' });
+      if (stateRef.current.selectedProjectId === targetId) {
+        mergeState({
+          selectedProjectId: '',
+          expandedProjectId: '',
+          selectedTicket: null,
+          lockedTicket: null,
+          createTicketModel: { ...stateRef.current.createTicketModel, projectId: '' },
+        });
+      } else if (stateRef.current.expandedProjectId === targetId) {
+        mergeState({ expandedProjectId: '' });
+      }
+      closeProjectEditor();
+      await loadProjects();
+      await loadTickets();
+    } catch (error: any) {
+      console.error('Unable to delete project', error);
+      mergeState({ feedback: error?.response?.data?.message || 'Unable to delete project.' });
+    } finally {
+      mergeState({ projectEditorDeleting: false });
+    }
+  };
+
   const createProject = async () => {
     const { name, ticketPrefix } = stateRef.current.createProjectModel;
     if (!name.trim() || !ticketPrefix.trim()) {
@@ -625,6 +733,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         feedback: 'Project created.',
         createProjectModel: defaultProjectModel,
         selectedProjectId: response.id,
+        expandedProjectId: response.id,
         createTicketModel: { ...stateRef.current.createTicketModel, projectId: response.id },
         showCreateProject: false,
       });
@@ -919,8 +1028,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       loadDms,
       updateCreateTicketField,
       updateCreateProjectField,
+      updateProjectEditorField,
       updateDmFormField,
       createProject,
+      saveProjectEditor,
+      openProjectEditor,
+      closeProjectEditor,
+      removeProject,
       createTicket,
       postTicketMessage,
       startTicket,

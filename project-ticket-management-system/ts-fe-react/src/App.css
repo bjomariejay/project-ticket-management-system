@@ -388,15 +388,15 @@ textarea {
 }
 
 .project-panel {
-  overflow: hidden;
   transition: max-height 0.35s ease, opacity 0.35s ease;
-  max-height: 640px;
+  max-height: none;
 }
 
 .project-panel.is-collapsed {
   max-height: 0;
   opacity: 0;
   pointer-events: none;
+  overflow: hidden;
 }
 
 .project-item {
@@ -422,6 +422,7 @@ textarea {
   justify-content: space-between;
   align-items: center;
   width: 100%;
+  flex: 1;
   cursor: pointer;
   text-align: left;
 }
@@ -458,6 +459,7 @@ textarea {
   font-weight: 600;
 }
 
+.project-edit,
 .project-delete {
   border: none;
   background: transparent;
@@ -470,12 +472,15 @@ textarea {
   justify-content: center;
 }
 
+.project-edit:hover,
+.project-edit:focus-visible,
 .project-delete:hover,
 .project-delete:focus-visible {
   background: rgba(97, 31, 105, 0.08);
   color: #611f69;
 }
 
+.project-edit svg,
 .project-delete svg {
   width: 1.1rem;
   height: 1.1rem;
@@ -1399,6 +1404,12 @@ textarea {
   box-shadow: 0 8px 18px rgba(97, 31, 105, 0.25);
 }
 
+.link-button.danger {
+  background: #fee2e2;
+  color: #b91c1c;
+  box-shadow: none;
+}
+
 .link-button.outline {
   background: transparent;
   color: #611f69;
@@ -1471,6 +1482,15 @@ textarea {
   border-radius: 0.7rem;
   padding: 0.45rem 1rem;
   border: none;
+}
+
+.edit-project-footer {
+  justify-content: space-between;
+}
+
+.edit-project-footer__actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .modal footer button.ghost {

@@ -559,6 +559,7 @@ const listProjects = asyncHandler(async (req, res) => {
       name: row.name,
       slug: row.slug,
       ticketPrefix: row.ticket_prefix,
+      description: row.description,
       nextNumber: (row.last_value || 0) + 1,
     }))
   );
@@ -616,6 +617,92 @@ app.get('/api/channels', listProjects);
 app.post('/api/projects', createProject);
 app.post('/api/channels', createProject);
 
+const updateProject = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
+  const projectId = req.params.projectId || req.params.channelId;
+  const { name, slug, ticketPrefix, description } = req.body || {};
+
+  const updates = [];
+  const params = [];
+
+  if (typeof name === 'string' && name.trim()) {
+    params.push(name.trim());
+    updates.push(`name = $${params.length}`);
+  }
+
+  if (typeof slug === 'string') {
+    const normalizedSlug = slugify(slug || name || '');
+    if (!normalizedSlug) {
+      return res.status(400).json({ message: 'Invalid slug' });
+    }
+    params.push(normalizedSlug);
+    updates.push(`slug = $${params.length}`);
+  }
+
+  if (typeof ticketPrefix === 'string') {
+    const prefix = String(ticketPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+    if (!prefix) {
+      return res.status(400).json({ message: 'Invalid ticket prefix' });
+    }
+    params.push(prefix);
+    updates.push(`ticket_prefix = $${params.length}`);
+  }
+
+  if (description !== undefined) {
+    params.push(description && description.trim() ? description.trim() : null);
+    updates.push(`description = $${params.length}`);
+  }
+
+  if (!updates.length) {
+    return res.status(400).json({ message: 'Provide at least one field to update.' });
+  }
+
+  params.push(projectId);
+  const projectParamIndex = params.length;
+  params.push(workspaceId);
+  const workspaceParamIndex = params.length;
+
+  try {
+    const { rows } = await query(
+      `WITH updated AS (
+         UPDATE projects
+            SET ${updates.join(', ')}, updated_at = NOW()
+          WHERE id = $${projectParamIndex}
+            AND workspace_id = $${workspaceParamIndex}
+          RETURNING id, name, slug, ticket_prefix, description
+       )
+       SELECT u.id,
+              u.name,
+              u.slug,
+              u.ticket_prefix,
+              u.description,
+              ps.last_value
+         FROM updated u
+         LEFT JOIN project_sequences ps ON u.id = ps.project_id`,
+      params
+    );
+    if (!rows.length) {
+      return res.status(404).json({ message: 'Project not found' });
+    }
+    const row = rows[0];
+    res.json({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      ticketPrefix: row.ticket_prefix,
+      description: row.description,
+      nextNumber: (row.last_value || 0) + 1,
+    });
+  } catch (error) {
+    if (error.code === '23505') {
+      return res.status(409).json({ message: 'Project slug or prefix already exists' });
+    }
+    console.error('Project update failed', error);
+    res.status(500).json({ message: 'Unable to update project.' });
+  }
+});
+
 const deleteProject = asyncHandler(async (req, res) => {
   const workspaceId = requireWorkspaceContext(req, res);
   if (!workspaceId) return;
@@ -632,6 +719,8 @@ const deleteProject = asyncHandler(async (req, res) => {
 
 app.delete('/api/projects/:projectId', deleteProject);
 app.delete('/api/channels/:channelId', deleteProject);
+app.patch('/api/projects/:projectId', updateProject);
+app.patch('/api/channels/:channelId', updateProject);
 
 const projectReportsHandler = asyncHandler(async (req, res) => {
   const workspaceId = requireWorkspaceContext(req, res);

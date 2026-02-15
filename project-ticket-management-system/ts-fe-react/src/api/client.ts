@@ -17,6 +17,7 @@ import {
   TicketDetail,
   TicketLog,
   TicketMessage,
+  UpdateProjectPayload,
   UpdateTicketSettingsPayload,
   User,
   WorkspaceSummary,
@@ -76,7 +77,11 @@ export class ApiClient {
   }
 
   createProject(payload: CreateProjectPayload) {
-    return this.client.post<Project & { nextNumber: number }>('/projects', payload).then((res) => res.data);
+    return this.client.post<Project>('/projects', payload).then((res) => res.data);
+  }
+
+  updateProject(projectId: string, payload: UpdateProjectPayload) {
+    return this.client.patch<Project>(`/projects/${projectId}`, payload).then((res) => res.data);
   }
 
   deleteProject(projectId: string) {
