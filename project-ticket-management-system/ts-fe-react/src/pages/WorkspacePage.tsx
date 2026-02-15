@@ -299,6 +299,17 @@ const WorkspacePage = () => {
     void sendDm();
   };
 
+  const handleReportTicketNavigate = (ticketNumber: string) => {
+    const targetTicket = tickets.find(
+      (ticketItem) => ticketItem.ticketNumber === ticketNumber,
+    );
+    if (!targetTicket) return;
+
+    closeProjectReports();
+    setActiveTab("home");
+    void selectTicket(targetTicket.id);
+  };
+
   const openAdminEdit = (targetUserId: string) => {
     const target = users.find((item) => item.id === targetUserId);
     if (!target) return;
@@ -710,11 +721,20 @@ const WorkspacePage = () => {
                 <ul>
                   {projectReportEntries.map((entry) => (
                     <li key={entry.id}>
-                      <div>
-                        <strong>{entry.ticketNumber}</strong>
-                        <small>
-                          {new Date(entry.createdAt).toLocaleString()}
-                        </small>
+                      <div className="report-entry-head">
+                        <div>
+                          <strong>{entry.ticketNumber}</strong>
+                          <small>
+                            {new Date(entry.createdAt).toLocaleString()}
+                          </small>
+                        </div>
+                        <button
+                          type="button"
+                          className="report-ticket-link"
+                          onClick={() => handleReportTicketNavigate(entry.ticketNumber)}
+                        >
+                          View ticket
+                        </button>
                       </div>
                       <p>{entry.ticketTitle}</p>
                       <p className="muted">{entry.message}</p>
