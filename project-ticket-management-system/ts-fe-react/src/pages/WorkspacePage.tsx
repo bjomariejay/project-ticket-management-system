@@ -2,7 +2,14 @@ import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
 import clsx from "clsx";
 import Loader from "../components/Loader";
 import ActivityPanel from "../components/workspace/ActivityPanel";
+import DashboardView from "../components/workspace/DashboardView";
 import DmPanel from "../components/workspace/DmPanel";
+import TabContent from "../components/workspace/TabContent";
+import UserSettingsModal from "../components/workspace/UserSettingsModal";
+import AdminEditModal from "../components/workspace/AdminEditModal";
+import ProjectEditorModal from "../components/workspace/ProjectEditorModal";
+import CreateTicketModal from "../components/workspace/CreateTicketModal";
+import CreateProjectModal from "../components/workspace/CreateProjectModal";
 import { useAuth } from "../hooks/useAuth";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { NotificationItem, Ticket, User } from "../types/api";
@@ -337,8 +344,7 @@ const WorkspacePage = () => {
     setAdminEditForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  const handleAdminSave = async (event: FormEvent) => {
-    event.preventDefault();
+  const handleAdminSave = async () => {
     if (!adminEditUser) return;
     const trimmedName = adminEditForm.displayName.trim();
     const trimmedHandle = adminEditForm.handle.trim();
@@ -433,117 +439,6 @@ const WorkspacePage = () => {
     return workspaceLabel;
   }, [activeTab, user, workspaceLabel]);
 
-  const renderDashboard = () => (
-    <section className="main__view" aria-label="Dashboard">
-      <section className="card dashboard-controls">
-        <div>
-          <label>
-            Range
-            <select
-              value={dashboardRange}
-              onChange={(event) =>
-                void handleDashboardRangeChange(event.target.value as any)
-              }
-            >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="90d">Last 90 days</option>
-              <option value="all">All time</option>
-              <option value="custom">Custom range</option>
-            </select>
-          </label>
-        </div>
-        {dashboardRange === "custom" && (
-          <div className="custom-range">
-            <label>
-              Start
-              <input
-                type="date"
-                value={dashboardStartDate || ""}
-                onChange={(event) =>
-                  void handleDashboardDateChange(
-                    "start",
-                    event.target.value || null,
-                  )
-                }
-              />
-            </label>
-            <label>
-              End
-              <input
-                type="date"
-                value={dashboardEndDate || ""}
-                onChange={(event) =>
-                  void handleDashboardDateChange(
-                    "end",
-                    event.target.value || null,
-                  )
-                }
-              />
-            </label>
-          </div>
-        )}
-      </section>
-      {dashboard.length ? (
-        <section className="dashboard-grid">
-          {dashboard.map((entry) => (
-            <article key={entry.id} className="card dashboard-card">
-              <header>
-                <div>
-                  <h3>{entry.displayName}</h3>
-                  <p>
-                    {entry.openCount +
-                      entry.inProgressCount +
-                      entry.archivedCount}{" "}
-                    tickets
-                  </p>
-                </div>
-                {user?.handle === "admin" && (
-                  <button
-                    type="button"
-                    className="icon-button"
-                    onClick={() => openAdminEdit(entry.id)}
-                    aria-label="Edit user"
-                  >
-                    ✎
-                  </button>
-                )}
-              </header>
-              <ul>
-                <li>
-                  <span>Fixed (archived)</span>
-                  <strong>{entry.archivedCount}</strong>
-                </li>
-                <li>
-                  <span>In progress</span>
-                  <strong>{entry.inProgressCount}</strong>
-                </li>
-                <li>
-                  <span>Open</span>
-                  <strong>{entry.openCount}</strong>
-                </li>
-                <li>
-                  <span>Estimated hrs</span>
-                  <strong>{entry.estimatedTotal.toFixed(1)}</strong>
-                </li>
-                <li>
-                  <span>Actual hrs</span>
-                  <strong>{entry.actualTotal.toFixed(1)}</strong>
-                </li>
-              </ul>
-            </article>
-          ))}
-        </section>
-      ) : (
-        <section className="card empty-detail">
-          <h3>No data yet</h3>
-          <p className="muted">
-            Start assigning tickets to see the dashboard populate.
-          </p>
-        </section>
-      )}
-    </section>
-  );
 
   const renderHome = () => (
     <section className="main__view home-view" aria-label="Home">
@@ -1079,474 +974,96 @@ const WorkspacePage = () => {
     </section>
   );
 
-  const renderContent = () => {
-    if (activeTab === "dashboard") return renderDashboard();
-    if (activeTab === "dms") {
-      return (
-        <DmPanel
-          users={users}
-          currentUserId={user?.id}
-          selectedRecipientId={dmForm.recipientId}
-          dmBody={dmForm.body}
-          conversationCount={dms.length}
-          onRecipientChange={handleDmRecipientChange}
-          onBodyChange={(value) => updateDmFormField("body", value)}
-          onSend={handleDmSend}
-          onTextareaKeyDown={handleDmTextareaKeyDown}
-          thread={selectedDmThread}
-        />
-      );
-    }
-    if (activeTab === "activity") {
-      return (
-        <ActivityPanel
-          notifications={activityNotifications}
-          unreadCount={activityUnreadCount}
-          onOpenTicket={navigateToNotification}
-        />
-      );
-    }
-    return renderHome();
-  };
+  const dashboardView = (
+    <DashboardView
+      entries={dashboard}
+      range={dashboardRange}
+      startDate={dashboardStartDate}
+      endDate={dashboardEndDate}
+      canEditUsers={user?.handle === "admin"}
+      onRangeChange={(value) => void handleDashboardRangeChange(value)}
+      onDateChange={(type, value) => void handleDashboardDateChange(type, value)}
+      onEditUser={openAdminEdit}
+    />
+  );
 
-  const renderUserSettingsModal = () => {
-    if (!showUserSettings) return null;
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <article className="modal">
-          <header>
-            <h3>User settings</h3>
-            <button
-              type="button"
-              onClick={closeUserSettings}
-              aria-label="Close settings"
-            >
-              ×
-            </button>
-          </header>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveUserSettings();
-            }}
-          >
-            <label>
-              Display name
-              <input
-                type="text"
-                value={userSettingsForm.displayName}
-                onChange={(event) =>
-                  updateUserSettingsField("displayName", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Handle
-              <input
-                type="text"
-                value={userSettingsForm.handle}
-                onChange={(event) =>
-                  updateUserSettingsField("handle", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Location
-              <input
-                type="text"
-                value={userSettingsForm.location}
-                onChange={(event) =>
-                  updateUserSettingsField("location", event.target.value)
-                }
-              />
-            </label>
-            {userSettingsError && <p className="error">{userSettingsError}</p>}
-            <footer>
-              <button
-                type="button"
-                className="link-button outline"
-                onClick={closeUserSettings}
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="link-button"
-                disabled={userSettingsSaving}
-              >
-                {userSettingsSaving ? "Saving…" : "Save changes"}
-              </button>
-            </footer>
-          </form>
-        </article>
-      </div>
-    );
-  };
+  const dmView = (
+    <DmPanel
+      users={users}
+      currentUserId={user?.id}
+      selectedRecipientId={dmForm.recipientId}
+      dmBody={dmForm.body}
+      conversationCount={dms.length}
+      onRecipientChange={handleDmRecipientChange}
+      onBodyChange={(value) => updateDmFormField("body", value)}
+      onSend={handleDmSend}
+      onTextareaKeyDown={handleDmTextareaKeyDown}
+      thread={selectedDmThread}
+    />
+  );
 
-  const renderCreateTicketModal = () => {
-    if (!showCreateTicket) return null;
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <article className="modal">
-          <header>
-            <h3>Create ticket</h3>
-            <button
-              type="button"
-              onClick={closeCreateTicket}
-              aria-label="Close create ticket form"
-            >
-              ×
-            </button>
-          </header>
-          <form onSubmit={handleTicketSubmit}>
-            <label>
-              Title
-              <input
-                type="text"
-                value={createTicketModel.title}
-                onChange={(event) =>
-                  updateCreateTicketField("title", event.target.value)
-                }
-                required
-              />
-            </label>
-            <label>
-              Description
-              <textarea
-                rows={3}
-                value={createTicketModel.description}
-                onChange={(event) =>
-                  updateCreateTicketField("description", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Project
-              <select
-                value={createTicketModel.projectId}
-                onChange={(event) =>
-                  updateCreateTicketField("projectId", event.target.value)
-                }
-                required
-              >
-                <option value="">Select project</option>
-                {projects.map((project) => (
-                  <option key={project.id} value={project.id}>
-                    {project.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Estimated hours
-              <input
-                type="number"
-                min={0}
-                value={createTicketModel.estimatedHours}
-                onChange={(event) =>
-                  updateCreateTicketField(
-                    "estimatedHours",
-                    Number(event.target.value),
-                  )
-                }
-              />
-            </label>
-            <label>
-              Priority
-              <select
-                value={createTicketModel.priority}
-                onChange={(event) =>
-                  updateCreateTicketField("priority", event.target.value as any)
-                }
-              >
-                <option value="normal">Normal</option>
-                <option value="priority">Priority</option>
-              </select>
-            </label>
-            <label>
-              Privacy
-              <select
-                value={createTicketModel.privacy}
-                onChange={(event) =>
-                  updateCreateTicketField("privacy", event.target.value as any)
-                }
-              >
-                <option value="public">Public</option>
-                <option value="private">Private</option>
-              </select>
-            </label>
-            <footer>
-              <button
-                type="button"
-                className="link-button outline"
-                onClick={closeCreateTicket}
-              >
-                Cancel
-              </button>
-              <button className="link-button" type="submit">
-                Create ticket
-              </button>
-            </footer>
-          </form>
-        </article>
-      </div>
-    );
-  };
+  const activityView = (
+    <ActivityPanel
+      notifications={activityNotifications}
+      unreadCount={activityUnreadCount}
+      onOpenTicket={navigateToNotification}
+    />
+  );
 
-  const renderCreateProjectModal = () => {
-    if (!showCreateProject) return null;
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <article className="modal">
-          <header>
-            <h3>Create project</h3>
-            <button
-              type="button"
-              onClick={closeCreateProject}
-              aria-label="Close create project form"
-            >
-              ×
-            </button>
-          </header>
-          <form onSubmit={handleProjectSubmit} className="create-project">
-            <label>
-              Name
-              <input
-                type="text"
-                value={createProjectModel.name}
-                onChange={(event) =>
-                  updateCreateProjectField("name", event.target.value)
-                }
-                required
-              />
-            </label>
-            <label>
-              Slug
-              <input
-                type="text"
-                value={createProjectModel.slug}
-                onChange={(event) =>
-                  updateCreateProjectField("slug", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Ticket prefix
-              <input
-                type="text"
-                value={createProjectModel.ticketPrefix}
-                onChange={(event) =>
-                  updateCreateProjectField("ticketPrefix", event.target.value)
-                }
-                required
-              />
-            </label>
-            <label>
-              Description
-              <textarea
-                rows={3}
-                value={createProjectModel.description}
-                onChange={(event) =>
-                  updateCreateProjectField("description", event.target.value)
-                }
-              />
-            </label>
-            <footer>
-              <button
-                type="button"
-                className="link-button outline"
-                onClick={closeCreateProject}
-              >
-                Cancel
-              </button>
-              <button type="submit" className="link-button">
-                Create project
-              </button>
-            </footer>
-          </form>
-        </article>
-      </div>
-    );
-  };
+  const createTicketModal = (
+    <CreateTicketModal
+      isOpen={showCreateTicket}
+      form={createTicketModel}
+      projects={projects}
+      onFieldChange={(field, value) => updateCreateTicketField(field as any, value as any)}
+      onClose={closeCreateTicket}
+      onSubmit={handleTicketSubmit}
+    />
+  );
 
-  const renderProjectEditorModal = () => {
-    if (!showProjectEditor) return null;
-    const handleDelete = () => {
-      if (projectEditorDeleting) return;
-      const confirmed =
-        typeof window === "undefined"
-          ? true
-          : window.confirm("Delete this project? This cannot be undone.");
-      if (!confirmed) return;
-      void removeProject();
-    };
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <article className="modal">
-          <header>
-            <h3>Edit project</h3>
-            <button
-              type="button"
-              onClick={closeProjectEditor}
-              aria-label="Close project editor"
-            >
-              ×
-            </button>
-          </header>
-          <form
-            onSubmit={(event) => {
-              event.preventDefault();
-              void saveProjectEditor();
-            }}
-            className="create-project"
-          >
-            <label>
-              Name
-              <input
-                type="text"
-                value={projectEditorModel.name}
-                onChange={(event) =>
-                  updateProjectEditorField("name", event.target.value)
-                }
-                required
-                disabled={projectEditorSaving || projectEditorDeleting}
-              />
-            </label>
-            <label>
-              Slug
-              <input
-                type="text"
-                value={projectEditorModel.slug}
-                onChange={(event) =>
-                  updateProjectEditorField("slug", event.target.value)
-                }
-                disabled={projectEditorSaving || projectEditorDeleting}
-              />
-            </label>
-            <label>
-              Ticket prefix
-              <input
-                type="text"
-                value={projectEditorModel.ticketPrefix}
-                onChange={(event) =>
-                  updateProjectEditorField("ticketPrefix", event.target.value)
-                }
-                required
-                disabled={projectEditorSaving || projectEditorDeleting}
-              />
-            </label>
-            <label>
-              Description
-              <textarea
-                rows={3}
-                value={projectEditorModel.description}
-                onChange={(event) =>
-                  updateProjectEditorField("description", event.target.value)
-                }
-                disabled={projectEditorSaving || projectEditorDeleting}
-              />
-            </label>
-            <footer className="edit-project-footer">
-              <button
-                type="button"
-                className="link-button outline"
-                onClick={closeProjectEditor}
-                disabled={projectEditorSaving || projectEditorDeleting}
-              >
-                Cancel
-              </button>
-              <div className="edit-project-footer__actions">
-                <button
-                  type="button"
-                  className="link-button danger"
-                  onClick={handleDelete}
-                  disabled={projectEditorDeleting}
-                >
-                  {projectEditorDeleting ? "Deleting…" : "Delete project"}
-                </button>
-                <button
-                  className="link-button"
-                  type="submit"
-                  disabled={projectEditorSaving || projectEditorDeleting}
-                >
-                  {projectEditorSaving ? "Saving…" : "Save changes"}
-                </button>
-              </div>
-            </footer>
-          </form>
-        </article>
-      </div>
-    );
-  };
+  const createProjectModal = (
+    <CreateProjectModal
+      isOpen={showCreateProject}
+      form={createProjectModel}
+      onFieldChange={(field, value) => updateCreateProjectField(field as any, value as any)}
+      onClose={closeCreateProject}
+      onSubmit={handleProjectSubmit}
+    />
+  );
 
-  const renderAdminEditModal = () => {
-    if (!adminEditUser) return null;
-    return (
-      <div className="modal-backdrop" role="dialog" aria-modal="true">
-        <article className="modal">
-          <header>
-            <h3>Edit {adminEditUser.displayName}</h3>
-            <button
-              type="button"
-              onClick={closeAdminEdit}
-              aria-label="Close admin edit"
-            >
-              ×
-            </button>
-          </header>
-          <form onSubmit={handleAdminSave}>
-            <label>
-              Display name
-              <input
-                type="text"
-                value={adminEditForm.displayName}
-                onChange={(event) =>
-                  handleAdminFieldChange("displayName", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Handle
-              <input
-                type="text"
-                value={adminEditForm.handle}
-                onChange={(event) =>
-                  handleAdminFieldChange("handle", event.target.value)
-                }
-              />
-            </label>
-            <label>
-              Location
-              <input
-                type="text"
-                value={adminEditForm.location}
-                onChange={(event) =>
-                  handleAdminFieldChange("location", event.target.value)
-                }
-              />
-            </label>
-            {adminEditError && <p className="error">{adminEditError}</p>}
-            <footer>
-              <button
-                type="button"
-                className="link-button outline"
-                onClick={closeAdminEdit}
-              >
-                Cancel
-              </button>
-              <button
-                className="link-button"
-                type="submit"
-                disabled={adminEditSaving}
-              >
-                {adminEditSaving ? "Saving…" : "Save changes"}
-              </button>
-            </footer>
-          </form>
-        </article>
-      </div>
-    );
-  };
+  const renderContent = () => (
+    <TabContent
+      activeTab={activeTab}
+      dashboardView={dashboardView}
+      dmView={dmView}
+      activityView={activityView}
+      homeView={renderHome()}
+    />
+  );
+
+  const userSettingsModal = (
+    <UserSettingsModal
+      isOpen={showUserSettings}
+      form={userSettingsForm}
+      error={userSettingsError}
+      saving={userSettingsSaving}
+      onClose={closeUserSettings}
+      onSave={saveUserSettings}
+      onFieldChange={updateUserSettingsField}
+    />
+  );
+
+  const adminEditModal = (
+    <AdminEditModal
+      isOpen={Boolean(adminEditUser)}
+      form={adminEditForm}
+      saving={adminEditSaving}
+      error={adminEditError}
+      onFieldChange={handleAdminFieldChange}
+      onClose={closeAdminEdit}
+      onSave={handleAdminSave}
+    />
+  );
 
   return (
     <div className="workspace">
@@ -1683,11 +1200,20 @@ const WorkspacePage = () => {
         {isBootstrapping && <Loader label="Loading workspace…" />}
         {renderContent()}
       </main>
-      {renderCreateTicketModal()}
-      {renderCreateProjectModal()}
-      {renderProjectEditorModal()}
-      {renderAdminEditModal()}
-      {renderUserSettingsModal()}
+      {createTicketModal}
+      {createProjectModal}
+      <ProjectEditorModal
+        isOpen={showProjectEditor}
+        form={projectEditorModel}
+        saving={projectEditorSaving}
+        deleting={projectEditorDeleting}
+        onFieldChange={(field, value) => updateProjectEditorField(field, value)}
+        onClose={closeProjectEditor}
+        onSave={saveProjectEditor}
+        onDelete={removeProject}
+      />
+      {adminEditModal}
+      {userSettingsModal}
     </div>
   );
 };
