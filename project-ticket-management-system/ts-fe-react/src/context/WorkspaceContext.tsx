@@ -683,11 +683,15 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
     mergeState({ projectEditorSaving: true });
     try {
-      await apiClient.updateProject(projectId, {
+      const payload = {
         name: name.trim(),
         slug: slug.trim(),
         ticketPrefix: ticketPrefix.trim(),
         description: description.trim() || undefined,
+      };
+      console.log('Updating project', { projectId, payload });
+      await apiClient.updateProject(projectId, {
+        ...payload,
       });
       mergeState({ feedback: 'Project updated.' });
       closeProjectEditor();
@@ -729,6 +733,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  //jay
   const createProject = async () => {
     const { name, ticketPrefix } = stateRef.current.createProjectModel;
     if (!name.trim() || !ticketPrefix.trim()) {
@@ -743,12 +748,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     try {
-      const response = await apiClient.createProject({
+      const payload = {
         name: name.trim(),
         slug,
         ticketPrefix: ticketPrefix.trim(),
         description: stateRef.current.createProjectModel.description.trim() || undefined,
-      });
+      };
+      console.log('Creating project', payload);
+      const response = await apiClient.createProject(payload);
       mergeState({
         feedback: 'Project created.',
         createProjectModel: defaultProjectModel,
@@ -766,6 +773,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const createTicket = async () => {
+
+    alert('Creating ticket with title: ' + stateRef.current.createTicketModel.title);
     const { title, projectId } = stateRef.current.createTicketModel;
     const creatorId = stateRef.current.selectedUserId;
     if (!title.trim() || !projectId || !creatorId) {
