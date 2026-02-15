@@ -1,6 +1,8 @@
 import { FormEvent, KeyboardEvent, useMemo, useState } from "react";
 import clsx from "clsx";
 import Loader from "../components/Loader";
+import ActivityPanel from "../components/workspace/ActivityPanel";
+import DmPanel from "../components/workspace/DmPanel";
 import { useAuth } from "../hooks/useAuth";
 import { useWorkspace } from "../hooks/useWorkspace";
 import { NotificationItem, Ticket, User } from "../types/api";
@@ -281,8 +283,7 @@ const WorkspacePage = () => {
     submitMessage();
   };
 
-  const handleDmSubmit = (event: FormEvent) => {
-    event.preventDefault();
+  const handleDmSend = () => {
     void sendDm();
   };
 
@@ -401,6 +402,7 @@ const WorkspacePage = () => {
       .length;
   }, [activityNotifications]);
 
+  console.log("Activity unread count:", activityUnreadCount);
   const showActivityTabAlert =
     activeTab !== "activity" && activityUnreadCount > 0;
 
@@ -1077,130 +1079,33 @@ const WorkspacePage = () => {
     </section>
   );
 
-  const renderDms = () => (
-    <section className="main__view" aria-label="Direct messages">
-      <article className="card dm-panel">
-        <header className="dm-panel__header">
-          <div>
-            <p className="eyebrow">Inbox</p>
-            <h3>Direct messages</h3>
-            <p className="muted">Stay in sync with teammates instantly.</p>
-          </div>
-          <div className="dm-panel__stats">
-            <div>
-              <span className="stat-label">Messages</span>
-              <strong>{selectedDmThread.length}</strong>
-            </div>
-          </div>
-        </header>
-        <div className="dm-panel__layout">
-          <aside className="dm-panel__compose">
-            <div className="dm-recipient-field">
-              <label htmlFor="dm-recipient">Conversation with</label>
-              <select
-                id="dm-recipient"
-                value={dmForm.recipientId}
-                onChange={(event) => handleDmRecipientChange(event.target.value)}
-              >
-                <option value="">Select teammate</option>
-                {users
-                  .filter((teammate) => teammate.id !== user?.id)
-                  .map((teammate) => (
-                    <option key={teammate.id} value={teammate.id}>
-                      {teammate.displayName}
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <form className="dm-message-form" onSubmit={handleDmSubmit}>
-              <div className="dm-message-label">Message</div>
-              <div className="dm-message-row">
-                <textarea
-                  rows={4}
-                  value={dmForm.body}
-                  onChange={(event) =>
-                    updateDmFormField("body", event.target.value)
-                  }
-                  onKeyDown={handleDmTextareaKeyDown}
-                  placeholder="Share a quick update or hand off a ticket"
-                />
-                <button
-                  className="primary-pill"
-                  type="submit"
-                  disabled={!dmForm.recipientId || !dmForm.body.trim()}
-                >
-                  Send
-                </button>
-              </div>
-            </form>
-            
-          </aside>
-          <section className="dm-panel__thread">
-            {selectedDmThread.length ? (
-              <div className="dm-thread">
-                {selectedDmThread.map((message, index) => (
-                  <article key={message.id} className={index % 2 ? "bubble-alt" : "bubble"}>
-                    <header>
-                      <strong>{message.senderName}</strong>
-                      <small>{new Date(message.createdAt).toLocaleString()}</small>
-                    </header>
-                    <p>{message.body}</p>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className="dm-empty">
-                <h4>No direct messages yet</h4>
-                <p className="muted">Pick a teammate and say hello.</p>
-              </div>
-            )}
-          </section>
-        </div>
-      </article>
-    </section>
-  );
-
-  const renderActivity = () => (
-    <section className="main__view" aria-label="Activity">
-      <article className="card activity-panel">
-        <header className="section-heading">
-          <h3>Notifications</h3>
-          <span className="badge">{activityUnreadCount} unread</span>
-        </header>
-        <ul>
-          {activityNotifications.length ? (
-            activityNotifications.map((notification) => (
-              <li
-                key={notification.id}
-                className={clsx({ unread: !notification.isRead })}
-              >
-                <strong>{notification.ticketNumber}</strong>
-                <p>{notification.message}</p>
-                {notification.ticketId && (
-                  <div className="notification-actions">
-                    <button
-                      type="button"
-                      className="link-button outline"
-                      onClick={() => void navigateToNotification(notification)}
-                    >
-                      Open ticket
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))
-          ) : (
-            <li className="muted">You're all caught up!</li>
-          )}
-        </ul>
-      </article>
-    </section>
-  );
-
   const renderContent = () => {
     if (activeTab === "dashboard") return renderDashboard();
-    if (activeTab === "dms") return renderDms();
-    if (activeTab === "activity") return renderActivity();
+    if (activeTab === "dms") {
+      return (
+        <DmPanel
+          users={users}
+          currentUserId={user?.id}
+          selectedRecipientId={dmForm.recipientId}
+          dmBody={dmForm.body}
+          conversationCount={dms.length}
+          onRecipientChange={handleDmRecipientChange}
+          onBodyChange={(value) => updateDmFormField("body", value)}
+          onSend={handleDmSend}
+          onTextareaKeyDown={handleDmTextareaKeyDown}
+          thread={selectedDmThread}
+        />
+      );
+    }
+    if (activeTab === "activity") {
+      return (
+        <ActivityPanel
+          notifications={activityNotifications}
+          unreadCount={activityUnreadCount}
+          onOpenTicket={navigateToNotification}
+        />
+      );
+    }
     return renderHome();
   };
 
