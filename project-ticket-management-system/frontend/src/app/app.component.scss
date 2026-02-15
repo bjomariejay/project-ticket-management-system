@@ -727,12 +727,6 @@
 }
 
 .ticket-panel {
-  display: grid;
-  grid-template-columns: 380px 1fr;
-  gap: 1.25rem;
-}
-
-.ticket-panel__left {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;

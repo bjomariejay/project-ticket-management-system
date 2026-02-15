@@ -715,8 +715,6 @@ const WorkspacePage = () => {
             </section>
           ) : (
             <article className="card ticket-panel">
-              <div className="ticket-panel__left"></div>
-              <div className="ticket-panel__right">
                 {selectedTicket ? (
                   <article className="ticket-detail">
                     <header>
