@@ -662,8 +662,9 @@ const WorkspacePage = () => {
                         <li key={ticket.id}>
                           <div className="report-entry-head">
                             <div>
-                              <strong>{ticket.ticketNumber}</strong>
-                              <small>{ticket.status.replace("_", " ")}</small>
+                              <small>Ticket #: {ticket.ticketNumber}</small>
+                              <br />
+                              <small>Ticket Created On: {new Date(ticket.createdAt).toLocaleString()}</small>
                             </div>
                             <button
                               type="button"
@@ -675,7 +676,7 @@ const WorkspacePage = () => {
                           </div>
                           <p>{ticket.title}</p>
                           {ticket.description && (
-                            <p className="muted">{ticket.description}</p>
+                            <p className="muted">{ticket.assigneeId}</p>
                           )}
                         </li>
                       ))}
@@ -695,9 +696,9 @@ const WorkspacePage = () => {
                       <li key={entry.id}>
                         <div className="report-entry-head">
                           <div>
-                            <strong>{entry.ticketNumber}</strong>
+                            <small>Ticket #:{entry.ticketNumber}</small> <br />
                             <small>
-                              {new Date(entry.createdAt).toLocaleString()}
+                             Ticket Created On: {new Date(entry.createdAt).toLocaleString()}
                             </small>
                           </div>
                           <button
@@ -708,10 +709,8 @@ const WorkspacePage = () => {
                             View ticket
                           </button>
                         </div>
-                        <p>{entry.ticketTitle}</p>
-                        <p className="muted">{entry.message}</p>
                         {entry.actorName && (
-                          <small>Started by {entry.actorName}</small>
+                          <small>Ticket Handled By: {entry.actorName}</small>
                         )}
                       </li>
                     ))}
