@@ -118,8 +118,8 @@ CREATE TABLE IF NOT EXISTS dms (
 -- seed workspaces
 INSERT INTO workspaces (id, name)
 VALUES
-  ('aaaaaaaa-1111-1111-1111-111111111111', 'ajoya-room'),
-  ('bbbbbbbb-2222-2222-2222-222222222222', 'cpc-room')
+  ('aaaaaaaa-1111-1111-1111-111111111111', 'MCBI-Workspace'),
+  ('bbbbbbbb-2222-2222-2222-222222222222', 'SPEEDX-Workspace')
 ON CONFLICT (id) DO NOTHING;
 
 -- seed users
@@ -139,7 +139,7 @@ VALUES
     '22222222-2222-2222-2222-222222222222',
     'Joji',
     'joji',
-    'user',
+    'admin',
     'joji@example.com',
     '6f00585673a1a8108705b80bd568f23f:196714f853608770c43e591f3fecb367f1d313be602b34e731cc222fb9c285e1357e248fec9d8a6c2eb69b557f675e5f70120904270bbb8fe20194ff87c693c9',
     'CEBU',
@@ -153,7 +153,7 @@ VALUES
     'lore@example.com',
     '120bbf1cb1d70b195cc567687a258e7a:5755cf2486877a54e1bc9a6d94efbef2282c190f06b2a311c8c946bbc7f0e49c37a471f363d63f7ad00744cbbf482abfb04ab469480522998dde6d3764a7c879',
     'Mandaue',
-    'bbbbbbbb-2222-2222-2222-222222222222'
+    'aaaaaaaa-1111-1111-1111-111111111111'
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -162,19 +162,19 @@ INSERT INTO projects (id, name, slug, ticket_prefix, description, workspace_id)
 VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'HRMS',
-    'HRMS',
-    'HRMS',
-    'HRMS',
+    'HRMS-PROJECT',
+    'HRMS-PROJECT',
+    'HRMS-PROJECT',
+    'HRMS-PROJECT',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'CPC Operations',
-    'cpc_operations',
-    'CPC',
-    'CPC room initiatives',
-    'bbbbbbbb-2222-2222-2222-222222222222'
+    'AKONINI-PROJECT',
+    'AKONINI-PROJECT',
+    'AKONINI-PROJECT',
+    'AKONINI-PROJECT',
+    'aaaaaaaa-1111-1111-1111-111111111111'
   )
 ON CONFLICT (id) DO NOTHING;
 

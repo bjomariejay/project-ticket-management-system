@@ -321,6 +321,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const loadUsers = useCallback(async () => {
     try {
       const users = await apiClient.getUsers();
+      console.log('Loaded users', users);
       mergeState({ users });
     } catch (error) {
       console.error('Unable to load users', error);

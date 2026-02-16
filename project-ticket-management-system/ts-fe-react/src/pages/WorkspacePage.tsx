@@ -548,12 +548,7 @@ const WorkspacePage = () => {
                                         <div>
                                           <strong>
                                             {ticket.ticketNumber} ·{" "}
-                                            {ticket.title}
                                           </strong>
-                                          <small>
-                                            {ticket.description ||
-                                              "No description provided."}
-                                          </small>
                                         </div>
                                         <span
                                           className={clsx(
@@ -648,110 +643,110 @@ const WorkspacePage = () => {
             </section>
           ) : (
             <article className="card ticket-panel">
-                {selectedTicket ? (
-                  <article className="ticket-detail">
-                    <header>
-                      <h3>
-                        {selectedTicket.ticketNumber} · {selectedTicket.title}
-                      </h3>
-                      <span className={clsx("status", selectedTicket.status)}>
-                        {selectedTicket.status.replace("_", " ")}
-                      </span>
-                    </header>
-                    <p>
-                      {selectedTicket.description || "No description provided."}
-                    </p>
-                    <section className="ticket-info">
-                      <div>
-                        <label>Assignee</label>
-                        <p>
-                          <span className="assignee-badge">
-                            {assigneeUsername || 'Unassigned'}
-                          </span>
-                        </p>
-                        
-                      </div>
-                      <div>
-                        <label>Privacy</label>
-                        <p>
-                          <span
-                            className={clsx(
-                              "privacy-badge",
-                              selectedTicket.privacy,
-                            )}
-                          >
-                            {selectedTicket.privacy}
-                          </span>
-                        </p>
-                      </div>
-                      <div>
-                        <label>Estimated hrs</label>
-                        <p>
-                          <span className="estimated-badge">
-                            {formatEstimatedHours(selectedTicket.estimatedHours)}
-                          </span>
-                        </p>
-                      </div>
-                    </section>
-                    <section
-                      className="ticket-members"
-                      style={{ display: "inline-block" }}
-                    >
-                      <label>Partcipants: </label>
+              {selectedTicket ? (
+                <article className="ticket-detail">
+                  <header>
+                    <h3>
+                      {selectedTicket.ticketNumber} · {selectedTicket.title}
+                    </h3>
+                    <span className={clsx("status", selectedTicket.status)}>
+                      {selectedTicket.status.replace("_", " ")}
+                    </span>
+                  </header>
+                  <p>
+                    {selectedTicket.description || "No description provided."}
+                  </p>
+                  <section className="ticket-info">
+                    <div>
+                      <label>Assignee</label>
+                      <p>
+                        <span className="assignee-badge">
+                          {assigneeUsername || 'Unassigned'}
+                        </span>
+                      </p>
 
-                      {selectedTicket.members.map((member, index) => (
-                        <label key={member.userId || index}>
-                          {member.displayName}
-                          {index !== selectedTicket.members.length - 1 && ", "}
-                        </label>
-                      ))}
-                    </section>
-                    {isTicketMember ? (
-                      selectedTicket.status === "archived" ? (
-                        <section className="card join-card">
-                          <p className="muted">
-                            This ticket is archived. Unarchive to continue
-                            collaborating.
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => void restoreArchivedTicket()}
-                          >
-                            Unarchive ticket
-                          </button>
-                        </section>
-                      ) : (
-                        <section className="ticket-thread">
-                          <h4>Messages</h4>
-                          <div className="message-list">
-                            {selectedTicket.messages.map((message) => {
-                              const isViewer = message.displayName === user?.displayName;
-                              return (
-                                <article
-                                  key={message.id}
-                                  className={clsx('message-item', {
-                                    'message-item--viewer': isViewer,
-                                    'message-item--teammate': !isViewer,
-                                  })}
-                                >
-                                  <header>
-                                    <strong>{message.displayName || 'Unknown user'}</strong>
-                                    <small>{new Date(message.createdAt).toLocaleString()}</small>
-                                  </header>
-                                  <p>{message.body}</p>
-                                </article>
-                              );
-                            })}
-                          </div>
-                          <form
-                            onSubmit={handleMessageSubmit}
-                            className="message-form"
-                          >
-                            <div className="message-input">
-                              <textarea
-                                rows={3}
-                                value={messageDraft}
-                                placeholder="Write an update…"
+                    </div>
+                    <div>
+                      <label>Privacy</label>
+                      <p>
+                        <span
+                          className={clsx(
+                            "privacy-badge",
+                            selectedTicket.privacy,
+                          )}
+                        >
+                          {selectedTicket.privacy}
+                        </span>
+                      </p>
+                    </div>
+                    <div>
+                      <label>Estimated hrs</label>
+                      <p>
+                        <span className="estimated-badge">
+                          {formatEstimatedHours(selectedTicket.estimatedHours)}
+                        </span>
+                      </p>
+                    </div>
+                  </section>
+                  <section
+                    className="ticket-members"
+                    style={{ display: "inline-block" }}
+                  >
+                    <label>Partcipants: </label>
+
+                    {selectedTicket.members.map((member, index) => (
+                      <label key={member.userId || index}>
+                        {member.displayName}
+                        {index !== selectedTicket.members.length - 1 && ", "}
+                      </label>
+                    ))}
+                  </section>
+                  {isTicketMember ? (
+                    selectedTicket.status === "archived" ? (
+                      <section className="card join-card">
+                        <p className="muted">
+                          This ticket is archived. Unarchive to continue
+                          collaborating.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => void restoreArchivedTicket()}
+                        >
+                          Unarchive ticket
+                        </button>
+                      </section>
+                    ) : (
+                      <section className="ticket-thread">
+                        <h4>Messages</h4>
+                        <div className="message-list">
+                          {selectedTicket.messages.map((message) => {
+                            const isViewer = message.displayName === user?.displayName;
+                            return (
+                              <article
+                                key={message.id}
+                                className={clsx('message-item', {
+                                  'message-item--viewer': isViewer,
+                                  'message-item--teammate': !isViewer,
+                                })}
+                              >
+                                <header>
+                                  <strong>{message.displayName || 'Unknown user'}</strong>
+                                  <small>{new Date(message.createdAt).toLocaleString()}</small>
+                                </header>
+                                <p>{message.body}</p>
+                              </article>
+                            );
+                          })}
+                        </div>
+                        <form
+                          onSubmit={handleMessageSubmit}
+                          className="message-form"
+                        >
+                          <div className="message-input">
+                            <textarea
+                              rows={3}
+                              value={messageDraft}
+                              placeholder="Write an update…"
                               onChange={(event) =>
                                 setMessageDraft(event.target.value)
                               }
@@ -764,209 +759,210 @@ const WorkspacePage = () => {
                               onInput={(event) => {
                                 const target =
                                   event.target as HTMLTextAreaElement;
-                                  const caretIndex =
-                                    target.selectionStart ??
-                                    target.value.length;
-                                  const before = target.value.slice(
-                                    0,
-                                    caretIndex,
+                                const caretIndex =
+                                  target.selectionStart ??
+                                  target.value.length;
+                                const before = target.value.slice(
+                                  0,
+                                  caretIndex,
+                                );
+                                const slashMatch =
+                                  before.match(/(?:^|\s)\/([\w]*)$/);
+                                if (slashMatch) {
+                                  setSlashSuggestions(
+                                    buildSlashSuggestions(),
                                   );
-                                  const slashMatch =
-                                    before.match(/(?:^|\s)\/([\w]*)$/);
-                                  if (slashMatch) {
-                                    setSlashSuggestions(
-                                      buildSlashSuggestions(),
-                                    );
-                                    setSlashRange({
-                                      start: caretIndex - slashMatch[0].length,
-                                      end: caretIndex,
-                                    });
-                                    setShowSlashSuggestions(true);
-                                  } else {
-                                    setSlashRange(null);
-                                    setShowSlashSuggestions(false);
+                                  setSlashRange({
+                                    start: caretIndex - slashMatch[0].length,
+                                    end: caretIndex,
+                                  });
+                                  setShowSlashSuggestions(true);
+                                } else {
+                                  setSlashRange(null);
+                                  setShowSlashSuggestions(false);
+                                }
+                                const mentionMatch =
+                                  before.match(/(?:^|\s)@([\w-]*)$/i);
+                                if (mentionMatch) {
+                                  const query = mentionMatch[1].toLowerCase();
+                                  const suggestions = users.filter(
+                                    (u) =>
+                                      u.username
+                                        .toLowerCase()
+                                        .includes(query) ||
+                                      u.handle.toLowerCase().includes(query),
+                                  );
+                                  setMentionRange({
+                                    start:
+                                      caretIndex - mentionMatch[0].length,
+                                    end: caretIndex,
+                                  });
+                                  setMentionSuggestions(
+                                    suggestions.slice(0, 5),
+                                  );
+                                  setShowMentionSuggestions(
+                                    suggestions.length > 0,
+                                  );
+                                } else {
+                                  setMentionRange(null);
+                                  setShowMentionSuggestions(false);
+                                }
+                              }}
+                            />
+                            {showMentionSuggestions &&
+                              mentionSuggestions.length > 0 && (
+                                <div className="mention-suggestions">
+                                  {
+
+                                    mentionSuggestions.map((suggestion) => {
+                                      const username = suggestion.username?.trim();
+                                      const handle = suggestion.handle?.trim();
+
+                                      // Skip if both are empty
+                                      if (username === user?.username) return null;
+                                      const normalized = username || handle;
+                                      const insertion = `@${normalized} `;
+
+                                      return (
+                                        <button
+                                          type="button"
+                                          key={suggestion.id}
+                                          onMouseDown={(e) => e.preventDefault()}
+                                          onClick={() => {
+                                            if (mentionRange) {
+                                              const before = messageDraft.slice(0, mentionRange.start);
+                                              const after = messageDraft.slice(mentionRange.end);
+                                              setMessageDraft(`${before}${insertion}${after}`);
+                                            } else {
+                                              setMessageDraft((prev) => `${prev}${insertion}`);
+                                            }
+
+                                            setShowMentionSuggestions(false);
+                                          }}
+                                        >
+                                          <strong>@{username || handle}</strong>
+                                          <small>
+                                            {suggestion.displayName} · {handle}
+                                          </small>
+                                        </button>
+                                      );
+                                    })
+
+
                                   }
-                                  const mentionMatch =
-                                    before.match(/(?:^|\s)@([\w-]*)$/i);
-                                  if (mentionMatch) {
-                                    const query = mentionMatch[1].toLowerCase();
-                                    const suggestions = users.filter(
-                                      (u) =>
-                                        u.username
-                                          .toLowerCase()
-                                          .includes(query) ||
-                                        u.handle.toLowerCase().includes(query),
-                                    );
-                                    setMentionRange({
-                                      start:
-                                        caretIndex - mentionMatch[0].length,
-                                      end: caretIndex,
-                                    });
-                                    setMentionSuggestions(
-                                      suggestions.slice(0, 5),
-                                    );
-                                    setShowMentionSuggestions(
-                                      suggestions.length > 0,
-                                    );
-                                  } else {
-                                    setMentionRange(null);
-                                    setShowMentionSuggestions(false);
-                                  }
-                                }}
-                              />
-                              {showMentionSuggestions &&
-                                mentionSuggestions.length > 0 && (
-                                  <div className="mention-suggestions">
-                                    {mentionSuggestions.map((suggestion) => (
-                                      <button
-                                        type="button"
-                                        key={suggestion.id}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => {
-                                          const normalized = (
-                                            suggestion.username ||
-                                            suggestion.handle
-                                          ).trim();
-                                          const insertion = `@${normalized} `;
-                                          if (mentionRange) {
-                                            const before = messageDraft.slice(
-                                              0,
-                                              mentionRange.start,
-                                            );
-                                            const after = messageDraft.slice(
-                                              mentionRange.end,
-                                            );
-                                            setMessageDraft(
-                                              `${before}${insertion}${after}`,
-                                            );
-                                          } else {
-                                            setMessageDraft(
-                                              (prev) => `${prev}${insertion}`,
-                                            );
-                                          }
-                                          setShowMentionSuggestions(false);
-                                        }}
-                                      >
-                                        <strong>@{suggestion.username}</strong>
-                                        <small>
-                                          {suggestion.displayName} ·{" "}
-                                          {suggestion.handle}
-                                        </small>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                              {showSlashSuggestions &&
-                                slashSuggestions.length > 0 && (
-                                  <div className="slash-suggestions">
-                                    {slashSuggestions.map((command) => (
-                                      <button
-                                        type="button"
-                                        key={command}
-                                        onMouseDown={(e) => e.preventDefault()}
-                                        onClick={() => {
-                                          if (slashRange) {
-                                            const before = messageDraft.slice(
-                                              0,
-                                              slashRange.start,
-                                            );
-                                            const after = messageDraft.slice(
-                                              slashRange.end,
-                                            );
-                                            setMessageDraft(
-                                              `${before}${command} ${after}`,
-                                            );
-                                          } else {
-                                            setMessageDraft(
-                                              (prev) => `${prev}${command} `,
-                                            );
-                                          }
-                                          setShowSlashSuggestions(false);
-                                        }}
-                                      >
-                                        <strong>{command}</strong>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
-                            </div>
-                            <button
-                              className="link-button"
-                              type="submit"
-                              disabled={isPostingMessage}
-                              aria-label="Post update"
-                              style={{float:"right"}}
-                            >
-                              {isPostingMessage ? (
-                                'Posting…'
-                              ) : (
-                                <svg
-                                  viewBox="0 0 24 24"
-                                  role="img"
-                                  aria-hidden="true"
-                                  focusable="false"
-                                  width="20"
-                                  height="20"
-                                >
-                                  <path d="M2 21l21-9L2 3v7l15 2-15 2z" fill="currentColor" />
-                                </svg>
+                                </div>
                               )}
-                            </button>
-                          </form>
-                        </section>
-                      )
-                    ) : (
-                      <section className="card join-card">
-                        <p>
-                          You’re not part of this ticket yet. Join to read and
-                          post updates.
-                        </p>
+                            {showSlashSuggestions &&
+                              slashSuggestions.length > 0 && (
+                                <div className="slash-suggestions">
+                                  {slashSuggestions.map((command) => (
+                                    <button
+                                      type="button"
+                                      key={command}
+                                      onMouseDown={(e) => e.preventDefault()}
+                                      onClick={() => {
+                                        if (slashRange) {
+                                          const before = messageDraft.slice(
+                                            0,
+                                            slashRange.start,
+                                          );
+                                          const after = messageDraft.slice(
+                                            slashRange.end,
+                                          );
+                                          setMessageDraft(
+                                            `${before}${command} ${after}`,
+                                          );
+                                        } else {
+                                          setMessageDraft(
+                                            (prev) => `${prev}${command} `,
+                                          );
+                                        }
+                                        setShowSlashSuggestions(false);
+                                      }}
+                                    >
+                                      <strong>{command}</strong>
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                          </div>
+                          <button
+                            className="link-button"
+                            type="submit"
+                            disabled={isPostingMessage}
+                            aria-label="Post update"
+                            style={{ float: "right" }}
+                          >
+                            {isPostingMessage ? (
+                              'Posting…'
+                            ) : (
+                              <svg
+                                viewBox="0 0 24 24"
+                                role="img"
+                                aria-hidden="true"
+                                focusable="false"
+                                width="20"
+                                height="20"
+                              >
+                                <path d="M2 21l21-9L2 3v7l15 2-15 2z" fill="currentColor" />
+                              </svg>
+                            )}
+                          </button>
+                        </form>
+                      </section>
+                    )
+                  ) : (
+                    <section className="card join-card">
+                      <p>
+                        You’re not part of this ticket yet. Join to read and
+                        post updates.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => void handleJoinTicket()}
+                      >
+                        Join ticket
+                      </button>
+                    </section>
+                  )}
+                  <footer className="ticket-actions">
+                    {selectedTicket.status === "archived" && (
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => void restoreArchivedTicket()}
+                      >
+                        Unarchive ticket
+                      </button>
+                    )}
+                    {!isTicketMember &&
+                      selectedTicket.status !== "archived" && (
                         <button
                           type="button"
+                          className="link-button outline"
                           onClick={() => void handleJoinTicket()}
                         >
                           Join ticket
                         </button>
-                      </section>
-                    )}
-                    <footer className="ticket-actions">
-                      {selectedTicket.status === "archived" && (
-                        <button
-                          type="button"
-                          className="link-button"
-                          onClick={() => void restoreArchivedTicket()}
-                        >
-                          Unarchive ticket
-                        </button>
                       )}
-                      {!isTicketMember &&
-                        selectedTicket.status !== "archived" && (
-                          <button
-                            type="button"
-                            className="link-button outline"
-                            onClick={() => void handleJoinTicket()}
-                          >
-                            Join ticket
-                          </button>
-                        )}
-                    </footer>
-                  </article>
-                ) : lockedTicket ? (
-                  <article className="card empty-detail">
-                    <h3>{lockedTicket.ticketNumber}</h3>
-                    <p>
-                      This ticket is private or locked. Request access from its
-                      members.
-                    </p>
-                  </article>
-                ) : (
-                  <article className="card empty-detail">
-                    <h3>Select a ticket</h3>
-                    <p className="muted">
-                      Choose a ticket from the left panel to see its details.
-                    </p>
-                  </article>
-                )}
+                  </footer>
+                </article>
+              ) : lockedTicket ? (
+                <article className="card empty-detail">
+                  <h3>{lockedTicket.ticketNumber}</h3>
+                  <p>
+                    This ticket is private or locked. Request access from its
+                    members.
+                  </p>
+                </article>
+              ) : (
+                <article className="card empty-detail">
+                  <h3>Select a ticket</h3>
+                  <p className="muted">
+                    Choose a ticket from the left panel to see its details.
+                  </p>
+                </article>
+              )}
             </article>
           )}
         </section>
