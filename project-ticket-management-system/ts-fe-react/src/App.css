@@ -1212,40 +1212,6 @@ textarea {
   background: rgba(97, 31, 105, 0.15);
 }
 
-.reviewer-ticket-summary {
-  margin-top: 1.25rem;
-  padding-top: 0.75rem;
-  font-size: 0.85rem;
-  color: #454754;
-}
-
-.reviewer-ticket-summary h4 {
-  margin: 0 0 0.5rem;
-  font-size: 0.9rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: #6b6f82;
-}
-
-.reviewer-ticket-summary ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.reviewer-ticket-summary li {
-  border: 1px solid rgba(97, 31, 105, 0.15);
-  border-radius: 0.65rem;
-  padding: 0.5rem 0.65rem;
-  background: #fff;
-}
-
-.reviewer-ticket-summary small {
-  color: #8b8fa3;
-}
 
 .dm-panel {
   position: relative;

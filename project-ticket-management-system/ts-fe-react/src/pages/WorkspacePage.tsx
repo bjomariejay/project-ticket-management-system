@@ -636,6 +636,7 @@ const WorkspacePage = () => {
                     >
                       <div>
                         <strong>Reviewer reports</strong>
+                        <small>{user?.displayName || "You"}</small>
                       </div>
                       <span className="project-number">
                         {reviewerTicketCount}
@@ -662,9 +663,11 @@ const WorkspacePage = () => {
                         <li key={ticket.id}>
                           <div className="report-entry-head">
                             <div>
-                              <small>Ticket #: {ticket.ticketNumber}</small>
-                              <br />
-                              <small>Ticket Created On: {new Date(ticket.createdAt).toLocaleString()}</small>
+                              <small>Ticket #: {ticket.ticketNumber}</small> <br />
+                              <small>
+                                Ticket created on{' '}
+                                {new Date(ticket.createdAt).toLocaleString()}
+                              </small>
                             </div>
                             <button
                               type="button"
@@ -674,15 +677,16 @@ const WorkspacePage = () => {
                               View ticket
                             </button>
                           </div>
-                          <p>{ticket.title}</p>
-                          {ticket.description && (
-                            <p className="muted">{ticket.assigneeId}</p>
-                          )}
+                          <small>
+                            Ticket handled by {getUserName(ticket.assigneeId)}
+                          </small>
                         </li>
                       ))}
                     </ul>
                   </div>
-                ) : ( <p className="muted">No Review tickets available!</p> )}
+                ) : (
+                  <p className="muted">No reviewer tickets available.</p>
+                )}
               </section>
             ) : (
               <section className="card project-reports">
