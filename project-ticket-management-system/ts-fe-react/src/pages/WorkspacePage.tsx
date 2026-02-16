@@ -636,7 +636,6 @@ const WorkspacePage = () => {
                     >
                       <div>
                         <strong>Reviewer reports</strong>
-                        <small>{user?.displayName || "You"}</small>
                       </div>
                       <span className="project-number">
                         {reviewerTicketCount}
