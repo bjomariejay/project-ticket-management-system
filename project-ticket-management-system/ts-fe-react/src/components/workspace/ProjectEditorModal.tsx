@@ -65,7 +65,7 @@ const ProjectEditorModal = ({
               disabled={saving || deleting}
             />
           </label>
-          <label>
+          <label style={{display: 'none'}}>
             Slug
             <input
               type="text"
@@ -74,7 +74,7 @@ const ProjectEditorModal = ({
               disabled={saving || deleting}
             />
           </label>
-          <label>
+          <label >
             Ticket prefix
             <input
               type="text"
@@ -84,7 +84,7 @@ const ProjectEditorModal = ({
               disabled={saving || deleting}
             />
           </label>
-          <label>
+          <label style={{display: 'none'}}>
             Description
             <textarea
               rows={3}
