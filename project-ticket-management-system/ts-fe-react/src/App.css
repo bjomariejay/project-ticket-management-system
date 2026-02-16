@@ -1171,7 +1171,8 @@ textarea {
   cursor: pointer;
 }
 
-.project-reports ul {
+.project-reports ul,
+.reviewer-reports ul {
   list-style: none;
   padding: 0;
   margin: 1rem 0 0;
@@ -1180,7 +1181,8 @@ textarea {
   gap: 0.75rem;
 }
 
-.project-reports li {
+.project-reports li,
+.reviewer-reports li {
   border: 1px solid rgba(97, 31, 105, 0.15);
   border-radius: 0.75rem;
   padding: 0.6rem 0.8rem;
@@ -1213,7 +1215,6 @@ textarea {
 .reviewer-ticket-summary {
   margin-top: 1.25rem;
   padding-top: 0.75rem;
-  border-top: 1px dashed rgba(97, 31, 105, 0.2);
   font-size: 0.85rem;
   color: #454754;
 }

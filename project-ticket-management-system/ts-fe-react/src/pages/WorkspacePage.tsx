@@ -610,81 +610,78 @@ const WorkspacePage = () => {
         </section>
         <section className="home-layout__right">
           {viewingReportsForProjectId ? (
-            <section className="card project-reports">
-              <header>
-                <div>
-                  <h3>Report of work</h3>
-                  <p>{viewingReportsForProjectName || "All projects"}</p>
-                </div>
-                <button
-                  type="button"
-                  className="link-button outline"
-                  onClick={closeProjectReports}
-                >
-                  Close
-                </button>
-              </header>
-              {projectReportsLoading ? (
-                <p className="muted">Loading reports…</p>
-              ) : projectReportEntries.length === 0 ? (
-                <p className="muted">No ticket starts recorded yet.</p>
-              ) : (
-                <ul>
-                  {projectReportEntries.map((entry) => (
-                    <li key={entry.id}>
-                      <div className="report-entry-head">
-                        <div>
-                          <strong>{entry.ticketNumber}</strong>
-                          <small>
-                            {new Date(entry.createdAt).toLocaleString()}
-                          </small>
-                        </div>
-                        <button
-                          type="button"
-                          className="report-ticket-link"
-                          onClick={() => handleReportTicketNavigate(entry.ticketNumber)}
-                        >
-                          View ticket
-                        </button>
-                      </div>
-                      <p>{entry.ticketTitle}</p>
-                      <p className="muted">{entry.message}</p>
-                      {entry.actorName && (
-                        <small>Started by {entry.actorName}</small>
-                      )}
-                    </li>
-                  ))}
-                </ul>
-              )}
-              {isReviewerReportView && reviewerTickets.length > 0 && (
-                <div className="reviewer-ticket-summary">
-                  <h4>Reviewer tickets</h4>
+            isReviewerReportView ? (
+              <section className="card reviewer-reports">
+                
+                {projectReportsLoading ? (
+                  <p className="muted">Loading reports…</p>
+                ) : projectReportEntries.length === 0 ? (
+                  <p className="muted">No ticket starts recorded yet.</p>
+                ) : null}
+                {reviewerTickets.length > 0 ? (
+                  <div className="reviewer-ticket-summary">
+                    <ul>
+                      {reviewerTickets.map((ticket) => (
+                        <li key={ticket.id}>
+                          <div className="report-entry-head">
+                            <div>
+                              <strong>{ticket.ticketNumber}</strong>
+                              <small>{ticket.status.replace("_", " ")}</small>
+                            </div>
+                            <button
+                              type="button"
+                              className="report-ticket-link"
+                              onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
+                            >
+                              View ticket
+                            </button>
+                          </div>
+                          <p>{ticket.title}</p>
+                          {ticket.description && (
+                            <p className="muted">{ticket.description}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : ( <p className="muted">No ticket available!</p> )}
+              </section>
+            ) : (
+              <section className="card project-reports">
+                {projectReportsLoading ? (
+                  <p className="muted">Loading reports…</p>
+                ) : projectReportEntries.length === 0 ? (
+                  <p className="muted">No ticket starts recorded yet.</p>
+                ) : (
                   <ul>
-                    {reviewerTickets.map((ticket) => (
-                      <li key={ticket.id}>
+                    {projectReportEntries.map((entry) => (
+                      <li key={entry.id}>
                         <div className="report-entry-head">
                           <div>
-                            <strong>{ticket.ticketNumber}</strong>
-                            <small>{ticket.status.replace("_", " ")}</small>
+                            <strong>{entry.ticketNumber}</strong>
+                            <small>
+                              {new Date(entry.createdAt).toLocaleString()}
+                            </small>
                           </div>
                           <button
                             type="button"
                             className="report-ticket-link"
-                            onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
+                            onClick={() => handleReportTicketNavigate(entry.ticketNumber)}
                           >
                             View ticket
                           </button>
                         </div>
-                        <p>{ticket.title}</p>
-                        {ticket.description && (
-                          <p className="muted">{ticket.description}</p>
+                        <p>{entry.ticketTitle}</p>
+                        <p className="muted">{entry.message}</p>
+                        {entry.actorName && (
+                          <small>Started by {entry.actorName}</small>
                         )}
                       </li>
                     ))}
                   </ul>
-                </div>
-              )}
-            </section>
+                )}
+              </section>
+            )
           ) : (
             <article className="card ticket-panel">
               {selectedTicket ? (
