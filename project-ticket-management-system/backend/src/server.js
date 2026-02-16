@@ -137,6 +137,7 @@ const mapTicket = (row, viewerIsMember = true) => {
     projectId: row.project_id,
     creatorId: row.creator_id,
     assigneeId: row.assignee_id,
+    reviewerId: row.reviewer_id,
     estimatedHours: row.estimated_hours == null ? null : Number(row.estimated_hours),
     actualHours: row.actual_hours == null ? null : Number(row.actual_hours),
     startedAt: row.started_at,
@@ -808,12 +809,53 @@ app.get(
 );
 
 app.get(
+  '/api/reviewers/:reviewerId/reports',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const { reviewerId } = req.params;
+    const reviewer = await fetchUser(reviewerId);
+    if (!reviewer || reviewer.workspace_id !== workspaceId) {
+      return res.status(404).json({ message: 'Reviewer not found' });
+    }
+    const { rows } = await query(
+      `SELECT tl.id,
+              tl.message,
+              tl.created_at,
+              u.display_name AS actor_name,
+              t.ticket_number,
+              t.title
+         FROM ticket_logs tl
+         JOIN tickets t ON tl.ticket_id = t.id
+         JOIN projects p ON t.project_id = p.id
+         LEFT JOIN users u ON tl.created_by = u.id
+        WHERE t.reviewer_id = $1
+          AND p.workspace_id = $2
+          AND LOWER(tl.message) LIKE '%start%'
+        ORDER BY tl.created_at DESC
+        LIMIT 200`,
+      [reviewerId, workspaceId]
+    );
+    res.json(
+      rows.map((row) => ({
+        id: row.id,
+        message: row.message,
+        createdAt: row.created_at,
+        actorName: row.actor_name,
+        ticketNumber: row.ticket_number,
+        ticketTitle: row.title,
+      }))
+    );
+  })
+);
+
+app.get(
   '/api/tickets',
   asyncHandler(async (req, res) => {
     const workspaceId = requireWorkspaceContext(req, res);
     if (!workspaceId) return;
     const projectFilter = req.query.projectId || req.query.channelId;
-    const { creatorId, assigneeId } = req.query;
+    const { creatorId, assigneeId, reviewerId } = req.query;
     const conditions = [];
     const params = [];
 
@@ -831,6 +873,10 @@ app.get(
     if (assigneeId) {
       params.push(assigneeId);
       conditions.push(`t.assignee_id = $${params.length}`);
+    }
+    if (reviewerId) {
+      params.push(reviewerId);
+      conditions.push(`t.reviewer_id = $${params.length}`);
     }
 
     const whereClause = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
@@ -921,7 +967,7 @@ app.post(
   asyncHandler(async (req, res) => {
     const workspaceId = requireWorkspaceContext(req, res);
     if (!workspaceId) return;
-    const { title, description, creatorId, estimatedHours } = req.body;
+    const { title, description, creatorId, estimatedHours, reviewerId: requestedReviewerId } = req.body;
     const projectId = req.body.projectId || req.body.channelId;
     if (!title || !projectId || !creatorId) {
       return res.status(400).json({ message: 'title, projectId and creatorId are required' });
@@ -944,6 +990,14 @@ app.post(
     if (!creator || creator.workspace_id !== workspaceId) {
       return res.status(404).json({ message: 'Creator not found' });
     }
+    let reviewerId = creatorId;
+    if (requestedReviewerId && requestedReviewerId !== creatorId) {
+      const reviewer = await fetchUser(requestedReviewerId);
+      if (!reviewer || reviewer.workspace_id !== workspaceId) {
+        return res.status(404).json({ message: 'Reviewer not found' });
+      }
+      reviewerId = reviewer.id;
+    }
 
     const client = await pool.connect();
     try {
@@ -961,8 +1015,8 @@ app.post(
 
       const insertTicket = await client.query(
         `INSERT INTO tickets (
-          id, ticket_number, title, description, project_id, creator_id, estimated_hours, privacy, priority, workspace_id
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+          id, ticket_number, title, description, project_id, creator_id, reviewer_id, estimated_hours, privacy, priority, workspace_id
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
         [
           ticketId,
           ticketNumber,
@@ -970,6 +1024,7 @@ app.post(
           description || '',
           projectId,
           creatorId,
+          reviewerId,
           estimatedHours || null,
           privacy,
           priority,

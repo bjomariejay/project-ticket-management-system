@@ -63,6 +63,7 @@ const WorkspacePage = () => {
     openCreateTicket,
     closeCreateTicket,
     handleGlobalReportView,
+    handleReviewerReportView,
     closeProjectReports,
     updateUserInfo,
   } = useWorkspace();
@@ -105,7 +106,9 @@ const WorkspacePage = () => {
     viewingReportsForProjectName,
     projectReportsLoading,
     isGlobalReportView,
+    isReviewerReportView,
     hasUnseenGlobalReports,
+    reviewerTickets,
     userSettingsForm,
     userSettingsError,
     userSettingsSaving,
@@ -587,6 +590,21 @@ const WorkspacePage = () => {
                       <span className="project-number">View</span>
                     </button>
                   </div>
+                  <div className="project-item report-project">
+                    <button
+                      type="button"
+                      className={clsx("project-main", {
+                        active: isReviewerReportView,
+                      })}
+                      onClick={() => void handleReviewerReportView()}
+                    >
+                      <div>
+                        <strong>Reviewer reports</strong>
+                        <small>{user?.displayName || "You"}</small>
+                      </div>
+                      <span className="project-number">View</span>
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -639,6 +657,38 @@ const WorkspacePage = () => {
                     </li>
                   ))}
                 </ul>
+              )}
+              {isReviewerReportView && (
+                <div className="reviewer-ticket-summary">
+                  <h4>Reviewer tickets</h4>
+                  {reviewerTickets.length === 0 ? (
+                    <p className="muted">No tickets assigned for review.</p>
+                  ) : (
+                    <ul>
+                      {reviewerTickets.map((ticket) => (
+                        <li key={ticket.id}>
+                          <div className="report-entry-head">
+                            <div>
+                              <strong>{ticket.ticketNumber}</strong>
+                              <small>{ticket.status.replace("_", " ")}</small>
+                            </div>
+                            <button
+                              type="button"
+                              className="report-ticket-link"
+                              onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
+                            >
+                              View ticket
+                            </button>
+                          </div>
+                          <p>{ticket.title}</p>
+                          {ticket.description && (
+                            <p className="muted">{ticket.description}</p>
+                          )}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
             </section>
           ) : (

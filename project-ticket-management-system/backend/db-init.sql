@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS tickets (
   project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   creator_id UUID REFERENCES users(id) ON DELETE SET NULL,
   assignee_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL,
   workspace_id UUID REFERENCES workspaces(id) ON DELETE CASCADE NOT NULL,
   estimated_hours NUMERIC(6,2),
   actual_hours NUMERIC(6,2),
@@ -59,6 +60,13 @@ CREATE TABLE IF NOT EXISTS tickets (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
+
+ALTER TABLE tickets
+  ADD COLUMN IF NOT EXISTS reviewer_id UUID REFERENCES users(id) ON DELETE SET NULL;
+
+UPDATE tickets
+   SET reviewer_id = creator_id
+ WHERE reviewer_id IS NULL;
 
 CREATE OR REPLACE FUNCTION update_ticket_timestamp()
 RETURNS TRIGGER AS $$

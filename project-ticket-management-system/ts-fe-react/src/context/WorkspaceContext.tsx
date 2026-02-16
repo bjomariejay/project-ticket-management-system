@@ -99,10 +99,12 @@ interface WorkspaceState {
   projectEditorSaving: boolean;
   projectEditorDeleting: boolean;
   projectReportEntries: ProjectReportEntry[];
+  reviewerTickets: Ticket[];
   viewingReportsForProjectId: string;
   viewingReportsForProjectName: string;
   projectReportsLoading: boolean;
   isGlobalReportView: boolean;
+  isReviewerReportView: boolean;
   hasUnseenGlobalReports: boolean;
   latestGlobalReportTimestamp: string | null;
 }
@@ -181,10 +183,12 @@ const initialState: WorkspaceState = {
   projectEditorSaving: false,
   projectEditorDeleting: false,
   projectReportEntries: [],
+  reviewerTickets: [],
   viewingReportsForProjectId: '',
   viewingReportsForProjectName: '',
   projectReportsLoading: false,
   isGlobalReportView: false,
+  isReviewerReportView: false,
   hasUnseenGlobalReports: false,
   latestGlobalReportTimestamp: null,
 };
@@ -232,6 +236,7 @@ interface WorkspaceContextValue {
   openCreateTicket: () => void;
   closeCreateTicket: () => void;
   handleGlobalReportView: () => Promise<void>;
+  handleReviewerReportView: () => Promise<void>;
   closeProjectReports: () => void;
   handleDmRecipientChange: (userId: string) => void;
   markNotification: (notificationId: string) => Promise<void>;
@@ -246,6 +251,7 @@ const ACTIVITY_VIEW_KEY = (userId: string) => `tsfe:activity:lastViewed:${userId
 const DM_VIEW_KEY = (userId: string) => `tsfe:dms:lastViewed:${userId}`;
 const GLOBAL_REPORTS_KEY = (userId: string) => `tsfe:globalReports:lastSeen:${userId}`;
 const GLOBAL_REPORT_PROJECT_ID = 'global-reports';
+const REVIEWER_REPORT_PROJECT_ID = 'reviewer-reports';
 
 export const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
 
@@ -487,10 +493,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const closeProjectReports = () => {
     mergeState({
       projectReportEntries: [],
+      reviewerTickets: [],
       viewingReportsForProjectId: '',
       viewingReportsForProjectName: '',
       projectReportsLoading: false,
       isGlobalReportView: false,
+      isReviewerReportView: false,
     });
   };
 
@@ -503,14 +511,46 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         viewingReportsForProjectId: GLOBAL_REPORT_PROJECT_ID,
         viewingReportsForProjectName: 'All projects',
         projectReportEntries: entries,
+        reviewerTickets: [],
         projectReportsLoading: false,
         isGlobalReportView: true,
+        isReviewerReportView: false,
         selectedTicket: null,
         lockedTicket: null,
       });
       markGlobalReportsSeen(latest);
     } catch (error) {
       console.error('Unable to load report-of-work', error);
+      mergeState({ projectReportsLoading: false });
+      closeProjectReports();
+    }
+  };
+
+  const handleReviewerReportView = async () => {
+    const reviewerId = stateRef.current.selectedUserId;
+    if (!reviewerId) return;
+    mergeState({ projectReportsLoading: true });
+    try {
+      const [entries, reviewerTickets] = await Promise.all([
+        apiClient.getReviewerReports(reviewerId),
+        apiClient.getTickets({ reviewerId }),
+      ]);
+      const reviewer = stateRef.current.users.find((user) => user.id === reviewerId);
+      mergeState({
+        viewingReportsForProjectId: `${REVIEWER_REPORT_PROJECT_ID}:${reviewerId}`,
+        viewingReportsForProjectName: reviewer
+          ? `Reviewer: ${reviewer.displayName}`
+          : 'Reviewer reports',
+        projectReportEntries: entries,
+        reviewerTickets,
+        projectReportsLoading: false,
+        isReviewerReportView: true,
+        isGlobalReportView: false,
+        selectedTicket: null,
+        lockedTicket: null,
+      });
+    } catch (error) {
+      console.error('Unable to load reviewer report-of-work', error);
       mergeState({ projectReportsLoading: false });
       closeProjectReports();
     }
@@ -587,8 +627,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       viewingReportsForProjectId: '',
       viewingReportsForProjectName: '',
       projectReportEntries: [],
+      reviewerTickets: [],
       projectReportsLoading: false,
       isGlobalReportView: false,
+      isReviewerReportView: false,
     });
     void loadTickets();
   };
@@ -603,8 +645,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       viewingReportsForProjectId: '',
       viewingReportsForProjectName: '',
       projectReportEntries: [],
+      reviewerTickets: [],
       projectReportsLoading: false,
       isGlobalReportView: false,
+      isReviewerReportView: false,
     });
     try {
       const ticket = await apiClient.getTicket(ticketId);
@@ -1098,6 +1142,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       openCreateTicket,
       closeCreateTicket,
       handleGlobalReportView,
+      handleReviewerReportView,
       closeProjectReports,
       handleDmRecipientChange,
       markNotification,

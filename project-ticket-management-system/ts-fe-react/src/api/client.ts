@@ -88,7 +88,7 @@ export class ApiClient {
     return this.client.delete(`/projects/${projectId}`).then((res) => res.data);
   }
 
-  getTickets(filters?: { projectId?: string; creatorId?: string; assigneeId?: string }) {
+  getTickets(filters?: { projectId?: string; creatorId?: string; assigneeId?: string; reviewerId?: string }) {
     return this.client.get<Ticket[]>('/tickets', { params: filters }).then((res) => res.data);
   }
 
@@ -162,6 +162,12 @@ export class ApiClient {
 
   getAllReports() {
     return this.client.get<ProjectReportEntry[]>('/reports').then((res) => res.data);
+  }
+
+  getReviewerReports(reviewerId: string) {
+    return this.client
+      .get<ProjectReportEntry[]>(`/reviewers/${reviewerId}/reports`)
+      .then((res) => res.data);
   }
 
   getWorkspaces(search?: string) {

@@ -30,6 +30,7 @@ export interface Ticket {
   projectId: string;
   creatorId: string;
   assigneeId?: string | null;
+  reviewerId?: string | null;
   estimatedHours?: number | null;
   actualHours?: number | null;
   startedAt?: string | null;
@@ -146,6 +147,7 @@ export interface CreateTicketPayload {
   privacy?: TicketPrivacy;
   additionalMemberIds?: string[];
   priority?: TicketPriority;
+  reviewerId?: string;
 }
 
 export interface CreateProjectPayload {
