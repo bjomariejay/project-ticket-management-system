@@ -219,6 +219,17 @@ const WorkspacePage = () => {
     return member?.displayName || '';
   }, [selectedTicket, users]);
 
+  const reviewerName = useMemo(() => {
+    if (!selectedTicket?.reviewerId) return '';
+    const teammate = users.find((candidate) => candidate.id === selectedTicket.reviewerId);
+    if (teammate?.displayName) return teammate.displayName;
+    if (teammate?.handle) return teammate.handle;
+    const member = selectedTicket.members.find((entry) => entry.userId === selectedTicket.reviewerId);
+    if (member?.displayName) return member.displayName;
+    if (member?.handle) return member.handle;
+    return member?.username || '';
+  }, [selectedTicket, users]);
+
   const formatEstimatedHours = (value?: number | null) => {
     if (value === null || value === undefined) return '—';
     const totalMinutes = Math.round(value * 60);
@@ -703,6 +714,15 @@ const WorkspacePage = () => {
                       <p>
                         <span className="assignee-badge">
                           {assigneeUsername || 'Unassigned'}
+                        </span>
+                      </p>
+
+                    </div>
+                    <div>
+                      <label>Reviewer</label>
+                      <p>
+                        <span className="assignee-badge">
+                          {reviewerName || 'Unassigned'}
                         </span>
                       </p>
 
