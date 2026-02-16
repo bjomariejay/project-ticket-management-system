@@ -194,6 +194,15 @@ const WorkspacePage = () => {
     }));
   }, [filteredTickets, selectedProjectId]);
 
+  const reviewerTicketCount = useMemo(() => {
+    if (!user?.id) return 0;
+    return tickets.filter(
+      (ticket) =>
+        ticket.reviewerId === user.id &&
+        ticket.status === "in_progress",
+    ).length;
+  }, [tickets, user?.id]);
+
   const selectedDmThread = useMemo(() => {
     if (!selectedDmRecipientId || !user?.id) return [];
     return dms
@@ -627,8 +636,11 @@ const WorkspacePage = () => {
                     >
                       <div>
                         <strong>Reviewer reports</strong>
+                        <small>{user?.displayName || "You"}</small>
                       </div>
-                      <span className="project-number">View</span>
+                      <span className="project-number">
+                        {reviewerTicketCount}
+                      </span>
                     </button>
                   </div>
                 </div>
