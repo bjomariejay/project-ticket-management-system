@@ -775,7 +775,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const createTicket = async () => {
 
-    alert('Creating ticket with title: ' + stateRef.current.createTicketModel.title);
     const { title, projectId } = stateRef.current.createTicketModel;
     const creatorId = stateRef.current.selectedUserId;
     if (!title.trim() || !projectId || !creatorId) {
