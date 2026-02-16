@@ -535,6 +535,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         apiClient.getReviewerReports(reviewerId),
         apiClient.getTickets({ reviewerId }),
       ]);
+      const inProgressReviewerTickets = reviewerTickets.filter(
+        (ticket) => ticket.status === 'in_progress'
+      );
       const reviewer = stateRef.current.users.find((user) => user.id === reviewerId);
       mergeState({
         viewingReportsForProjectId: `${REVIEWER_REPORT_PROJECT_ID}:${reviewerId}`,
@@ -542,7 +545,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           ? `Reviewer: ${reviewer.displayName}`
           : 'Reviewer reports',
         projectReportEntries: entries,
-        reviewerTickets,
+        reviewerTickets: inProgressReviewerTickets,
         projectReportsLoading: false,
         isReviewerReportView: true,
         isGlobalReportView: false,

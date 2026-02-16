@@ -656,36 +656,32 @@ const WorkspacePage = () => {
                   ))}
                 </ul>
               )}
-              {isReviewerReportView && (
+              {isReviewerReportView && reviewerTickets.length > 0 && (
                 <div className="reviewer-ticket-summary">
                   <h4>Reviewer tickets</h4>
-                  {reviewerTickets.length === 0 ? (
-                    <p className="muted">No tickets assigned for review.</p>
-                  ) : (
-                    <ul>
-                      {reviewerTickets.map((ticket) => (
-                        <li key={ticket.id}>
-                          <div className="report-entry-head">
-                            <div>
-                              <strong>{ticket.ticketNumber}</strong>
-                              <small>{ticket.status.replace("_", " ")}</small>
-                            </div>
-                            <button
-                              type="button"
-                              className="report-ticket-link"
-                              onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
-                            >
-                              View ticket
-                            </button>
+                  <ul>
+                    {reviewerTickets.map((ticket) => (
+                      <li key={ticket.id}>
+                        <div className="report-entry-head">
+                          <div>
+                            <strong>{ticket.ticketNumber}</strong>
+                            <small>{ticket.status.replace("_", " ")}</small>
                           </div>
-                          <p>{ticket.title}</p>
-                          {ticket.description && (
-                            <p className="muted">{ticket.description}</p>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                          <button
+                            type="button"
+                            className="report-ticket-link"
+                            onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
+                          >
+                            View ticket
+                          </button>
+                        </div>
+                        <p>{ticket.title}</p>
+                        {ticket.description && (
+                          <p className="muted">{ticket.description}</p>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
                 </div>
               )}
             </section>
