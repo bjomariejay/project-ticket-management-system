@@ -585,7 +585,6 @@ const WorkspacePage = () => {
                     >
                       <div>
                         <strong>Report of work</strong>
-                        <small>All projects</small>
                       </div>
                       <span className="project-number">View</span>
                     </button>
@@ -600,7 +599,6 @@ const WorkspacePage = () => {
                     >
                       <div>
                         <strong>Reviewer reports</strong>
-                        <small>{user?.displayName || "You"}</small>
                       </div>
                       <span className="project-number">View</span>
                     </button>
