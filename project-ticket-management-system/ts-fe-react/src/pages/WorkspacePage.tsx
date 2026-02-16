@@ -41,6 +41,7 @@ const WorkspacePage = () => {
     sendDm,
     startTicket,
     handleAssign,
+    updateTicketReviewer,
     updateTicketEstimate,
     handleJoinTicket,
     handleArchiveTicket,
@@ -269,6 +270,22 @@ const WorkspacePage = () => {
       void handleArchiveTicket();
       return;
     }
+    const reviewerCommand = payload.match(/^\/r-@([a-z0-9._-]+)$/i);
+    if (reviewerCommand) {
+      const targetUsername = reviewerCommand[1].toLowerCase();
+      const targetUser = users.find(
+        (candidate) => candidate.username?.toLowerCase() === targetUsername,
+      );
+      if (targetUser) {
+        setMessageDraft("");
+        setShowSlashSuggestions(false);
+        setSlashRange(null);
+        void updateTicketReviewer(targetUser.id);
+      } else {
+        console.warn(`Reviewer username ${targetUsername} not found`);
+      }
+      return;
+    }
     const estimateMatch = payload.match(/^\/e[-\s]?([0-9]+(?:\.[0-9]+)?)$/i);
     if (estimateMatch) {
       const hours = Number(estimateMatch[1]);
@@ -402,7 +419,7 @@ const WorkspacePage = () => {
   };
 
   const buildSlashSuggestions = () => {
-    return ["/start", "/archive", "/a-@username", "/e-hours"];
+    return ["/start", "/archive", "/a-@username", "/e-hours", "/r-@username"];
   };
 
   const isDmNotification = (notification: NotificationItem) => {
@@ -626,8 +643,6 @@ const WorkspacePage = () => {
                 
                 {projectReportsLoading ? (
                   <p className="muted">Loading reports…</p>
-                ) : projectReportEntries.length === 0 ? (
-                  <p className="muted">No ticket starts recorded yet.</p>
                 ) : null}
                 {reviewerTickets.length > 0 ? (
                   <div className="reviewer-ticket-summary">
@@ -655,7 +670,7 @@ const WorkspacePage = () => {
                       ))}
                     </ul>
                   </div>
-                ) : ( <p className="muted">No ticket available!</p> )}
+                ) : ( <p className="muted">No Review tickets available!</p> )}
               </section>
             ) : (
               <section className="card project-reports">

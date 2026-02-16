@@ -1360,6 +1360,65 @@ app.post(
 );
 
 app.post(
+  '/api/tickets/:ticketId/reviewer',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const { ticketId } = req.params;
+    const { reviewerId, actorId } = req.body;
+    if (!reviewerId || !actorId) {
+      return res.status(400).json({ message: 'reviewerId and actorId are required' });
+    }
+
+    const [ticket, reviewer, actor] = await Promise.all([
+      fetchTicketForWorkspace(ticketId, workspaceId),
+      fetchUser(reviewerId),
+      fetchUser(actorId),
+    ]);
+
+    if (!ticket) {
+      return res.status(404).json({ message: 'Ticket not found' });
+    }
+    if (
+      !reviewer ||
+      !actor ||
+      reviewer.workspace_id !== workspaceId ||
+      actor.workspace_id !== workspaceId
+    ) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    const actorIsMember = await ensureTicketMember(ticketId, actorId);
+    if (!actorIsMember) {
+      return res.status(403).json({ message: 'Only ticket members can assign a reviewer.' });
+    }
+
+    const client = await pool.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('UPDATE tickets SET reviewer_id = $1, updated_at = now() WHERE id = $2', [
+        reviewerId,
+        ticketId,
+      ]);
+      await appendLog(
+        client,
+        ticketId,
+        actorId,
+        `${actor.display_name} set reviewer to ${reviewer.display_name}`
+      );
+      await client.query('COMMIT');
+      res.json({ message: 'Reviewer updated' });
+    } catch (error) {
+      await client.query('ROLLBACK');
+      console.error('Unable to update reviewer', error);
+      res.status(500).json({ message: 'Unable to update reviewer' });
+    } finally {
+      client.release();
+    }
+  })
+);
+
+app.post(
   '/api/tickets/:ticketId/archive',
   asyncHandler(async (req, res) => {
     const workspaceId = requireWorkspaceContext(req, res);

@@ -122,6 +122,10 @@ export class ApiClient {
       .then((res) => res.data);
   }
 
+  updateTicketReviewer(ticketId: string, payload: { reviewerId: string; actorId: string }) {
+    return this.client.post(`/tickets/${ticketId}/reviewer`, payload).then((res) => res.data);
+  }
+
   archiveTicket(ticketId: string, actorId: string) {
     return this.client.post(`/tickets/${ticketId}/archive`, { actorId }).then((res) => res.data);
   }
