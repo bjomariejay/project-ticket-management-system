@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const connectionString = process.env.DATABASE_URL || 'postgres://postgres:postgres@db:5432/project_ticket_management';
+const connectionString = process.env.DATABASE_URL || 'postgres://postgres:123123@localhost:5432/project_ticket_management';
 const sslEnabled = process.env.DB_SSL === 'true';
 
 const pool = new Pool({

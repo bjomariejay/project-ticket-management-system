@@ -162,10 +162,10 @@ INSERT INTO projects (id, name, slug, ticket_prefix, description, workspace_id)
 VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'Ajoya Launch Pad',
-    'ajoya_launch_pad',
-    'AJOYA',
-    'Core tickets for the Ajoya room',
+    'HRMS',
+    'HRMS',
+    'HRMS',
+    'HRMS',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
