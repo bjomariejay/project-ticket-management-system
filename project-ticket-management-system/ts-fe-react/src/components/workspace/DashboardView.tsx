@@ -226,6 +226,39 @@ const DashboardView = ({
 
   const renderTaskOverview = () => (
     <div className="task-overview">
+      <article className="card task-list">
+        <header>
+          <div>
+            <h3>Recent tasks</h3>
+            <p className="muted">
+              Showing {recentTickets.length} of {filteredTickets.length}
+            </p>
+          </div>
+        </header>
+        {recentTickets.length ? (
+          <ul className="task-rows">
+            {recentTickets.map((ticket) => (
+              <li key={ticket.id} className="task-row">
+                <div>
+                  <strong>{ticket.ticketNumber}</strong>
+                  <p>{ticket.title}</p>
+                  <small className="muted">Updated {formatDate(ticket.updatedAt)}</small>
+                </div>
+                <div className="task-row__meta">
+                  <span className={`status-pill status-${ticket.status}`}>
+                    {formatStatus(ticket.status)}
+                  </span>
+                  <span className={`priority-pill priority-${ticket.priority}`}>
+                    {formatPriority(ticket.priority)}
+                  </span>
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="muted">No tasks found for this filter.</p>
+        )}
+      </article>
       <article className="card task-summary">
         <header>
           <div>
@@ -282,71 +315,44 @@ const DashboardView = ({
             <strong>{ticketSummary.actual.toFixed(1)}</strong>
           </div>
         </div>
-      </article>
-      <article className="card task-list">
-        <header>
-          <div>
-            <h3>Recent tasks</h3>
-            <p className="muted">
-              Showing {recentTickets.length} of {filteredTickets.length}
-            </p>
-          </div>
-        </header>
-        {recentTickets.length ? (
-          <ul className="task-rows">
-            {recentTickets.map((ticket) => (
-              <li key={ticket.id} className="task-row">
-                <div>
-                  <strong>{ticket.ticketNumber}</strong>
-                  <p>{ticket.title}</p>
-                  <small className="muted">Updated {formatDate(ticket.updatedAt)}</small>
-                </div>
-                <div className="task-row__meta">
-                  <span className={`status-pill status-${ticket.status}`}>
-                    {formatStatus(ticket.status)}
-                  </span>
-                  <span className={`priority-pill priority-${ticket.priority}`}>
-                    {formatPriority(ticket.priority)}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">No tasks found for this filter.</p>
-        )}
-      </article>
-      <article className="card project-graph">
-        <header>
-          <div>
-            <h3>Project throughput</h3>
-            <p className="muted">Created vs archived tasks per project</p>
-          </div>
-        </header>
-        {projectTicketStats.length ? (
-          <ul>
-            {projectTicketStats.map((project) => (
-              <li key={project.projectId} className="project-graph__row">
-                <div>
-                  <strong>{project.projectName}</strong>
-                  <small className="muted">
-                    {project.active} left · {project.archived} archived
-                  </small>
-                </div>
-                <div className="project-graph__bars">
-                  <div className="bar created" style={{ width: `${(project.created / maxGraphValue) * 100}%` }}>
-                    <span>{project.created}</span>
+        <section className="project-graph">
+          <header>
+            <div>
+              <h3>Project throughput</h3>
+              <p className="muted">Created vs archived tasks per project</p>
+            </div>
+          </header>
+          {projectTicketStats.length ? (
+            <ul>
+              {projectTicketStats.map((project) => (
+                <li key={project.projectId} className="project-graph__row">
+                  <div>
+                    <strong>{project.projectName}</strong>
+                    <small className="muted">
+                      {project.active} left · {project.archived} archived
+                    </small>
                   </div>
-                  <div className="bar archived" style={{ width: `${(project.archived / maxGraphValue) * 100}%` }}>
-                    <span>{project.archived}</span>
+                  <div className="project-graph__bars">
+                    <div
+                      className="bar created"
+                      style={{ width: `${(project.created / maxGraphValue) * 100}%` }}
+                    >
+                      <span>{project.created}</span>
+                    </div>
+                    <div
+                      className="bar archived"
+                      style={{ width: `${(project.archived / maxGraphValue) * 100}%` }}
+                    >
+                      <span>{project.archived}</span>
+                    </div>
                   </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="muted">No project data for this filter.</p>
-        )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="muted">No project data for this filter.</p>
+          )}
+        </section>
       </article>
     </div>
   );
