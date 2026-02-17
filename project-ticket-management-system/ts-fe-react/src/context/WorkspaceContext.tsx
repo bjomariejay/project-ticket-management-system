@@ -250,7 +250,6 @@ interface WorkspaceContextValue {
 
 const ACTIVITY_VIEW_KEY = (userId: string) => `tsfe:activity:lastViewed:${userId}`;
 const DM_VIEW_KEY = (userId: string) => `tsfe:dms:lastViewed:${userId}`;
-const GLOBAL_REPORTS_KEY = (userId: string) => `tsfe:globalReports:lastSeen:${userId}`;
 const GLOBAL_REPORT_PROJECT_ID = 'global-reports';
 const REVIEWER_REPORT_PROJECT_ID = 'reviewer-reports';
 
@@ -420,35 +419,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const getLastSeenGlobalReportTimestamp = () => {
-    const userId = stateRef.current.selectedUserId;
-    if (!userId) return null;
-    try {
-      return localStorage.getItem(GLOBAL_REPORTS_KEY(userId));
-    } catch (error) {
-      console.warn('Unable to read report-of-work state', error);
-      return null;
-    }
-  };
-
-  const persistGlobalReportTimestamp = (timestamp: string | null) => {
-    const userId = stateRef.current.selectedUserId;
-    if (!userId) return;
-    const key = GLOBAL_REPORTS_KEY(userId);
-    try {
-      if (timestamp) {
-        localStorage.setItem(key, timestamp);
-      } else {
-        localStorage.removeItem(key);
-      }
-    } catch (error) {
-      console.warn('Unable to persist report-of-work state', error);
-    }
-  };
-
-  const markGlobalReportsSeen = (timestamp: string | null) => {
-    persistGlobalReportTimestamp(timestamp);
+  const markGlobalReportsSeen = async (timestamp: string | null) => {
+    const seenAt = timestamp ?? new Date().toISOString();
     mergeState({ hasUnseenGlobalReports: false, latestGlobalReportTimestamp: timestamp });
+    try {
+      await apiClient.markGlobalReportsSeen(seenAt);
+    } catch (error) {
+      console.error('Unable to persist report-of-work acknowledgement', error);
+    }
   };
 
   const updateActivityAttention = useCallback(() => {
@@ -528,7 +506,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         selectedTicket: null,
         lockedTicket: null,
       });
-      markGlobalReportsSeen(latest);
+      void markGlobalReportsSeen(latest);
     } catch (error) {
       console.error('Unable to load report-of-work', error);
       mergeState({ projectReportsLoading: false });
@@ -597,13 +575,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const checkGlobalReports = useCallback(async () => {
     if (!stateRef.current.selectedUserId) return;
     try {
-      const entries = await apiClient.getAllReports();
-      const latest = entries[0]?.createdAt || null;
+      const { latest, lastSeen } = await apiClient.getGlobalReportsStatus();
       if (!latest) {
         mergeState({ latestGlobalReportTimestamp: null, hasUnseenGlobalReports: false });
         return;
       }
-      const lastSeen = getLastSeenGlobalReportTimestamp();
       const latestTime = new Date(latest).getTime();
       const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : NaN;
       const hasUnseen =

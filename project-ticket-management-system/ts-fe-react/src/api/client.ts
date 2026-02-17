@@ -168,6 +168,18 @@ export class ApiClient {
     return this.client.get<ProjectReportEntry[]>('/reports').then((res) => res.data);
   }
 
+  getGlobalReportsStatus() {
+    return this.client
+      .get<{ latest: string | null; lastSeen: string | null }>('/reports/latest')
+      .then((res) => res.data);
+  }
+
+  markGlobalReportsSeen(timestamp?: string | null) {
+    return this.client
+      .post<{ lastSeen: string | null }>('/reports/seen', { timestamp })
+      .then((res) => res.data.lastSeen ?? null);
+  }
+
   getReviewerReports(reviewerId: string) {
     return this.client
       .get<ProjectReportEntry[]>(`/reviewers/${reviewerId}/reports`)

@@ -204,6 +204,15 @@ const requireWorkspaceContext = (req, res) => {
   return workspaceId;
 };
 
+const requireUserContext = (req, res) => {
+  const userId = req.user?.userId;
+  if (!userId) {
+    res.status(403).json({ message: 'User context is required' });
+    return null;
+  }
+  return userId;
+};
+
 const ensureTicketMember = async (ticketId, userId) => {
   const { rows } = await query(
     'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
@@ -811,6 +820,66 @@ app.get(
         ticketTitle: row.title,
       }))
     );
+  })
+);
+
+app.get(
+  '/api/reports/latest',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const userId = requireUserContext(req, res);
+    if (!userId) return;
+    const [latestResult, seenResult] = await Promise.all([
+      query(
+        `SELECT MAX(tl.created_at) AS latest
+           FROM ticket_logs tl
+           JOIN tickets t ON tl.ticket_id = t.id
+           JOIN projects p ON t.project_id = p.id
+          WHERE LOWER(tl.message) LIKE '%start%'
+            AND p.workspace_id = $1`,
+        [workspaceId]
+      ),
+      query(
+        `SELECT global_reports_last_seen
+           FROM users
+          WHERE id = $1
+            AND workspace_id = $2`,
+        [userId, workspaceId]
+      ),
+    ]);
+    const latest = latestResult.rows[0]?.latest || null;
+    const lastSeen = seenResult.rows[0]?.global_reports_last_seen || null;
+    res.json({ latest, lastSeen });
+  })
+);
+
+app.post(
+  '/api/reports/seen',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const userId = requireUserContext(req, res);
+    if (!userId) return;
+    const provided = typeof req.body?.timestamp === 'string' ? req.body.timestamp : null;
+    let seenAt;
+    if (provided) {
+      const parsed = new Date(provided);
+      if (Number.isNaN(parsed.getTime())) {
+        return res.status(400).json({ message: 'Invalid timestamp' });
+      }
+      seenAt = parsed.toISOString();
+    } else {
+      seenAt = new Date().toISOString();
+    }
+    await query(
+      `UPDATE users
+          SET global_reports_last_seen = $1
+        WHERE id = $2
+          AND workspace_id = $3`,
+      [seenAt, userId, workspaceId]
+    );
+    res.json({ lastSeen: seenAt });
   })
 );
 
