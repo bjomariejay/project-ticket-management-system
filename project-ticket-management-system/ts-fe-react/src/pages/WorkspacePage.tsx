@@ -3,6 +3,7 @@ import clsx from "clsx";
 import Loader from "../components/Loader";
 import ActivityPanel from "../components/workspace/ActivityPanel";
 import DashboardView from "../components/workspace/DashboardView";
+import DashboardTicketModal from "../components/workspace/DashboardTicketModal";
 import DmPanel from "../components/workspace/DmPanel";
 import TabContent from "../components/workspace/TabContent";
 import UserSettingsModal from "../components/workspace/UserSettingsModal";
@@ -43,6 +44,7 @@ const WorkspacePage = () => {
     handleAssign,
     updateTicketReviewer,
     updateTicketEstimate,
+    quickUpdateTicket,
     handleJoinTicket,
     handleArchiveTicket,
     handlePrivacyChange,
@@ -128,6 +130,9 @@ const WorkspacePage = () => {
   const [adminEditSaving, setAdminEditSaving] = useState(false);
 
   const [dashboardSearch, setDashboardSearch] = useState("");
+  const [dashboardTicketToEdit, setDashboardTicketToEdit] = useState<Ticket | null>(null);
+  const [dashboardTicketSaving, setDashboardTicketSaving] = useState(false);
+  const [dashboardTicketError, setDashboardTicketError] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [slashSuggestions, setSlashSuggestions] = useState<string[]>([]);
@@ -1071,9 +1076,33 @@ const WorkspacePage = () => {
   };
 
   const handleDashboardOpenTicket = (ticket: Ticket) => {
-    selectProject(ticket.projectId);
-    selectTicket(ticket.id);
-    setActiveTab("home");
+    setDashboardTicketError("");
+    setDashboardTicketToEdit(ticket);
+  };
+
+  const closeDashboardTicketModal = () => {
+    if (dashboardTicketSaving) return;
+    setDashboardTicketToEdit(null);
+    setDashboardTicketError("");
+  };
+
+  const handleDashboardTicketSave = async (updates: {
+    title: string;
+    status: Ticket["status"];
+    priority: Ticket["priority"];
+    estimatedHours: number | null;
+  }) => {
+    if (!dashboardTicketToEdit) return;
+    setDashboardTicketSaving(true);
+    setDashboardTicketError("");
+    try {
+      await quickUpdateTicket(dashboardTicketToEdit.id, updates);
+      setDashboardTicketToEdit(null);
+    } catch (error: any) {
+      setDashboardTicketError(error?.response?.data?.message || "Unable to update ticket.");
+    } finally {
+      setDashboardTicketSaving(false);
+    }
   };
 
   const dashboardView = (
@@ -1136,6 +1165,17 @@ const WorkspacePage = () => {
       onFieldChange={(field, value) => updateCreateProjectField(field as any, value as any)}
       onClose={closeCreateProject}
       onSubmit={handleProjectSubmit}
+    />
+  );
+
+  const dashboardTicketModal = (
+    <DashboardTicketModal
+      ticket={dashboardTicketToEdit}
+      isOpen={Boolean(dashboardTicketToEdit)}
+      saving={dashboardTicketSaving}
+      error={dashboardTicketError}
+      onClose={closeDashboardTicketModal}
+      onSave={(changes) => void handleDashboardTicketSave(changes)}
     />
   );
 
@@ -1310,6 +1350,7 @@ const WorkspacePage = () => {
       </main>
       {createTicketModal}
       {createProjectModal}
+      {dashboardTicketModal}
       <ProjectEditorModal
         isOpen={showProjectEditor}
         form={projectEditorModel}

@@ -129,7 +129,7 @@ CREATE TABLE IF NOT EXISTS dms (
 -- seed workspaces
 INSERT INTO workspaces (id, name)
 VALUES
-  ('aaaaaaaa-1111-1111-1111-111111111111', 'MCBI-Workspace'),
+  ('aaaaaaaa-1111-1111-1111-111111111111', 'CYBER-Workspace'),
   ('bbbbbbbb-2222-2222-2222-222222222222', 'SPEEDX-Workspace')
 ON CONFLICT (id) DO NOTHING;
 
@@ -174,16 +174,16 @@ VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
     'HRMS-PROJECT',
-    'HRMS-PROJECT',
-    'HRMS-PROJECT',
+    'hrms',
+    'hrms',
     'HRMS-PROJECT',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
     'AKONINI-PROJECT',
-    'AKONINI-PROJECT',
-    'AKONINI-PROJECT',
+    'akonini',
+    'akonini',
     'AKONINI-PROJECT',
     'aaaaaaaa-1111-1111-1111-111111111111'
   )

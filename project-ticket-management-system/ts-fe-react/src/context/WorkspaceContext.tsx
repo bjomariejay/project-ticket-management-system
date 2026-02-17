@@ -222,6 +222,15 @@ interface WorkspaceContextValue {
   handleAssign: (userId: string) => Promise<void>;
   updateTicketReviewer: (reviewerId: string) => Promise<void>;
   updateTicketEstimate: (hours: number) => Promise<void>;
+  quickUpdateTicket: (
+    ticketId: string,
+    updates: {
+      title?: string;
+      status?: Ticket['status'];
+      priority?: TicketPriority;
+      estimatedHours?: number | null;
+    },
+  ) => Promise<Ticket | null>;
   handleJoinTicket: (targetUserId?: string) => Promise<void>;
   handleArchiveTicket: () => Promise<void>;
   handlePrivacyChange: (privacy: TicketPrivacy) => Promise<void>;
@@ -907,6 +916,30 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     await loadTickets();
   };
 
+  const quickUpdateTicket = async (
+    ticketId: string,
+    updates: {
+      title?: string;
+      status?: Ticket['status'];
+      priority?: TicketPriority;
+      estimatedHours?: number | null;
+    },
+  ) => {
+    if (!stateRef.current.selectedUserId) return null;
+    const payload = {
+      actorId: stateRef.current.selectedUserId,
+      ...updates,
+    };
+    const updatedTicket = await apiClient.updateTicketSettings(ticketId, payload);
+    mergeState({
+      tickets: stateRef.current.tickets.map((ticket) =>
+        ticket.id === updatedTicket.id ? updatedTicket : ticket,
+      ),
+    });
+    await loadDashboard();
+    return updatedTicket;
+  };
+
   const handleArchiveTicket = async () => {
     if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
     const ticketId = stateRef.current.selectedTicket.id;
@@ -1121,6 +1154,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       handleAssign,
       updateTicketReviewer,
       updateTicketEstimate,
+      quickUpdateTicket,
       handleJoinTicket,
       handleArchiveTicket,
       handlePrivacyChange,

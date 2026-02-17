@@ -1232,7 +1232,7 @@ app.post(
     const workspaceId = requireWorkspaceContext(req, res);
     if (!workspaceId) return;
     const { ticketId } = req.params;
-    const { actorId, status, priority, estimatedHours } = req.body;
+    const { actorId, status, priority, estimatedHours, title } = req.body;
     if (!actorId) {
       return res.status(400).json({ message: 'actorId is required' });
     }
@@ -1282,6 +1282,18 @@ app.post(
       updates.push(`priority = $${updates.length + 1}`);
       params.push(normalizedPriority);
       changeMessages.push(`${actor.display_name} marked ticket as ${normalizedPriority}`);
+    }
+
+    if (typeof title === 'string') {
+      const trimmedTitle = title.trim();
+      if (!trimmedTitle) {
+        return res.status(400).json({ message: 'Title cannot be empty' });
+      }
+      if (trimmedTitle !== ticket.title) {
+        updates.push(`title = $${updates.length + 1}`);
+        params.push(trimmedTitle);
+        changeMessages.push(`${actor.display_name} renamed ticket`);
+      }
     }
 
     if (Number.isFinite(estimatedHours)) {
