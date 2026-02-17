@@ -162,6 +162,7 @@ const mapUser = (row) =>
         location: row.location,
         workspaceId: row.workspace_id,
         workspaceName: row.workspace_name,
+        isActive: row.is_active,
       }
     : null;
 
@@ -273,6 +274,7 @@ app.post(
               u.location,
               u.password_hash,
               u.workspace_id,
+              u.is_active,
               w.name AS workspace_name
          FROM users u
          LEFT JOIN workspaces w ON u.workspace_id = w.id
@@ -282,7 +284,7 @@ app.post(
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    await query('UPDATE users SET last_active_at = now() WHERE id = $1', [user.id]);
+    await query('UPDATE users SET last_active_at = now(), is_active = true WHERE id = $1', [user.id]);
     const token = signToken({
       userId: user.id,
       handle: user.handle,
@@ -299,6 +301,7 @@ app.post(
         location: user.location,
         workspaceId: user.workspace_id,
         workspaceName: user.workspace_name,
+        isActive: true,
       },
     });
   })
@@ -354,8 +357,8 @@ app.post(
         }
       }
       await client.query(
-        `INSERT INTO users (id, display_name, username, handle, email, password_hash, location, workspace_id)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        `INSERT INTO users (id, display_name, username, handle, email, password_hash, location, workspace_id, is_active)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
         [
           userId,
           displayName,
@@ -365,6 +368,7 @@ app.post(
           passwordHash,
           location,
           workspaceId,
+          true,
         ]
       );
       await client.query('COMMIT');
@@ -402,6 +406,7 @@ app.post(
         location,
         workspaceId,
         workspaceName: workspaceDisplayName,
+        isActive: true,
       },
     });
   })
@@ -409,22 +414,26 @@ app.post(
 
 app.post(
   '/api/users/me/heartbeat',
+  authenticate,
   asyncHandler(async (req, res) => {
     if (!req.user?.userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
-    await query('UPDATE users SET last_active_at = now() WHERE id = $1', [req.user.userId]);
+    await query('UPDATE users SET last_active_at = now(), is_active = true WHERE id = $1', [
+      req.user.userId,
+    ]);
     res.json({ message: 'ok' });
   })
 );
 
 app.post(
   '/api/users/me/inactive',
+  authenticate,
   asyncHandler(async (req, res) => {
     if (!req.user?.userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
-    await query("UPDATE users SET last_active_at = now() - INTERVAL '10 minutes' WHERE id = $1", [
+    await query('UPDATE users SET is_active = false, last_active_at = now() WHERE id = $1', [
       req.user.userId,
     ]);
     res.json({ message: 'ok' });
@@ -453,17 +462,14 @@ app.get(
               u.location,
               u.workspace_id,
               w.name AS workspace_name,
-              CASE WHEN u.last_active_at >= now() - interval '5 minutes' THEN true ELSE false END AS is_active
+              u.is_active AS is_active
          FROM users u
          LEFT JOIN workspaces w ON u.workspace_id = w.id
         WHERE u.workspace_id = $1
         ORDER BY u.display_name`,
       [workspaceId]
     );
-    res.json(rows.map((row) => ({
-      ...mapUser(row),
-      isActive: row.is_active,
-    })));
+    res.json(rows.map((row) => mapUser(row)));
   })
 );
 

@@ -15,10 +15,12 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   location TEXT,
   workspace_id UUID REFERENCES workspaces(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
+  is_active BOOLEAN NOT NULL DEFAULT false
 );
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS last_active_at TIMESTAMP WITH TIME ZONE DEFAULT now();
+ALTER TABLE users ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT false;
 
 CREATE UNIQUE INDEX IF NOT EXISTS users_workspace_handle_unique
   ON users (workspace_id, LOWER(handle))
