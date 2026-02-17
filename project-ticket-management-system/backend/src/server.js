@@ -1637,8 +1637,8 @@ app.post(
           clauses.push('updated_at = now()');
           const updateQuery = `UPDATE tickets SET ${clauses.join(', ')} WHERE id = $${params.length + 1}`;
           await client.query(updateQuery, [...params, ticketId]);
-          await appendLog(client, ticketId, userId, `${user.display_name} started working on the ticket`);
         }
+        await appendLog(client, ticketId, userId, `${user.display_name} started working on the ticket`);
       }
 
       const recipients = await resolveMentionRecipients(client, mentions, userId, workspaceId);
