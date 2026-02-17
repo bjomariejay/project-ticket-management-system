@@ -93,6 +93,7 @@ textarea {
   padding: 0.15rem 0.4rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.15);
+  color: #a49494;
 }
 
 .sidebar__team .badge.active {
@@ -665,6 +666,29 @@ textarea {
   flex-wrap: wrap;
 }
 
+.dashboard-tabs {
+  display: flex;
+  gap: 0.5rem;
+  flex-basis: 100%;
+}
+
+.dashboard-tabs button {
+  border: 1px solid #dfe3ef;
+  background: #f6f7fb;
+  color: #4c5165;
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.dashboard-tabs button.active {
+  background: #1a49d7;
+  border-color: #1a49d7;
+  color: #fff;
+}
+
 .dashboard-controls select,
 .dashboard-controls input[type='date'] {
   border-radius: 0.6rem;
@@ -675,6 +699,199 @@ textarea {
 .custom-range {
   display: flex;
   gap: 1rem;
+}
+
+.task-overview {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+.task-summary__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.task-summary__highlight {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e4e7f2;
+  border-radius: 0.9rem;
+  margin-top: 1rem;
+  background: #f7f9ff;
+}
+
+.task-summary__highlight span {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #8c93ad;
+}
+
+.task-summary__highlight strong {
+  font-size: 2rem;
+  color: #1c2241;
+}
+
+.task-progress {
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.task-progress__bar {
+  width: 100%;
+  height: 10px;
+  background: #e4e7f2;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.task-progress__bar span {
+  display: block;
+  height: 100%;
+  background: #1a49d7;
+}
+
+.task-summary__grid div,
+.task-summary__totals div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.task-summary__grid span,
+.task-summary__totals span {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  color: #8c93ad;
+}
+
+.task-summary__grid strong,
+.task-summary__totals strong {
+  font-size: 1.25rem;
+  color: #1c2241;
+}
+
+.task-summary__totals {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.task-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid #e4e7f2;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  gap: 1rem;
+}
+
+.task-row p {
+  margin: 0.2rem 0;
+  color: #1c2241;
+}
+
+.task-row__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.4rem;
+}
+
+.status-pill,
+.priority-pill {
+  border-radius: 999px;
+  padding: 0.15rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.status-pill {
+  background: #e8edff;
+  color: #1a49d7;
+}
+
+.status-pill.status-in_progress {
+  background: #fff2cc;
+  color: #a97300;
+}
+
+.status-pill.status-archived {
+  background: #e6f4ed;
+  color: #2c7a51;
+}
+
+.priority-pill {
+  background: #f3f4f6;
+  color: #4c5165;
+}
+
+.priority-pill.priority-priority {
+  background: #ffe3e3;
+  color: #b42318;
+}
+
+.project-graph ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.project-graph__row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.project-graph__bars {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.project-graph__bars .bar {
+  height: 28px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  background: #e4e7f2;
+}
+
+.project-graph__bars .bar.created {
+  background: #1a49d7;
+}
+
+.project-graph__bars .bar.archived {
+  background: #2c7a51;
 }
 
 .dashboard-grid {

@@ -1069,6 +1069,8 @@ const WorkspacePage = () => {
   const dashboardView = (
     <DashboardView
       entries={filteredDashboardEntries}
+      projects={projects}
+      tickets={tickets}
       range={dashboardRange}
       startDate={dashboardStartDate}
       endDate={dashboardEndDate}
