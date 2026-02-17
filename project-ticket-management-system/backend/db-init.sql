@@ -173,18 +173,18 @@ INSERT INTO projects (id, name, slug, ticket_prefix, description, workspace_id)
 VALUES
   (
     'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
-    'HRMS-PROJECT',
+    'HRMS',
     'hrms',
     'hrms',
-    'HRMS-PROJECT',
+    'HRMS',
     'aaaaaaaa-1111-1111-1111-111111111111'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
-    'AKONINI-PROJECT',
+    'AKONINI',
     'akonini',
     'akonini',
-    'AKONINI-PROJECT',
+    'AKONINI',
     'aaaaaaaa-1111-1111-1111-111111111111'
   )
 ON CONFLICT (id) DO NOTHING;

@@ -221,6 +221,24 @@ const ensureTicketMember = async (ticketId, userId) => {
   return rows.length > 0;
 };
 
+const fetchUserProjectIds = async (workspaceId, userId) => {
+  const { rows } = await query(
+    `SELECT DISTINCT t.project_id AS "projectId"
+       FROM tickets t
+       LEFT JOIN ticket_members tm ON tm.ticket_id = t.id AND tm.user_id = $2
+      WHERE t.workspace_id = $1
+        AND t.project_id IS NOT NULL
+        AND (
+          tm.user_id IS NOT NULL OR
+          t.creator_id = $2 OR
+          t.assignee_id = $2 OR
+          t.reviewer_id = $2
+        )`,
+    [workspaceId, userId]
+  );
+  return rows.map((row) => row.projectId);
+};
+
 const appendLog = async (client, ticketId, userId, message) => {
   await client.query(
     'INSERT INTO ticket_logs (id, ticket_id, message, created_by) VALUES ($1, $2, $3, $4)',
@@ -836,6 +854,13 @@ app.get(
     if (!workspaceId) return;
     const userId = requireUserContext(req, res);
     if (!userId) return;
+    const userProjectIds = await fetchUserProjectIds(workspaceId, userId);
+    const latestParams = [workspaceId];
+    let projectFilterClause = '';
+    if (userProjectIds.length) {
+      latestParams.push(userProjectIds);
+      projectFilterClause = ` AND t.project_id = ANY($${latestParams.length})`;
+    }
     const [latestResult, seenResult] = await Promise.all([
       query(
         `SELECT MAX(tl.created_at) AS latest
@@ -843,8 +868,8 @@ app.get(
            JOIN tickets t ON tl.ticket_id = t.id
            JOIN projects p ON t.project_id = p.id
           WHERE LOWER(tl.message) LIKE '%start%'
-            AND p.workspace_id = $1`,
-        [workspaceId]
+            AND p.workspace_id = $1${projectFilterClause}`,
+        latestParams
       ),
       query(
         `SELECT global_reports_last_seen
