@@ -457,7 +457,7 @@ const WorkspacePage = () => {
 
   console.log("Activity unread count:", activityUnreadCount);
   const showActivityTabAlert =
-    activeTab !== "activity" && activityUnreadCount > 0;
+    activeTab !== "activity" && (hasActivityAttention || activityUnreadCount > 0);
 
   const headerTitle = useMemo(() => {
     switch (activeTab) {

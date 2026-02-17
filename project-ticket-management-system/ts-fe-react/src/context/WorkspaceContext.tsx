@@ -248,7 +248,6 @@ interface WorkspaceContextValue {
   ) => Promise<void>;
 }
 
-const ACTIVITY_VIEW_KEY = (userId: string) => `tsfe:activity:lastViewed:${userId}`;
 const DM_VIEW_KEY = (userId: string) => `tsfe:dms:lastViewed:${userId}`;
 const GLOBAL_REPORT_PROJECT_ID = 'global-reports';
 const REVIEWER_REPORT_PROJECT_ID = 'reviewer-reports';
@@ -429,33 +428,32 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const updateActivityAttention = useCallback(() => {
-    const hasUnread = stateRef.current.notifications.some(
-      (notification) => !notification.isRead && Boolean(notification.ticketId),
-    );
-    mergeState({ hasActivityAttention: hasUnread });
+  const updateActivityAttention = useCallback(async () => {
+    try {
+      const { pendingSince, hasNew } = await apiClient.getNotificationStatus();
+      mergeState({
+        hasActivityAttention: hasNew,
+        lastActivityViewTimestamp: pendingSince,
+      });
+    } catch (error) {
+      console.error('Unable to check ticket notifications', error);
+    }
   }, [mergeState]);
 
   const markAllTicketNotificationsRead = useCallback(async () => {
-    const unread = stateRef.current.notifications.filter(
-      (notification) => !notification.isRead && Boolean(notification.ticketId),
-    );
-    if (!unread.length) return;
-    const unreadIds = new Set(unread.map((notification) => notification.id));
     try {
-      await Promise.all(
-        unread.map((notification) => apiClient.markNotificationRead(notification.id)),
-      );
+      await apiClient.markTicketNotificationsSeen();
       mergeState({
         notifications: stateRef.current.notifications.map((notification) =>
-          unreadIds.has(notification.id) ? { ...notification, isRead: true } : notification,
+          notification.ticketId ? { ...notification, isRead: true } : notification,
         ),
+        hasActivityAttention: false,
+        lastActivityViewTimestamp: null,
       });
-      updateActivityAttention();
     } catch (error) {
       console.error('Unable to mark notifications read', error);
     }
-  }, [mergeState, updateActivityAttention]);
+  }, [mergeState]);
 
   const updateDmAttention = useCallback(() => {
     const userId = stateRef.current.selectedUserId;
@@ -595,12 +593,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     try {
       const notifications = await apiClient.getNotifications();
       mergeState({ notifications });
-      updateActivityAttention();
+      await updateActivityAttention();
       await checkGlobalReports();
     } catch (error) {
       console.error('Unable to load notifications', error);
     }
   }, [checkGlobalReports, mergeState, updateActivityAttention]);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    void updateActivityAttention();
+  }, [isAuthenticated, updateActivityAttention]);
 
   const selectProject = (projectId: string) => {
     if (stateRef.current.expandedProjectId === projectId) {
@@ -1035,12 +1038,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const setActiveTab = (tab: WorkspaceTab) => {
     mergeState({ activeTab: tab });
     if (tab === 'activity') {
-      const timestamp = new Date().toISOString();
-      const userId = stateRef.current.selectedUserId;
-      if (userId) {
-        persistTimestamp(ACTIVITY_VIEW_KEY(userId), timestamp);
-      }
-      mergeState({ hasActivityAttention: false, lastActivityViewTimestamp: timestamp });
+      mergeState({ hasActivityAttention: false });
       void (async () => {
         await markAllTicketNotificationsRead();
         await loadNotifications();

@@ -146,6 +146,18 @@ export class ApiClient {
     return this.client.post(`/notifications/${notificationId}/read`, {}).then((res) => res.data);
   }
 
+  getNotificationStatus() {
+    return this.client
+      .get<{ pendingSince: string | null; hasNew: boolean }>('/notifications/status')
+      .then((res) => res.data);
+  }
+
+  markTicketNotificationsSeen() {
+    return this.client
+      .post<{ lastSeen: string | null }>('/notifications/seen', {})
+      .then((res) => res.data.lastSeen ?? null);
+  }
+
   getDms() {
     return this.client.get<DmMessage[]>('/dms').then((res) => res.data);
   }

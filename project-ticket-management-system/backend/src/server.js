@@ -228,11 +228,17 @@ const appendLog = async (client, ticketId, userId, message) => {
   );
 };
 
-const createNotification = async (client, userId, ticketId, message) => {
+const createNotification = async (client, userId, ticketId, message, options = {}) => {
   await client.query(
     'INSERT INTO notifications (id, user_id, source_ticket_id, message) VALUES ($1, $2, $3, $4)',
     [uuidv4(), userId, ticketId, message]
   );
+  if (options.triggerAttention) {
+    await client.query(
+      'UPDATE users SET ticket_notifications_last_seen = now(), has_new_notifications = true WHERE id = $1',
+      [userId]
+    );
+  }
 };
 
 app.get(
@@ -1646,7 +1652,8 @@ app.post(
             client,
             recipient.id,
             ticketId,
-            `${user.display_name} mentioned you on ${ticket.ticket_number}`
+            `${user.display_name} mentioned you on ${ticket.ticket_number}`,
+            { triggerAttention: true }
           );
         }
       }
@@ -1748,6 +1755,53 @@ app.post(
       return res.status(404).json({ message: 'Notification not found' });
     }
     res.json({ message: 'Notification updated' });
+  })
+);
+
+app.get(
+  '/api/notifications/status',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const userId = requireUserContext(req, res);
+    if (!userId) return;
+    const { rows } = await query(
+      `SELECT ticket_notifications_last_seen, has_new_notifications
+         FROM users
+        WHERE id = $1
+          AND workspace_id = $2`,
+      [userId, workspaceId]
+    );
+    const pendingSince = rows[0]?.ticket_notifications_last_seen || null;
+    const hasNew = Boolean(rows[0]?.has_new_notifications);
+    res.json({ pendingSince, hasNew });
+  })
+);
+
+app.post(
+  '/api/notifications/seen',
+  asyncHandler(async (req, res) => {
+    const workspaceId = requireWorkspaceContext(req, res);
+    if (!workspaceId) return;
+    const userId = requireUserContext(req, res);
+    if (!userId) return;
+    await query(
+      `UPDATE notifications
+          SET is_read = true
+        WHERE user_id = $1
+          AND source_ticket_id IS NOT NULL
+          AND is_read = false`,
+      [userId]
+    );
+    await query(
+      `UPDATE users
+          SET ticket_notifications_last_seen = NULL,
+              has_new_notifications = false
+        WHERE id = $1
+          AND workspace_id = $2`,
+      [userId, workspaceId]
+    );
+    res.json({ lastSeen: null });
   })
 );
 
