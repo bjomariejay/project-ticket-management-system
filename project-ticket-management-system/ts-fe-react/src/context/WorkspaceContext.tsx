@@ -430,11 +430,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const updateActivityAttention = useCallback(async () => {
     try {
-      const { pendingSince, hasNew } = await apiClient.getNotificationStatus();
-      mergeState({
-        hasActivityAttention: hasNew,
-        lastActivityViewTimestamp: pendingSince,
-      });
+      const { hasNew } = await apiClient.getNotificationStatus();
+      mergeState({ hasActivityAttention: hasNew });
     } catch (error) {
       console.error('Unable to check ticket notifications', error);
     }
@@ -448,7 +445,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           notification.ticketId ? { ...notification, isRead: true } : notification,
         ),
         hasActivityAttention: false,
-        lastActivityViewTimestamp: null,
       });
     } catch (error) {
       console.error('Unable to mark notifications read', error);

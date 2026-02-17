@@ -235,7 +235,7 @@ const createNotification = async (client, userId, ticketId, message, options = {
   );
   if (options.triggerAttention) {
     await client.query(
-      'UPDATE users SET ticket_notifications_last_seen = now(), has_new_notifications = true WHERE id = $1',
+      'UPDATE users SET has_new_notifications = true WHERE id = $1',
       [userId]
     );
   }
@@ -1766,15 +1766,14 @@ app.get(
     const userId = requireUserContext(req, res);
     if (!userId) return;
     const { rows } = await query(
-      `SELECT ticket_notifications_last_seen, has_new_notifications
+      `SELECT has_new_notifications
          FROM users
         WHERE id = $1
           AND workspace_id = $2`,
       [userId, workspaceId]
     );
-    const pendingSince = rows[0]?.ticket_notifications_last_seen || null;
     const hasNew = Boolean(rows[0]?.has_new_notifications);
-    res.json({ pendingSince, hasNew });
+    res.json({ hasNew });
   })
 );
 
@@ -1795,8 +1794,7 @@ app.post(
     );
     await query(
       `UPDATE users
-          SET ticket_notifications_last_seen = NULL,
-              has_new_notifications = false
+          SET has_new_notifications = false
         WHERE id = $1
           AND workspace_id = $2`,
       [userId, workspaceId]
