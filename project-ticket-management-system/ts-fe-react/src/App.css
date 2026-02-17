@@ -1939,6 +1939,12 @@ textarea {
   box-shadow: 0 8px 18px rgba(97, 31, 105, 0.25);
 }
 
+.link-button.small {
+  padding: 0.3rem 0.7rem;
+  font-size: 0.75rem;
+  box-shadow: none;
+}
+
 .link-button.danger {
   background: #fee2e2;
   color: #b91c1c;
@@ -1950,6 +1956,10 @@ textarea {
   color: #611f69;
   border: 1px solid rgba(97, 31, 105, 0.4);
   box-shadow: none;
+}
+
+.task-row__meta .link-button {
+  align-self: flex-end;
 }
 
 .modal-backdrop {

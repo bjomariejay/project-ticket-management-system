@@ -22,6 +22,8 @@ interface DashboardViewProps {
   onDateChange: (type: "start" | "end", value: string | null) => void;
   onSearchChange: (value: string) => void;
   onEditUser: (userId: string) => void;
+  onAddTicket: () => void;
+  onOpenTicket: (ticket: Ticket) => void;
 }
 
 const DashboardView = ({
@@ -37,6 +39,8 @@ const DashboardView = ({
   onDateChange,
   onSearchChange,
   onEditUser,
+  onAddTicket,
+  onOpenTicket,
 }: DashboardViewProps) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("users");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
@@ -234,6 +238,9 @@ const DashboardView = ({
               Showing {recentTickets.length} of {filteredTickets.length}
             </p>
           </div>
+          <button type="button" className="link-button outline small" onClick={onAddTicket}>
+            + Ticket
+          </button>
         </header>
         {recentTickets.length ? (
           <ul className="task-rows">
@@ -251,6 +258,13 @@ const DashboardView = ({
                   <span className={`priority-pill priority-${ticket.priority}`}>
                     {formatPriority(ticket.priority)}
                   </span>
+                  <button
+                    type="button"
+                    className="link-button outline small"
+                    onClick={() => onOpenTicket(ticket)}
+                  >
+                    Update
+                  </button>
                 </div>
               </li>
             ))}

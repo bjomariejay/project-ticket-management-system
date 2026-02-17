@@ -1066,6 +1066,16 @@ const WorkspacePage = () => {
     </section>
   );
 
+  const handleDashboardAddTicket = () => {
+    openCreateTicket();
+  };
+
+  const handleDashboardOpenTicket = (ticket: Ticket) => {
+    selectProject(ticket.projectId);
+    selectTicket(ticket.id);
+    setActiveTab("home");
+  };
+
   const dashboardView = (
     <DashboardView
       entries={filteredDashboardEntries}
@@ -1080,6 +1090,8 @@ const WorkspacePage = () => {
       onDateChange={(type, value) => void handleDashboardDateChange(type, value)}
       onSearchChange={(value) => setDashboardSearch(value)}
       onEditUser={openAdminEdit}
+      onAddTicket={handleDashboardAddTicket}
+      onOpenTicket={handleDashboardOpenTicket}
     />
   );
 
