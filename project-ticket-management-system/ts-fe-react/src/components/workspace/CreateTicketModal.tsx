@@ -48,7 +48,7 @@ const CreateTicketModal = ({
               required
             />
           </label>
-          <label>
+          <label style={{display:'none'}}>
             Description
             <textarea
               rows={3}

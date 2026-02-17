@@ -299,6 +299,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         },
         selectedProjectId,
         expandedProjectId: selectedProjectId,
+        activeTab: (user.handle || '').toLowerCase() === 'admin' ? 'dashboard' : 'home',
       });
       await loadTickets();
       await Promise.all([loadDashboard(), loadNotifications(), loadDms()]);
