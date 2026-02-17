@@ -32,6 +32,7 @@ const DashboardView = ({
         <label>
           Range
           <select value={range} onChange={(event) => onRangeChange(event.target.value as DashboardRange)}>
+            <option value="today">Today</option>
             <option value="7d">Last 7 days</option>
             <option value="30d">Last 30 days</option>
             <option value="90d">Last 90 days</option>
@@ -42,10 +43,9 @@ const DashboardView = ({
       </div>
       <div>
         <label>
-          Search users
           <input
             type="search"
-            placeholder="Filter by name"
+            placeholder="Search name"
             value={searchQuery}
             onChange={(event) => onSearchChange(event.target.value)}
           />

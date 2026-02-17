@@ -25,7 +25,7 @@ import { slugify } from '../utils/text';
 import { useInterval } from '../hooks/useInterval';
 
 export type WorkspaceTab = 'dashboard' | 'home' | 'dms' | 'activity';
-export type DashboardRange = '7d' | '30d' | '90d' | 'all' | 'custom';
+export type DashboardRange = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
 
 interface CreateTicketModel {
   title: string;
@@ -167,7 +167,7 @@ const initialState: WorkspaceState = {
   hasDmAttention: false,
   hasActivityAttention: false,
   isBootstrapping: false,
-  dashboardRange: '30d',
+  dashboardRange: 'today',
   dashboardStartDate: null,
   dashboardEndDate: null,
   userSettingsForm: defaultUserSettings,
@@ -363,6 +363,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const getDashboardFilters = useCallback(() => {
     const { dashboardRange, dashboardStartDate, dashboardEndDate } = stateRef.current;
     if (dashboardRange === 'all') return undefined;
+    if (dashboardRange === 'today') {
+      const now = new Date();
+      const start = new Date(now);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(now);
+      end.setHours(23, 59, 59, 999);
+      return { startDate: start.toISOString(), endDate: end.toISOString() };
+    }
     if (dashboardRange === 'custom') {
       if (dashboardStartDate && dashboardEndDate) {
         const start = new Date(`${dashboardStartDate}T00:00:00`).toISOString();
@@ -957,7 +965,6 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const handleDashboardRangeChange = async (range: DashboardRange) => {
     mergeState({ dashboardRange: range });
     if (range !== 'custom') {
-      console.log(range);
       mergeState({ dashboardStartDate: null, dashboardEndDate: null });
       await loadDashboard();
     }
