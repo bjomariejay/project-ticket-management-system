@@ -127,6 +127,7 @@ const WorkspacePage = () => {
   const [adminEditError, setAdminEditError] = useState("");
   const [adminEditSaving, setAdminEditSaving] = useState(false);
 
+  const [dashboardSearch, setDashboardSearch] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
   const [showMentionSuggestions, setShowMentionSuggestions] = useState(false);
   const [slashSuggestions, setSlashSuggestions] = useState<string[]>([]);
@@ -180,6 +181,12 @@ const WorkspacePage = () => {
       )
       .slice(0, 5);
   }, [ticketSearch, tickets]);
+
+  const filteredDashboardEntries = useMemo(() => {
+    const search = dashboardSearch.trim().toLowerCase();
+    if (!search) return dashboard;
+    return dashboard.filter((entry) => entry.displayName.toLowerCase().includes(search));
+  }, [dashboard, dashboardSearch]);
 
   const ticketGroups = useMemo(() => {
     if (!selectedProjectId)
@@ -1061,13 +1068,15 @@ const WorkspacePage = () => {
 
   const dashboardView = (
     <DashboardView
-      entries={dashboard}
+      entries={filteredDashboardEntries}
       range={dashboardRange}
       startDate={dashboardStartDate}
       endDate={dashboardEndDate}
       canEditUsers={user?.handle === "admin"}
+      searchQuery={dashboardSearch}
       onRangeChange={(value) => void handleDashboardRangeChange(value)}
       onDateChange={(type, value) => void handleDashboardDateChange(type, value)}
+      onSearchChange={(value) => setDashboardSearch(value)}
       onEditUser={openAdminEdit}
     />
   );

@@ -957,6 +957,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const handleDashboardRangeChange = async (range: DashboardRange) => {
     mergeState({ dashboardRange: range });
     if (range !== 'custom') {
+      console.log(range);
       mergeState({ dashboardStartDate: null, dashboardEndDate: null });
       await loadDashboard();
     }

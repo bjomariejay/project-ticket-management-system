@@ -7,8 +7,10 @@ interface DashboardViewProps {
   startDate: string | null;
   endDate: string | null;
   canEditUsers: boolean;
+  searchQuery: string;
   onRangeChange: (value: DashboardRange) => void;
   onDateChange: (type: "start" | "end", value: string | null) => void;
+  onSearchChange: (value: string) => void;
   onEditUser: (userId: string) => void;
 }
 
@@ -18,8 +20,10 @@ const DashboardView = ({
   startDate,
   endDate,
   canEditUsers,
+  searchQuery,
   onRangeChange,
   onDateChange,
+  onSearchChange,
   onEditUser,
 }: DashboardViewProps) => (
   <section className="main__view" aria-label="Dashboard">
@@ -34,6 +38,17 @@ const DashboardView = ({
             <option value="all">All time</option>
             <option value="custom">Custom range</option>
           </select>
+        </label>
+      </div>
+      <div>
+        <label>
+          Search users
+          <input
+            type="search"
+            placeholder="Filter by name"
+            value={searchQuery}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
         </label>
       </div>
       {range === "custom" && (
