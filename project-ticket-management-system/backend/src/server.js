@@ -299,7 +299,7 @@ app.post(
     if (!user || !verifyPassword(password, user.password_hash)) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
-    await query('UPDATE users SET last_active_at = now(), is_active = true WHERE id = $1', [user.id]);
+    await query('UPDATE users SET is_active = true WHERE id = $1', [user.id]);
     const token = signToken({
       userId: user.id,
       handle: user.handle,
@@ -434,7 +434,7 @@ app.post(
     if (!req.user?.userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
-    await query('UPDATE users SET last_active_at = now(), is_active = true WHERE id = $1', [
+    await query('UPDATE users SET is_active = true WHERE id = $1', [
       req.user.userId,
     ]);
     res.json({ message: 'ok' });
@@ -448,7 +448,7 @@ app.post(
     if (!req.user?.userId) {
       return res.status(403).json({ message: 'Unauthorized' });
     }
-    await query('UPDATE users SET is_active = false, last_active_at = now() WHERE id = $1', [
+    await query('UPDATE users SET is_active = false WHERE id = $1', [
       req.user.userId,
     ]);
     res.json({ message: 'ok' });
