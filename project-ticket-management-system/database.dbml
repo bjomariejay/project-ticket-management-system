@@ -1,0 +1,105 @@
+// DBML representation of the current PostgreSQL schema
+// Generate diagrams via https://dbdiagram.io
+
+Table workspaces {
+  id uuid [pk]
+  name text [not null, unique]
+  created_at timestamptz [default: 'now()']
+}
+
+Table users {
+  id uuid [pk]
+  display_name text [not null]
+  username text [not null, unique]
+  handle text [not null, note: 'Unique per workspace (case-insensitive) except admin']
+  email text [not null, unique]
+  password_hash text [not null]
+  location text
+  workspace_id uuid [ref: > workspaces.id]
+  created_at timestamptz [default: 'now()']
+  is_active boolean [not null, default: false]
+  global_reports_last_seen timestamptz
+  has_new_notifications boolean [not null, default: false]
+
+  Indexes {
+    (workspace_id, handle) [name: 'users_workspace_handle_unique']
+  }
+}
+
+Table projects {
+  id uuid [pk]
+  name text [not null]
+  slug text [not null, unique]
+  ticket_prefix text [not null]
+  description text
+  workspace_id uuid [not null, ref: > workspaces.id]
+  created_at timestamptz [default: 'now()']
+}
+
+Table project_sequences {
+  project_id uuid [pk, ref: > projects.id]
+  last_value integer [not null, default: 0]
+}
+
+Table tickets {
+  id uuid [pk]
+  ticket_number text [not null, unique]
+  title text [not null]
+  description text
+  status text [not null, default: 'open']
+  project_id uuid [ref: > projects.id]
+  creator_id uuid [ref: > users.id]
+  assignee_id uuid [ref: > users.id]
+  reviewer_id uuid [ref: > users.id]
+  workspace_id uuid [not null, ref: > workspaces.id]
+  estimated_hours numeric(6,2)
+  actual_hours numeric(6,2)
+  started_at timestamptz
+  closed_at timestamptz
+  archived_at timestamptz
+  privacy text [not null, default: 'public']
+  priority text [not null, default: 'normal']
+  created_at timestamptz [default: 'now()']
+  updated_at timestamptz [default: 'now()']
+}
+
+Table ticket_members {
+  ticket_id uuid [pk, ref: > tickets.id]
+  user_id uuid [pk, ref: > users.id]
+  role text [not null, default: 'participant']
+  joined_at timestamptz [default: 'now()']
+}
+
+Table ticket_logs {
+  id uuid [pk]
+  ticket_id uuid [ref: > tickets.id]
+  message text [not null]
+  created_by uuid [ref: > users.id]
+  created_at timestamptz [default: 'now()']
+}
+
+Table ticket_messages {
+  id uuid [pk]
+  ticket_id uuid [ref: > tickets.id]
+  user_id uuid [ref: > users.id]
+  body text [not null]
+  mentions text[] [default: '{}']
+  created_at timestamptz [default: 'now()']
+}
+
+Table notifications {
+  id uuid [pk]
+  user_id uuid [not null, ref: > users.id]
+  source_ticket_id uuid [ref: > tickets.id]
+  message text [not null]
+  is_read boolean [default: false]
+  created_at timestamptz [default: 'now()']
+}
+
+Table dms {
+  id uuid [pk]
+  sender_id uuid [not null, ref: > users.id]
+  recipient_id uuid [not null, ref: > users.id]
+  body text [not null]
+  created_at timestamptz [default: 'now()']
+}

@@ -122,7 +122,7 @@ const LoginPage = () => {
             </label>
             {authError && <p className="auth__error">{authError}</p>}
             <button type="submit" disabled={authLoading}>
-              {authLoading ? 'Signing in…' : 'Sign in'}
+              {authLoading ? 'Signing in…' : 'Sign in2'}
             </button>
           </form>
         ) : (
@@ -227,7 +227,7 @@ const LoginPage = () => {
               clearAuthError();
             }}
           >
-            {mode === 'login' ? 'Sign up' : 'Sign in'}
+            {mode === 'login' ? 'Sign up' : 'Sign in1'}
           </button>
         </p>
       </article>

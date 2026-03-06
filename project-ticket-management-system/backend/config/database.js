@@ -1,10 +1,9 @@
 const { Pool } = require('pg');
-const connectionString = process.env.DATABASE_URL || 'postgres://postgres:123123@localhost:5432/project_ticket_management';
-const sslEnabled = process.env.DB_SSL === 'true';
+const { databaseUrl, dbSslEnabled } = require('./env');
 
 const pool = new Pool({
-  connectionString,
-  ssl: sslEnabled ? { rejectUnauthorized: false } : undefined,
+  connectionString: databaseUrl,
+  ssl: dbSslEnabled ? { rejectUnauthorized: false } : undefined,
 });
 
 pool.on('error', (err) => {
