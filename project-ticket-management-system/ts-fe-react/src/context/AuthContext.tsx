@@ -73,6 +73,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       setAuthError(null);
       try {
         const response = await apiClient.login(payload);
+        console.log('fe response with user and created token:', response)
         persistSession(response.token, response.user);
       } catch (error) {
         setAuthError('Invalid username or password.');

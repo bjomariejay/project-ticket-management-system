@@ -1,15 +1,20 @@
-const { v4: uuidv4 } = require('uuid');
-const { pool, query } = require('../config/database');
-const { mapUser } = require('../models/userModel');
-const { asyncHandler } = require('../utils/asyncHandler');
-const { hashPassword, verifyPassword } = require('../utils/password');
-const { createExpiryClaim, signToken } = require('../utils/token');
+const { v4: uuidv4 } = require("uuid");
+const { pool, query } = require("../config/database");
+const { mapUser } = require("../models/userModel");
+const { asyncHandler } = require("../utils/asyncHandler");
+const { hashPassword, verifyPassword } = require("../utils/password");
+const { createExpiryClaim, signToken } = require("../utils/token");
 
 const login = asyncHandler(async (req, res) => {
-  const rawIdentifier = (req.body?.username ?? req.body?.handle ?? '').trim().toLowerCase();
+  const rawIdentifier = (req.body?.username ?? req.body?.handle ?? "")
+    .trim()
+    .toLowerCase();
   const { password } = req.body || {};
+  console.log("be login body", req.body);
   if (!rawIdentifier || !password) {
-    return res.status(400).json({ message: 'username and password are required' });
+    return res
+      .status(400)
+      .json({ message: "username and password are required" });
   }
 
   const {
@@ -27,14 +32,16 @@ const login = asyncHandler(async (req, res) => {
        FROM users u
        LEFT JOIN workspaces w ON u.workspace_id = w.id
       WHERE u.username = $1`,
-    [rawIdentifier]
+    [rawIdentifier],
   );
 
   if (!user || !verifyPassword(password, user.password_hash)) {
-    return res.status(401).json({ message: 'Invalid credentials' });
+    return res.status(401).json({ message: "Invalid credentials" });
   }
 
-  await query('UPDATE users SET is_active = true WHERE id = $1', [user.id]);
+  await query("UPDATE users SET is_active = true WHERE id = $1", [user.id]);
+
+  console.log("be selected user:", user);
 
   const token = signToken({
     userId: user.id,
@@ -43,6 +50,8 @@ const login = asyncHandler(async (req, res) => {
     exp: createExpiryClaim(),
   });
 
+  console.log("be create token:", token);
+  
   res.json({
     token,
     user: { ...mapUser(user), isActive: true },
@@ -50,29 +59,38 @@ const login = asyncHandler(async (req, res) => {
 });
 
 const register = asyncHandler(async (req, res) => {
-  const { displayName, handle, email, password, location, username, workspaceName } = req.body || {};
+  const {
+    displayName,
+    handle,
+    email,
+    password,
+    location,
+    username,
+    workspaceName,
+  } = req.body || {};
   if (!displayName || !handle || !email || !password || !workspaceName) {
     return res.status(400).json({
-      message: 'displayName, handle, email, password and workspaceName are required',
+      message:
+        "displayName, handle, email, password and workspaceName are required",
     });
   }
 
   const normalizedWorkspaceName = workspaceName.trim().toLowerCase();
   if (!normalizedWorkspaceName) {
-    return res.status(400).json({ message: 'workspaceName is required' });
+    return res.status(400).json({ message: "workspaceName is required" });
   }
 
   const passwordHash = hashPassword(password);
   const userId = uuidv4();
   const client = await pool.connect();
-  let workspaceId = '';
+  let workspaceId = "";
   let workspaceDisplayName = normalizedWorkspaceName;
 
   try {
-    await client.query('BEGIN');
+    await client.query("BEGIN");
     const existingWorkspace = await client.query(
-      'SELECT id, name FROM workspaces WHERE name = $1',
-      [normalizedWorkspaceName]
+      "SELECT id, name FROM workspaces WHERE name = $1",
+      [normalizedWorkspaceName],
     );
 
     if (existingWorkspace.rowCount) {
@@ -81,15 +99,16 @@ const register = asyncHandler(async (req, res) => {
     } else {
       workspaceId = uuidv4();
       try {
-        await client.query('INSERT INTO workspaces (id, name) VALUES ($1, $2)', [
-          workspaceId,
-          normalizedWorkspaceName,
-        ]);
+        await client.query(
+          "INSERT INTO workspaces (id, name) VALUES ($1, $2)",
+          [workspaceId, normalizedWorkspaceName],
+        );
       } catch (workspaceError) {
-        if (workspaceError.code === '23505') {
-          const fallback = await client.query('SELECT id, name FROM workspaces WHERE name = $1', [
-            normalizedWorkspaceName,
-          ]);
+        if (workspaceError.code === "23505") {
+          const fallback = await client.query(
+            "SELECT id, name FROM workspaces WHERE name = $1",
+            [normalizedWorkspaceName],
+          );
           if (fallback.rowCount) {
             workspaceId = fallback.rows[0].id;
             workspaceDisplayName = fallback.rows[0].name;
@@ -116,22 +135,24 @@ const register = asyncHandler(async (req, res) => {
         location,
         workspaceId,
         true,
-      ]
+      ],
     );
 
-    await client.query('COMMIT');
+    await client.query("COMMIT");
   } catch (error) {
-    await client.query('ROLLBACK');
-    if (error.code === '23505') {
+    await client.query("ROLLBACK");
+    if (error.code === "23505") {
       switch (error.constraint) {
-        case 'users_username_key':
-          return res.status(409).json({ message: 'Username already exists' });
-        case 'users_email_key':
-          return res.status(409).json({ message: 'Email already exists' });
-        case 'users_workspace_handle_unique':
-          return res.status(409).json({ message: 'Handle already exists in this workspace' });
+        case "users_username_key":
+          return res.status(409).json({ message: "Username already exists" });
+        case "users_email_key":
+          return res.status(409).json({ message: "Email already exists" });
+        case "users_workspace_handle_unique":
+          return res
+            .status(409)
+            .json({ message: "Handle already exists in this workspace" });
         default:
-          return res.status(409).json({ message: 'Account already exists' });
+          return res.status(409).json({ message: "Account already exists" });
       }
     }
     throw error;
