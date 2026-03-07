@@ -1,5 +1,6 @@
 const express = require('express');
 const { authenticate } = require('../middleware/authenticate');
+const { listPublicUsers } = require('../controllers/userController');
 const authRoutes = require('./authRoutes');
 const dashboardRoutes = require('./dashboardRoutes');
 const dmRoutes = require('./dmRoutes');
@@ -17,6 +18,7 @@ const router = express.Router();
 router.use('/health', healthRoutes);
 router.use('/workspaces', workspaceRoutes);
 router.use('/auth', authRoutes);
+router.get('/showUsers', listPublicUsers);
 
 router.use(authenticate);
 router.use('/users', userRoutes);

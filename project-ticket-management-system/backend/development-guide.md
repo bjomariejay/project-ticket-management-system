@@ -1,38 +1,43 @@
 # Backend Development Guide
 
-## Authentication Requests
+## TECH STACK USED
 
-When the frontend issues `login(payload: LoginPayload)`
+fe: React
+be: NodeJs Express(framework)
+db: postgress
 
-```ts
-login(payload: LoginPayload) {
-  return this.client.post<LoginResponse>('/auth/login', payload).then((res) => res.data);
-}
-```
+## CONNECTION
 
-make sure the backend `/api/auth/login` route is reachable and expects:
-/api/auth/login = is defined in `backend/routes/authRoutes.js` which uses login from `backend/controllers/authController.js`
+we can use 2 ways
+1. pgAdmin 4 and to connect it with this way `postgres://postgres:123@localhost:5432/project_ticket_management` or check .env
+2. docker file just run docker-compose.yml using command docker-compose up -d
 
-- `username` **or** `handle`: the account identifier, normalized to lowercase before lookup.
-- `password`: the plaintext value, which the server validates against the stored scrypt hash.
 
-On success the backend responds with `LoginResponse`:
+## project ticket management system module
 
-```json
+
+
+## Login Page
+
+user send payload reqeust: username, password
+request url: http://localhost:5173/api/auth/login
+
+response:
 {
-  "token": "<jwt>",
-  "user": {
-    "id": "…",
-    "displayName": "…",
-    "username": "…",
-    "handle": "…",
-    "location": "…",
-    "workspaceId": "…",
-    "workspaceName": "…",
-    "isActive": true
-  }
+"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMTExMTExMS0xMTExLTExMTEtMTExMS0xMTExMTExMTExMTEiLCJoYW5kbGUiOiJhZG1pbiIsIndvcmtzcGFjZUlkIjoiYWFhYWFhYWEtMTExMS0xMTExLTExMTEtMTExMTExMTExMTExIiwiZXhwIjoxNzcyODkyNjA3fQ.dDMno2Zh-5EaYlVzcE1aHX3coOASs6z1o_RLpiRtJUA",
+"user": {
+"id": "11111111-1111-1111-1111-111111111111",
+"displayName": "Jaylingers",
+"username": "jay",
+"handle": "admin",
+"location": "HQ",
+"workspaceId": "aaaaaaaa-1111-1111-1111-111111111111",
+"workspaceName": "CYBER-Workspace",
+"isActive": true
 }
-```
+}
+
+````
 
 If the payload is missing fields or credentials fail validation, return the appropriate `400` or `401` JSON error `{ "message": "…" }`. This keeps the frontend contract aligned with `login(payload)` and ensures `res.data` always matches `LoginResponse` on success.
 
@@ -115,4 +120,4 @@ const verifyToken = (token) => {
 };
 
 module.exports = { createExpiryClaim, signToken, verifyToken };
-```
+````

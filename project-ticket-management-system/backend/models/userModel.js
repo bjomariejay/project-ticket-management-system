@@ -44,6 +44,23 @@ const getWorkspaceUsers = async (workspaceId) => {
   return rows.map((row) => mapUser(row));
 };
 
+const getAllUsers = async () => {
+  const { rows } = await query(
+    `SELECT u.id,
+            u.display_name,
+            u.username,
+            u.handle,
+            u.location,
+            u.workspace_id,
+            w.name AS workspace_name,
+            u.is_active AS is_active
+       FROM users u
+       LEFT JOIN workspaces w ON u.workspace_id = w.id
+      ORDER BY u.display_name`
+  );
+  return rows.map((row) => mapUser(row));
+};
+
 const fetchUserProjectIds = async (workspaceId, userId) => {
   const { rows } = await query(
     `SELECT DISTINCT t.project_id AS "projectId"
@@ -87,6 +104,7 @@ const setGlobalReportsLastSeen = (userId, workspaceId, timestamp) =>
 
 module.exports = {
   fetchUserProjectIds,
+  getAllUsers,
   getGlobalReportsLastSeen,
   getUserById,
   getWorkspaceUsers,

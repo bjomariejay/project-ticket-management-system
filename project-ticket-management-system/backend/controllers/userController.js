@@ -1,5 +1,6 @@
 const { query } = require('../config/database');
 const {
+  getAllUsers,
   getUserById,
   getWorkspaceUsers,
   mapUser,
@@ -12,6 +13,11 @@ const listUsers = asyncHandler(async (req, res) => {
   const workspaceId = requireWorkspaceContext(req, res);
   if (!workspaceId) return;
   const rows = await getWorkspaceUsers(workspaceId);
+  res.json(rows);
+});
+
+const listPublicUsers = asyncHandler(async (req, res) => {
+  const rows = await getAllUsers();
   res.json(rows);
 });
 
@@ -106,4 +112,4 @@ const markInactive = asyncHandler(async (req, res) => {
   res.json({ message: 'ok' });
 });
 
-module.exports = { heartbeat, listUsers, markInactive, updateUser };
+module.exports = { heartbeat, listUsers, listPublicUsers, markInactive, updateUser };
