@@ -16,8 +16,16 @@
 
 1. **Install prerequisites** – Node.js 18+, npm 9+, PostgreSQL 14+ (or Docker Desktop if you prefer containers).
 2. **Install dependencies** by running `npm install` inside both `backend` and `ts-fe-react`.
-3. **Initialize the database** via `psql -f db-init.sql` (or run the schema inside pgAdmin). This seeds sample workspaces, users, and tickets so you can log in immediately.
-4. **Start servers** with `npm run dev` in each folder. Frontend will hot-reload on `http://localhost:5173`, backend on `http://localhost:4000`.
+3. **Initialize the database** via `psql -f db-init.sql` to check if it works do the following:
+
+### go to pgAdmin > open query tool > and run select * from users > verify the name column for the user jaylingers 
+### > Update db-init.sql > Open the db-init.sql file in your editor. >  Search for all instances of jaylingers. > Replace them with your desired name, e.g., jay.
+### add `C:\Program Files\PostgreSQL\18\bin` to Environment Variables → System Variables → Path
+### open cmd then cd `project file` and run the following
+`psql -U postgres -c "DROP DATABASE project_ticket_management;"`
+`psql -U postgres -c "CREATE DATABASE project_ticket_management;"`
+`psql -U postgres -d project_ticket_management -f db-init.sql`
+### or run `db-init.sql` script inside pgAdmin query tool
 
 ## Tech Stack
 
