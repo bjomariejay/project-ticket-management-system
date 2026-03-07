@@ -10,6 +10,8 @@ db: postgress
 
 we can use 2 ways
 1. pgAdmin 4 and to connect it with this way `postgres://postgres:123@localhost:5432/project_ticket_management` or check .env
+   (port 5432 =  you can check the port in pgAdmin4 and go to dbname > right click then select query tool > run `Show port`).
+   (password 123 = password is encrypted so we cant check the password in pgAdmin4 but can only update the password)
 2. docker file just run docker-compose.yml using command docker-compose up -d
 
 
@@ -40,7 +42,23 @@ response:
 }
 }
 
-````
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 If the payload is missing fields or credentials fail validation, return the appropriate `400` or `401` JSON error `{ "message": "…" }`. This keeps the frontend contract aligned with `login(payload)` and ensures `res.data` always matches `LoginResponse` on success.
 
