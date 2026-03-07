@@ -1,45 +1,72 @@
 # Backend Development Guide
 
-## TECH STACK USED
+## Contents
 
-- fe: React
-- be: NodeJs Express (framework)
-- db: PostgreSQL (a dependable relational database with migrations and SQL tooling)
+- Quick Start
+- Tech Stack
+- Project Structure
+- Environment & Database Access
+- Module Overview
+- Database Docs
+- Developer Workflow
+- Login Endpoint Reference
+- JWT Implementation
 
-## CONNECTION
+## Quick Start
 
-You can connect to the database in two supportive ways, depending on which workflow you prefer:
+1. **Install prerequisites** – Node.js 18+, npm 9+, PostgreSQL 14+ (or Docker Desktop if you prefer containers).
+2. **Install dependencies** by running `npm install` inside both `backend` and `ts-fe-react`.
+3. **Initialize the database** via `psql -f db-init.sql` (or run the schema inside pgAdmin). This seeds sample workspaces, users, and tickets so you can log in immediately.
+4. **Start servers** with `npm run dev` in each folder. Frontend will hot-reload on `http://localhost:5173`, backend on `http://localhost:4000`.
 
-1. **pgAdmin 4 (GUI)** – connect with `postgres://postgres:123@localhost:5432/project_ticket_management` or whatever credentials you configure in `.env`.
-   - Port 5432: confirm the port inside pgAdmin by opening the database, right-clicking, choosing **Query Tool**, and running `SHOW port;`.
-   - Password 123: pgAdmin stores a hashed version, so you won't see the raw value there—update it via the UI if needed.
-2. **Docker Compose (hands-off)** – simply run `docker-compose up -d` and let containers spin up the database and any supporting services. It's a fantastic option when you want a consistent environment fast.
+## Tech Stack
 
-## MODULES
+- **Frontend**: React + Vite + TypeScript (living in `ts-fe-react`).
+- **Backend**: Node.js with Express 5 framework.
+- **Database**: PostgreSQL accessed through the native `pg` driver in database.js
+
+## Project Structure
+
+- `backend/` – routes, controllers, models, middleware, and config.
+- `ts-fe-react/` –api, components, context, hooks, pages, types and utils.
+- `database.dbml` – Canonical schema or DB structure.
+
+Most backend code follows a simple layering pattern: **routes → controllers → models/utilities**. When adding features, keep business logic in models/helpers so routes stay thin.
+
+## Environment & Database Access
+
+You can connect to the database in two supportive ways, depending on your workflow:
+
+1. **pgAdmin 4 (GUI)** – connect with `postgres://postgres:123@localhost:5432/project_ticket_management` or the DSN stored in `.env`.
+   - Confirm the port via pgAdmin: right-click the database → Query Tool → run `SHOW port;`.
+   - Passwords encrypted with HASHED so we can only update password.
+2. **Docker Compose** – run `docker-compose up -d` from the repo root. Containers start PostgreSQL plus any supporting services with predictable ports.
+
+## Module Overview
+
+Think of the platform as a constellation of focused modules working together:
 
 - **Authentication & Workspaces** – manages signup, login, and scoping users to their workspace so data stays organized.
-- **Projects & Channels** – provide lightweight containers for tickets, giving teams flexibility whether they prefer project or channel metaphors.
+- **Projects & Channels** – provide containers for tickets, giving teams flexibility whether they prefer project or channel metaphors.
 - **Tickets** – the heart of the system, with creation, assignment, reviewer workflows, privacy controls, and threaded discussions.
-- **Dashboards & Reports** – surface productivity snapshots plus reviewer- and project-level histories to keep momentum visible.
-- **Notifications & DMs** – help collaborators stay in sync through real-time nudges and direct conversations without leaving the workspace.
+- **Dashboards & Reports** – offer productivity snapshots plus reviewer- and project-level histories.
+- **Notifications & DMs** – keep collaborators in sync through alerts and lightweight conversations.
 
-Treat each module as an API boundary: controllers should stay lean, business logic belongs in models/services, and shared utilities live under `utils/`. Following that discipline keeps the codebase approachable as it grows.
+## Database Docs
 
-## DATABASE DOCS
+We document schema changes in `database.dbml`. Open it in [DBML](https://dbdiagram.io/home) or your favorite ERD viewer to review relationships, constraints, and seed values. Keeping the diagram in sync with migrations helps everyone reason about joins and indexes before touching SQL.
 
-check `database.dbml` for database diagram
+## Developer Workflow
 
-## DEVELOPER WORKFLOW
+Run the frontend and backend simultaneously for the smoothest development loop:
 
-There are 2 folders in our project: `backend` and `ts-fe-react`. A smooth workflow is to open two terminals so both apps can run concurrently:
-
-- **Terminal 1**: `cd backend` then `npm run dev` to launch the API at `http://localhost:4000` (or your configured port).
-- **Terminal 2**: `cd ts-fe-react` then `npm run dev` to start Vite on `http://localhost:5173`.
+- **Terminal 1**: `cd backend && npm run dev` to start the API (`http://localhost:4000`).
+- **Terminal 2**: `cd ts-fe-react && npm run dev` to start the UI (`http://localhost:5173`).
 
 ### Check BE WORKS
 
-1. BE FLOW = Route → Controller → Model → Database
-2. BE PORT = BE application runs app with port 4000 check .env
+1. BE Structures = Route → Controller → Model → Database
+2. BE PORT = BE runs app with port 4000 check .env
 3. RUN APPLICATOIN = type npm run dev
 4. open this end point http://localhost:4000/api/showUsers we see the users data
 5. implement showUsers =
@@ -78,49 +105,47 @@ res.json(rows);
 
     const { query } = require('../config/database');
 
-
 ### Check FE WORKS
 
+## Login Endpoint Reference
 
-## Login Page
+- **Request**: `POST http://localhost:4000/api/auth/login`
+- **Payload**: `{ "username": "jay", "password": "supersecret" }`
+- **Response**:
 
-user send payload reqeust: username, password
-request url: http://localhost:5173/api/auth/login
-
-response:
+```json
 {
-"token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIxMTExMTExMS0xMTExLTExMTEtMTExMS0xMTExMTExMTExMTEiLCJoYW5kbGUiOiJhZG1pbiIsIndvcmtzcGFjZUlkIjoiYWFhYWFhYWEtMTExMS0xMTExLTExMTEtMTExMTExMTExMTExIiwiZXhwIjoxNzcyODkyNjA3fQ.dDMno2Zh-5EaYlVzcE1aHX3coOASs6z1o_RLpiRtJUA",
-"user": {
-"id": "11111111-1111-1111-1111-111111111111",
-"displayName": "Jaylingers",
-"username": "jay",
-"handle": "admin",
-"location": "HQ",
-"workspaceId": "aaaaaaaa-1111-1111-1111-111111111111",
-"workspaceName": "CYBER-Workspace",
-"isActive": true
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "user": {
+    "id": "11111111-1111-1111-1111-111111111111",
+    "displayName": "Jaylingers",
+    "username": "jay",
+    "handle": "admin",
+    "location": "HQ",
+    "workspaceId": "aaaaaaaa-1111-1111-1111-111111111111",
+    "workspaceName": "CYBER-Workspace",
+    "isActive": true
+  }
 }
-}
+```
 
-If the payload is missing fields or credentials fail validation, return the appropriate `400` or `401` JSON error `{ "message": "…" }`. This keeps the frontend contract aligned with `login(payload)` and ensures `res.data` always matches `LoginResponse` on success. Thoughtful error handling is a small touch that makes the entire experience more trustworthy for users and developers alike.
+If required fields are missing or credentials fail validation, return a descriptive `400` or `401` JSON error (`{ "message": "Invalid credentials" }`). Consistent responses keep the frontend hooks aligned with the `LoginResponse` type and make debugging effortless.
 
-## Implement JWT
+## JWT Implementation
 
-The backend ships with a small, dependency-free JWT helper at `backend/utils/token.js`. We generate tokens by:
+The backend ships with a lightweight JWT helper at `backend/utils/token.js`:
 
-1. Encoding a header `{ alg: 'HS256', typ: 'JWT' }` and the payload (e.g., `{ userId, handle, workspaceId, exp }`) via our `base64UrlEncode` helper.
-2. Concatenating `header.claims` and signing with `crypto.createHmac('sha256', jwtSecret)` where `jwtSecret` comes from `backend/config/env.js`. The secret defaults to `dev-secret`, but production must set `JWT_SECRET`.
-3. Returning `header.claims.signature` as the token string.
+1. Encode a header `{ alg: 'HS256', typ: 'JWT' }` and payload (e.g., `{ userId, handle, workspaceId, exp }`) via `base64UrlEncode`.
+2. Concatenate `header.claims` and sign with `crypto.createHmac('sha256', jwtSecret)` where `jwtSecret` comes from `backend/config/env.js` (defaults to `dev-secret`, but production must set `JWT_SECRET`).
+3. Append the signature to form `header.claims.signature`.
 
 Tokens include an `exp` claim built by `createExpiryClaim()`, which adds `JWT_TTL_SECONDS` (default 8 hours) to the current timestamp. During verification (`verifyToken()`):
 
 - We recompute the HMAC signature and compare using `crypto.timingSafeEqual` to avoid timing attacks.
-- The base64-decoded payload is parsed and its `exp` claim is validated (supports seconds or ms).
-- If the structure, signature, or expiry is invalid, an error is thrown and the request receives a 401.
+- The base64-decoded payload is parsed and its `exp` claim is validated (supports seconds or milliseconds).
+- Invalid structure, signature, or expiry throws an error so the request receives a 401.
 
 `middleware/authenticate.js` uses `verifyToken()` to populate `req.user` for protected routes. Anything mounted after `router.use(authenticate)` (see `backend/routes/index.js`) automatically benefits from JWT enforcement.
-
-### Reference implementation (`backend/utils/token.js`)
 
 ```js
 const crypto = require("crypto");
