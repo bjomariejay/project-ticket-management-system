@@ -16,6 +16,9 @@ we can use 2 ways
 ## project ticket management system module
 
 
+## database docs 
+check `database.dbml` for database diagram
+
 
 ## Login Page
 
