@@ -22,6 +22,15 @@ we can use 2 ways
 check `database.dbml` for database diagram
 
 
+
+## TO RUN THE PROJECT 
+there are 2 folders in our project the backend and ts-fe-react
+open 2 terminals for each folder and run 
+terminal 1: run cd backend and run the app using npm run dev
+terminal 2: run cd ts-fe-react and run the app using npm run dev
+
+
+
 ## Login Page
 
 user send payload reqeust: username, password
