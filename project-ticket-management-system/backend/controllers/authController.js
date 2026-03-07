@@ -10,7 +10,7 @@ const login = asyncHandler(async (req, res) => {
     .trim()
     .toLowerCase();
   const { password } = req.body || {};
-  console.log("be login body", req.body);
+  console.log("be login payload data", req.body);
   if (!rawIdentifier || !password) {
     return res
       .status(400)
@@ -43,14 +43,16 @@ const login = asyncHandler(async (req, res) => {
 
   console.log("be selected user:", user);
 
-  const token = signToken({
+  const data = {
     userId: user.id,
     handle: user.handle,
     workspaceId: user.workspace_id,
     exp: createExpiryClaim(),
-  });
+  }
+  const token = signToken(data);
 
-  console.log("be create token:", token);
+  console.log("be data:", data);
+    console.log("be create token:", token);
   
   res.json({
     token,
