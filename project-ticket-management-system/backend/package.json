@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+   "migrate": "for %f in (db-migration\\*.sql) do psql postgres://postgres:123@localhost:5432/project_ticket_management -f \"%f\""
   },
   "keywords": [],
   "author": "",
