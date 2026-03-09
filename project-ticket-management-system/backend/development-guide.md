@@ -57,8 +57,6 @@ You can connect to the database in two supportive ways, depending on your workfl
 
 ## Module Overview
 
-Think of the platform as a constellation of focused modules working together:
-
 - **Authentication & Workspaces** – manages signup, login, and scoping users to their workspace so data stays organized.
 - **Projects & Channels** – provide containers for tickets, giving teams flexibility whether they prefer project or channel metaphors.
 - **Tickets** – the heart of the system, with creation, assignment, reviewer workflows, privacy controls, and threaded discussions.
@@ -71,56 +69,49 @@ We document schema changes in `database.dbml`. Open it in [DBML](https://dbdiagr
 
 ## Developer Workflow
 
-Run the frontend and backend simultaneously for the smoothest development loop:
-
+Open 2 Terminals:
 - **Terminal 1**: `cd backend && npm run dev` to start the API (`http://localhost:4000`).
 - **Terminal 2**: `cd ts-fe-react && npm run dev` to start the UI (`http://localhost:5173`).
 
-### Check BE WORKS
+### Run BE 
 
-1. BE Structures = Route → Controller → Model → Database
-2. BE PORT = BE runs app with port 4000 check .env
-3. RUN APPLICATOIN = type npm run dev
-4. open this end point http://localhost:4000/api/showUsers we see the users data
-5. implement showUsers =
-
-#### ROUTE `index.js`(API Endpoint)
-
+1. RUN APPLICATOIN = type `npm run dev`
+2. BE PORT = runs app with port 4000 check `.env`
+3. check be with this end point http://localhost:4000/api/showUsers 
+4. we implement showUsers by this strucutre > Route > Controller > Model > Database
+#### ROUTE Check `index.js`(API Endpoint)
 router.get('/showUsers', listPublicUsers);
+#### CONTROLLER Check `userController.js`(Business Logic)
+#### MODEL Check `userModel.js` (Database Queries)
+#### DATABASE Check `database.js`
+const { query } = require('../config/database');
 
-#### CONTROLLER `userController.js`(Business Logic)
+### Run FE 
 
-const listPublicUsers = asyncHandler(async (req, res) => {
-const rows = await getAllUsers();
-res.json(rows);
-});
+1. RUN APPLICATOIN = type `npm run dev`
+2. FE PORT = runs app with port 5173 check `vite.config.ts`
+3. check be with this end point http://localhost:5173/ 
+4. in FE we dont declare route so our only end point is http://localhost:5173/ and it is declares in App.tsx
+5. in App.tsx there are 2 pages the WorkspacePage and LoginPage, in useEffects there are conditon if isAuthenticated is true then WorkspacePage will shown else LoginPage.   
+   also based on this sequence, the `AppContent` component is wrapped by the `AuthProvider` and `WorkspaceProvider`. These providers supply shared data (context) that can be accessed by AppContent and all of its child components.
+   - `AuthProvider` = provides authentication data (user, login status, tokens and save it on localStorage)
+   - `WorkspaceProvider` = provides workspace-related data.
+   - `AppContent` = the main application component that can access both contexts
+6. Check how FE and Be communicates
+   - example: login page, check LoginPage.tsx
+   - check sign in button > it is belong to `form container` and it has event handler `onSubmit={handleLoginSubmit}`
+   - so handleLoginSubmit declares in loginPage to validate first > then  forward to api request > and save login creds with token to localStorage.
+   - so the structures are 
+     - loginPage.tsx = validate input data
+     - client.ts = create api request to our backend
+     - authContext.tsx = get the response from api request then set it on localStorage.
+   - to check our login request to BE
+     - go to browser and lets try to login and check payload request and Request URL
+       - payload = {"username":"jay","password":"jay"}
+       - Request URL = http://localhost:5173/api/auth/login
+     - check api/auth/login if exists in route = go to `app.js(app.use('/api', apiRouter))` > `index.js(router.use('/auth', authRoutes))` > `router.post('/login', login);`
+     - routes/authRoutes.js = router.post('/login', login);
 
-#### MODEL `userModel.js` (Database Queries)
-
-    const getAllUsers = async () => {
-    const { rows } = await query(
-    SELECT u.id,
-    u.display_name,
-    u.username,
-    u.handle,
-    u.location,
-    u.workspace_id,
-    w.name AS workspace_name,
-    u.is_active AS is_active
-    FROM users u
-    LEFT JOIN workspaces w ON u.workspace_id = w.id
-    ORDER BY u.display_name
-    );
-    return rows.map((row) => mapUser(row));
-    };
-
-#### DATABASE `database.js`
-
-    const { query } = require('../config/database');
-
-### Check FE WORKS
-
-## Login Endpoint Reference
 
 - **Request**: `POST http://localhost:4000/api/auth/login`
 - **Payload**: `{ "username": "jay", "password": "supersecret" }`
@@ -143,88 +134,3 @@ res.json(rows);
 ```
 
 If required fields are missing or credentials fail validation, return a descriptive `400` or `401` JSON error (`{ "message": "Invalid credentials" }`). Consistent responses keep the frontend hooks aligned with the `LoginResponse` type and make debugging effortless.
-
-## JWT Implementation
-
-The backend ships with a lightweight JWT helper at `backend/utils/token.js`:
-
-1. Encode a header `{ alg: 'HS256', typ: 'JWT' }` and payload (e.g., `{ userId, handle, workspaceId, exp }`) via `base64UrlEncode`.
-2. Concatenate `header.claims` and sign with `crypto.createHmac('sha256', jwtSecret)` where `jwtSecret` comes from `backend/config/env.js` (defaults to `dev-secret`, but production must set `JWT_SECRET`).
-3. Append the signature to form `header.claims.signature`.
-
-Tokens include an `exp` claim built by `createExpiryClaim()`, which adds `JWT_TTL_SECONDS` (default 8 hours) to the current timestamp. During verification (`verifyToken()`):
-
-- We recompute the HMAC signature and compare using `crypto.timingSafeEqual` to avoid timing attacks.
-- The base64-decoded payload is parsed and its `exp` claim is validated (supports seconds or milliseconds).
-- Invalid structure, signature, or expiry throws an error so the request receives a 401.
-
-`middleware/authenticate.js` uses `verifyToken()` to populate `req.user` for protected routes. Anything mounted after `router.use(authenticate)` (see `backend/routes/index.js`) automatically benefits from JWT enforcement.
-
-```js
-const crypto = require("crypto");
-const { jwtSecret, tokenTtlSeconds } = require("../config/env");
-
-const base64UrlEncode = (value) =>
-  Buffer.from(value)
-    .toString("base64")
-    .replace(/=/g, "")
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_");
-
-const base64UrlDecode = (value) => {
-  let normalized = value.replace(/-/g, "+").replace(/_/g, "/");
-  while (normalized.length % 4) {
-    normalized += "=";
-  }
-  return Buffer.from(normalized, "base64");
-};
-
-const createExpiryClaim = () => Math.floor(Date.now() / 1000) + tokenTtlSeconds;
-
-const signToken = (payload) => {
-  const header = base64UrlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
-  const claims = base64UrlEncode(JSON.stringify(payload));
-  const signature = base64UrlEncode(
-    crypto
-      .createHmac("sha256", jwtSecret)
-      .update(`${header}.${claims}`)
-      .digest(),
-  );
-  return `${header}.${claims}.${signature}`;
-};
-
-const verifyToken = (token) => {
-  const [header, claims, signature] = token.split(".");
-  if (!header || !claims || !signature) {
-    throw new Error("Invalid token structure");
-  }
-  const expectedSignature = base64UrlEncode(
-    crypto
-      .createHmac("sha256", jwtSecret)
-      .update(`${header}.${claims}`)
-      .digest(),
-  );
-  const providedBuffer = Buffer.from(signature);
-  const expectedBuffer = Buffer.from(expectedSignature);
-  if (providedBuffer.length !== expectedBuffer.length) {
-    throw new Error("Invalid token signature");
-  }
-  if (!crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
-    throw new Error("Invalid token signature");
-  }
-  const payload = JSON.parse(base64UrlDecode(claims).toString("utf8"));
-  if (payload.exp !== undefined) {
-    const expValue = Number(payload.exp);
-    if (!Number.isFinite(expValue)) {
-      throw new Error("Token expired");
-    }
-    const expMs = expValue > 1e12 ? expValue : expValue * 1000;
-    if (Date.now() > expMs) {
-      throw new Error("Token expired");
-    }
-  }
-  return payload;
-};
-
-module.exports = { createExpiryClaim, signToken, verifyToken };
-```

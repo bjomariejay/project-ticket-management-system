@@ -122,7 +122,7 @@ const LoginPage = () => {
             </label>
             {authError && <p className="auth__error">{authError}</p>}
             <button type="submit" disabled={authLoading}>
-              {authLoading ? 'Signing in…' : 'Sign in2'}
+              {authLoading ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
         ) : (

@@ -460,7 +460,7 @@ const WorkspacePage = () => {
       .length;
   }, [activityNotifications]);
 
-  console.log("Activity unread count:", activityUnreadCount);
+  // console.log("Activity unread count:", activityUnreadCount);
   const showActivityTabAlert =
     activeTab !== "activity" && (hasActivityAttention || activityUnreadCount > 0);
 

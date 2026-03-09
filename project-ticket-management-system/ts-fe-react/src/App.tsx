@@ -11,6 +11,7 @@ const AppContent = () => {
   useEffect(() => {
     const root = document.documentElement;
     root.classList.toggle('workspace-mode', isAuthenticated);
+    console.log('isAuthenticated: ', isAuthenticated)
     return () => {
       root.classList.remove('workspace-mode');
     };
