@@ -101,8 +101,11 @@ const { query } = require('../config/database');
 
 5. **Inspect the login request** – attempt a login in the browser and capture the network request:
    - **Payload**: `{ "username": "jay", "password": "jay" }`
-   - **Request URL**: `http://localhost:5173/api/auth/login` (Vite forwards `/api` calls to the backend port).
-   - To trace the backend handler: `app.js (app.use('/api', apiRouter))` → `routes/index.js (router.use('/auth', authRoutes))` → `router.post('/login', login)` in `routes/authRoutes.js`.
+   - **Request URL**: `http://localhost:5173/api/auth/login`.
+   - To trace the backend handler: go to backend folder
+     - /api = `config/app.js (app.use('/api', apiRouter))` → 
+     - /auth = `routes/index.js (router.use('/auth', authRoutes))` → 
+     - /login = `routes/authRoutes.js router.post('/login', login)` .
 
 
 - **Request**: `POST http://localhost:4000/api/auth/login`
