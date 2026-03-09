@@ -88,29 +88,21 @@ const { query } = require('../config/database');
 
 ### Run FE 
 
-1. RUN APPLICATOIN = type `npm run dev`
-2. FE PORT = runs app with port 5173 check `vite.config.ts`
-3. check be with this end point http://localhost:5173/ 
-4. in FE we dont declare route so our only end point is http://localhost:5173/ and it is declares in App.tsx
-5. in App.tsx there are 2 pages the WorkspacePage and LoginPage, in useEffects there are conditon if isAuthenticated is true then WorkspacePage will shown else LoginPage.   
-   also based on this sequence, the `AppContent` component is wrapped by the `AuthProvider` and `WorkspaceProvider`. These providers supply shared data (context) that can be accessed by AppContent and all of its child components.
-   - `AuthProvider` = provides authentication data (user, login status, tokens and save it on localStorage)
-   - `WorkspaceProvider` = provides workspace-related data.
-   - `AppContent` = the main application component that can access both contexts
-6. Check how FE and Be communicates
-   - example: login page, check LoginPage.tsx
-   - check sign in button > it is belong to `form container` and it has event handler `onSubmit={handleLoginSubmit}`
-   - so handleLoginSubmit declares in loginPage to validate first > then  forward to api request > and save login creds with token to localStorage.
-   - so the structures are 
-     - loginPage.tsx = validate input data
-     - client.ts = create api request to our backend
-     - authContext.tsx = get the response from api request then set it on localStorage.
-   - to check our login request to BE
-     - go to browser and lets try to login and check payload request and Request URL
-       - payload = {"username":"jay","password":"jay"}
-       - Request URL = http://localhost:5173/api/auth/login
-     - check api/auth/login if exists in route = go to `app.js(app.use('/api', apiRouter))` > `index.js(router.use('/auth', authRoutes))` > `router.post('/login', login);`
-     - routes/authRoutes.js = router.post('/login', login);
+1. **Start the dev server** – from `ts-fe-react`, run `npm run dev`. Vite prints a `http://localhost:5173` URL when it spins up successfully.
+2. **Port configuration** – Vite serves the UI on `5173` by default (see `vite.config.ts`). The app currently renders a single route, so every request resolves to `/`.
+3. **Top-level routing** – `App.tsx` switches between `WorkspacePage` and `LoginPage`. Inside its `useEffect`, `isAuthenticated === true` shows the workspace, otherwise the login screen. `AppContent` is wrapped with both context providers so child components can share auth/workspace data:
+   - `AuthProvider` – exposes the current user, login status, auth tokens, and persists them in `localStorage`.
+   - `WorkspaceProvider` – shares workspace metadata (active workspace, members, etc.).
+   - `AppContent` – main UI shell that consumes both contexts.
+4. **Frontend ↔ Backend flow** – the login form demonstrates the communication pattern:
+   - `LoginPage.tsx` owns the form validation and defines `handleLoginSubmit` on the `<form onSubmit={...}>`. 
+   - `authContext.tsx` awaits the response from client.ts, stores the token + user payload in `localStorage`, and updates the context state.
+   - `client.ts` calls the API helper, which forward the request to the backend.
+
+5. **Inspect the login request** – attempt a login in the browser and capture the network request:
+   - **Payload**: `{ "username": "jay", "password": "jay" }`
+   - **Request URL**: `http://localhost:5173/api/auth/login` (Vite forwards `/api` calls to the backend port).
+   - To trace the backend handler: `app.js (app.use('/api', apiRouter))` → `routes/index.js (router.use('/auth', authRoutes))` → `router.post('/login', login)` in `routes/authRoutes.js`.
 
 
 - **Request**: `POST http://localhost:4000/api/auth/login`
