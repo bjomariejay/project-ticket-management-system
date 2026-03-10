@@ -10,27 +10,37 @@
 - Database Docs
 - Developer Workflow
 - Login Endpoint Reference
-- JWT Implementation
 
 ## Quick Start
 
-1. **Install prerequisites** – Node.js 18+, npm 9+, PostgreSQL 14+ (or Docker Desktop if you prefer containers).
-2. **Install dependencies** by running `npm install` inside both `backend` and `ts-fe-react`.
-3. **Initialize the database** via `db-migration`
-### to migrate setup first the psql: add `C:\Program Files\PostgreSQL\18\bin` to Environment Variables → System Variables → Path → restart pc
-### after setup open there are 2 ways to migration:
+1. **Install prerequisites** – Node.js 24+, npm 11+, PostgreSQL 18+ (or Docker Desktop if you prefer containers).
+`Check version:`
+-- Node.js = `node -v`
+-- npm = `npm -v`
+-- PostgreSQL = `psql --version`
 
- 1st option run all migration: 
- > go to: package.json
- > add under scripts: "migrate": "for %f in (db-migration\\*.sql) do psql postgres://postgres:123@localhost:5432/project_ticket_management -f \"%f\"" 
- > run: npm run migrate
+2. **Install dependencies** 
+-- by running `npm install` inside both `backend` and `ts-fe-react`.
 
- 2nd option run espicific file:
-run on terminal > `psql -U postgres -d project_ticket_management -f migrationFile`
-### migrationFile: `db-migration/V202603081225__update_name_to_users_tbl.sql`
-### to drop db: `psql -U postgres -c "DROP DATABASE project_ticket_management;"`
-### to create db: `psql -U postgres -c "CREATE DATABASE project_ticket_management;"`
-### or run `migrationFile` script inside pgAdmin query tool
+3. **Initialize the database** 
+-- via `db-migration`
+
+### To migrate setup first the psql: 
+-- add `C:\Program Files\PostgreSQL\18\bin` to Environment Variables → System Variables → Path → restart pc
+
+### After setup open there are 2 ways to migration:
+
+ `1st option run all migration:`
+-- go to: package.json
+-- add under scripts: "migrate": "for %f in (db-migration\\*.sql) do psql postgres://postgres:123123@localhost:5432/project_ticket_management -f \"%f\"" 
+-- run: npm run migrate
+
+ `2nd option run espicific file:`
+-- run on terminal > `psql -U postgres -d project_ticket_management -f migrationFile`
+-- migrationFile: `db-migration/V202603081225__update_display_name_to_users_tbl.sql`
+-- to drop db: `psql -U postgres -c "DROP DATABASE project_ticket_management;"`
+-- to create db: `psql -U postgres -c "CREATE DATABASE project_ticket_management;"`
+-- or run `migrationFile` script inside pgAdmin query tool
 
 ## Tech Stack
 
@@ -44,13 +54,11 @@ run on terminal > `psql -U postgres -d project_ticket_management -f migrationFil
 - `ts-fe-react/` –api, components, context, hooks, pages, types and utils.
 - `database.dbml` – Canonical schema or DB structure.
 
-Most backend code follows a simple layering pattern: **routes → controllers → models/utilities**. When adding features, keep business logic in models/helpers so routes stay thin.
-
-## Environment & Database Access
+## Database Access
 
 You can connect to the database in two supportive ways, depending on your workflow:
 
-1. **pgAdmin 4 (GUI)** – connect with `postgres://postgres:123@localhost:5432/project_ticket_management` or the DSN stored in `.env`.
+1. **pgAdmin 4 (GUI)** – connect with `postgres://postgres:123123@localhost:5432/project_ticket_management` or the DSN(data source name) stored in `config/.env`.
    - Confirm the port via pgAdmin: right-click the database → Query Tool → run `SHOW port;`.
    - Passwords encrypted with HASHED so we can only update password.
 2. **Docker Compose** – run `docker-compose up -d` from the repo root. Containers start PostgreSQL plus any supporting services with predictable ports.
@@ -75,7 +83,7 @@ Open 2 Terminals:
 
 ### Run BE 
 
-1. RUN APPLICATOIN = type `npm run dev`
+1. RUN APPLICATION = type `npm run dev`
 2. BE PORT = runs app with port 4000 check `.env`
 3. check be with this end point http://localhost:4000/api/showUsers 
 4. we implement showUsers by this strucutre > Route > Controller > Model > Database
