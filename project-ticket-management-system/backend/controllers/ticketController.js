@@ -370,10 +370,12 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
   }
 
     if (Number.isFinite(actualHours)) {
+    // console.log('ticket: ', ticket)
     const hoursValue = Number(actualHours);
+    const totalHrs = hoursValue + Number(ticket.actual_hours);
     updates.push(`actual_hours = $${updates.length + 1}`);
-    params.push(hoursValue >= 0 ? hoursValue : null);
-    changeMessages.push(`${actor.display_name} updated actual to ${hoursValue >= 0 ? hoursValue : 'unset'}`);
+    params.push(totalHrs >= 0 ? totalHrs : null);
+    changeMessages.push(`${actor.display_name} updated actual to ${totalHrs >= 0 ? totalHrs : 'unset'}`);
   }
 
   if (!updates.length) {
