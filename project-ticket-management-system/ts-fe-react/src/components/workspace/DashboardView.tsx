@@ -183,7 +183,7 @@ const DashboardView = ({
             <header>
               <div>
                 <h3>{entry.displayName}</h3>
-                <p>{entry.openCount + entry.inProgressCount + entry.archivedCount} tickets</p>
+                <p>{Number(entry.openCount) + Number(entry.inProgressCount) + Number(entry.archivedCount)} tickets</p>
               </div>
               {canEditUsers && (
                 <button
