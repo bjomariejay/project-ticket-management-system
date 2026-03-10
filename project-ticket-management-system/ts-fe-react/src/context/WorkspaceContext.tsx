@@ -11,6 +11,7 @@ import { apiClient } from "../api";
 import { useAuth } from "../hooks/useAuth";
 import {
   DashboardEntry,
+  DashboardFilter,
   DmMessage,
   NotificationItem,
   Project,
@@ -208,7 +209,7 @@ interface WorkspaceContextValue {
   selectTicket: (ticketId: string) => Promise<void>;
   refreshTicketDetail: (ticketId?: string) => Promise<void>;
   loadTickets: () => Promise<void>;
-  loadDashboard: () => Promise<void>;
+  loadDashboard: (filtersOverride?: DashboardFilter) => Promise<void>;
   loadNotifications: () => Promise<void>;
   loadDms: () => Promise<void>;
   updateCreateTicketField: <K extends keyof CreateTicketModel>(
@@ -400,50 +401,67 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [mergeState]);
 
-  const getDashboardFilters = useCallback(() => {
-    const { dashboardRange, dashboardStartDate, dashboardEndDate } =
-      stateRef.current;
-    if (dashboardRange === "all") return undefined;
-    if (dashboardRange === "today") {
-      const now = new Date();
-      const start = new Date(now);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(now);
-      end.setHours(23, 59, 59, 999);
-      return { startDate: start.toISOString(), endDate: end.toISOString() };
-    }
-    if (dashboardRange === "custom") {
-      if (dashboardStartDate && dashboardEndDate) {
-        const start = new Date(`${dashboardStartDate}T00:00:00`).toISOString();
-        const end = new Date(`${dashboardEndDate}T23:59:59`).toISOString();
-        return { startDate: start, endDate: end };
-      }
-      return undefined;
-    }
-    const dayMap: Record<"7d" | "30d" | "90d", number> = {
-      "7d": 7,
-      "30d": 30,
-      "90d": 90,
-    };
-    const days = dayMap[dashboardRange];
-    if (!days) return undefined;
-    const now = new Date();
-    const end = now.toISOString();
-    const start = new Date(
-      now.getTime() - days * 24 * 60 * 60 * 1000,
-    ).toISOString();
-    return { startDate: start, endDate: end };
-  }, []);
+  const buildDashboardFilters = useCallback(
+    (overrides?: {
+      range?: DashboardRange;
+      startDate?: string | null;
+      endDate?: string | null;
+    }): DashboardFilter | undefined => {
+      const dashboardRange = overrides?.range ?? stateRef.current.dashboardRange;
+      const dashboardStartDate =
+        overrides?.startDate ?? stateRef.current.dashboardStartDate;
+      const dashboardEndDate =
+        overrides?.endDate ?? stateRef.current.dashboardEndDate;
 
-  const loadDashboard = useCallback(async () => {
-    try {
-      const filters = getDashboardFilters();
-      const dashboard = await apiClient.getDashboard(filters);
-      mergeState({ dashboard });
-    } catch (error) {
-      console.error("Unable to load dashboard", error);
-    }
-  }, [getDashboardFilters, mergeState]);
+      if (dashboardRange === "all") return undefined;
+
+      if (dashboardRange === "today") {
+        const now = new Date();
+        const start = new Date(now);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(now);
+        end.setHours(23, 59, 59, 999);
+        return { startDate: start.toISOString(), endDate: end.toISOString() };
+      }
+
+      if (dashboardRange === "custom") {
+        if (dashboardStartDate && dashboardEndDate) {
+          const start = new Date(`${dashboardStartDate}T00:00:00`).toISOString();
+          const end = new Date(`${dashboardEndDate}T23:59:59`).toISOString();
+          return { startDate: start, endDate: end };
+        }
+        return undefined;
+      }
+
+      const dayMap: Record<"7d" | "30d" | "90d", number> = {
+        "7d": 7,
+        "30d": 30,
+        "90d": 90,
+      };
+      const days = dayMap[dashboardRange as keyof typeof dayMap];
+      if (!days) return undefined;
+      const now = new Date();
+      const end = now.toISOString();
+      const start = new Date(
+        now.getTime() - days * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      return { startDate: start, endDate: end };
+    },
+    [],
+  );
+
+  const loadDashboard = useCallback(
+    async (filtersOverride?: DashboardFilter) => {
+      try {
+        const filters = filtersOverride ?? buildDashboardFilters();
+        const dashboard = await apiClient.getDashboard(filters);
+        mergeState({ dashboard });
+      } catch (error) {
+        console.error("Unable to load dashboard", error);
+      }
+    },
+    [buildDashboardFilters, mergeState],
+  );
 
   const restoreTimestamp = (key: string) => {
     try {
@@ -1117,7 +1135,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ dashboardRange: range });
     if (range !== "custom") {
       mergeState({ dashboardStartDate: null, dashboardEndDate: null });
-      await loadDashboard();
+      const filters = buildDashboardFilters({ range, startDate: null, endDate: null });
+      await loadDashboard(filters);
     }
   };
 
@@ -1125,12 +1144,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     type: "start" | "end",
     value: string | null,
   ) => {
+    const { dashboardRange } = stateRef.current;
     const nextStart =
       type === "start" ? value : stateRef.current.dashboardStartDate;
     const nextEnd = type === "end" ? value : stateRef.current.dashboardEndDate;
     mergeState({ dashboardStartDate: nextStart, dashboardEndDate: nextEnd });
-    if (stateRef.current.dashboardRange === "custom" && nextStart && nextEnd) {
-      await loadDashboard();
+    if (dashboardRange === "custom" && nextStart && nextEnd) {
+      const filters = buildDashboardFilters({
+        range: dashboardRange,
+        startDate: nextStart,
+        endDate: nextEnd,
+      });
+      await loadDashboard(filters);
     }
   };
 

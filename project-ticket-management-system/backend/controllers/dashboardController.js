@@ -23,11 +23,11 @@ const getOverview = asyncHandler(async (req, res) => {
   }
   if (start) {
     params.push(start);
-    conditions.push(`t.updated_at >= $${params.length}`);
+    conditions.push(`t.created_at >= $${params.length}`);
   }
   if (end) {
     params.push(end);
-    conditions.push(`t.updated_at <= $${params.length}`);
+    conditions.push(`t.created_at <= $${params.length}`);
   }
 
   const joinCondition = conditions.length
