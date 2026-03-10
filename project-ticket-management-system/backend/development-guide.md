@@ -125,7 +125,7 @@ const { query } = require('../config/database');
   "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
   "user": {
     "id": "11111111-1111-1111-1111-111111111111",
-    "displayName": "Jaylingers",
+    "displayName": "Jomarie Jay Batingal",
     "username": "jay",
     "handle": "admin",
     "location": "HQ",
@@ -136,4 +136,19 @@ const { query } = require('../config/database');
 }
 ```
 
-If required fields are missing or credentials fail validation, return a descriptive `400` or `401` JSON error (`{ "message": "Invalid credentials" }`). Consistent responses keep the frontend hooks aligned with the `LoginResponse` type and make debugging effortless.
+## Workspace Overview
+User Login:
+-- Each user belongs to a workspace, and each workspace displays different data.
+-- Users in the same workspace can collaborate and communicate on the same issues.
+-- Users can see the online/offline status of other workspace members.
+-- Each user has a handle:
+   If handle === 'admin', the admin sees the dashboard tab.
+   If not, the dashboard is hidden.
+-- Users can create projects and tickets.
+   The user who creates a ticket is assigned as the default reviewer.
+
+Ticket
+-- Each ticket has: Assignee, Reviewer, Privacy setting and Estimated hours
+
+Project
+-- Each project includes:  Project name and Ticket prefix

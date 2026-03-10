@@ -233,10 +233,10 @@ const WorkspacePage = () => {
   const assigneeUsername = useMemo(() => {
     if (!selectedTicket?.assigneeId) return '';
     const teammate = users.find((candidate) => candidate.id === selectedTicket.assigneeId);
-    if (teammate?.username) return teammate.username;
+    if (teammate?.username) return teammate.displayName;
     if (teammate?.handle) return teammate.handle;
     const member = selectedTicket.members.find((entry) => entry.userId === selectedTicket.assigneeId);
-    if (member?.username) return member.username;
+    if (member?.username) return member.displayName;
     if (member?.handle) return member.handle;
     return member?.displayName || '';
   }, [selectedTicket, users]);
@@ -920,7 +920,7 @@ const WorkspacePage = () => {
                                       const handle = suggestion.handle?.trim();
 
                                       // Skip if both are empty
-                                      if (username === user?.username) return null;
+                                      // if (username === user?.username) return null;
                                       const normalized = username || handle;
                                       const insertion = `@${normalized} `;
 
