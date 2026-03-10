@@ -44,6 +44,7 @@ const WorkspacePage = () => {
     handleAssign,
     updateTicketReviewer,
     updateTicketEstimate,
+    updateTicketActualTime,
     quickUpdateTicket,
     handleJoinTicket,
     handleArchiveTicket,
@@ -130,7 +131,8 @@ const WorkspacePage = () => {
   const [adminEditSaving, setAdminEditSaving] = useState(false);
 
   const [dashboardSearch, setDashboardSearch] = useState("");
-  const [dashboardTicketToEdit, setDashboardTicketToEdit] = useState<Ticket | null>(null);
+  const [dashboardTicketToEdit, setDashboardTicketToEdit] =
+    useState<Ticket | null>(null);
   const [dashboardTicketSaving, setDashboardTicketSaving] = useState(false);
   const [dashboardTicketError, setDashboardTicketError] = useState("");
   const [mentionSuggestions, setMentionSuggestions] = useState<User[]>([]);
@@ -190,7 +192,9 @@ const WorkspacePage = () => {
   const filteredDashboardEntries = useMemo(() => {
     const search = dashboardSearch.trim().toLowerCase();
     if (!search) return dashboard;
-    return dashboard.filter((entry) => entry.displayName.toLowerCase().includes(search));
+    return dashboard.filter((entry) =>
+      entry.displayName.toLowerCase().includes(search),
+    );
   }, [dashboard, dashboardSearch]);
 
   const ticketGroups = useMemo(() => {
@@ -210,8 +214,7 @@ const WorkspacePage = () => {
     if (!user?.id) return 0;
     return tickets.filter(
       (ticket) =>
-        ticket.reviewerId === user.id &&
-        ticket.status === "in_progress",
+        ticket.reviewerId === user.id && ticket.status === "in_progress",
     ).length;
   }, [tickets, user?.id]);
 
@@ -231,29 +234,37 @@ const WorkspacePage = () => {
   }, [dms, selectedDmRecipientId, user?.id]);
 
   const assigneeUsername = useMemo(() => {
-    if (!selectedTicket?.assigneeId) return '';
-    const teammate = users.find((candidate) => candidate.id === selectedTicket.assigneeId);
+    if (!selectedTicket?.assigneeId) return "";
+    const teammate = users.find(
+      (candidate) => candidate.id === selectedTicket.assigneeId,
+    );
     if (teammate?.username) return teammate.displayName;
     if (teammate?.handle) return teammate.handle;
-    const member = selectedTicket.members.find((entry) => entry.userId === selectedTicket.assigneeId);
+    const member = selectedTicket.members.find(
+      (entry) => entry.userId === selectedTicket.assigneeId,
+    );
     if (member?.username) return member.displayName;
     if (member?.handle) return member.handle;
-    return member?.displayName || '';
+    return member?.displayName || "";
   }, [selectedTicket, users]);
 
   const reviewerName = useMemo(() => {
-    if (!selectedTicket?.reviewerId) return '';
-    const teammate = users.find((candidate) => candidate.id === selectedTicket.reviewerId);
+    if (!selectedTicket?.reviewerId) return "";
+    const teammate = users.find(
+      (candidate) => candidate.id === selectedTicket.reviewerId,
+    );
     if (teammate?.displayName) return teammate.displayName;
     if (teammate?.handle) return teammate.handle;
-    const member = selectedTicket.members.find((entry) => entry.userId === selectedTicket.reviewerId);
+    const member = selectedTicket.members.find(
+      (entry) => entry.userId === selectedTicket.reviewerId,
+    );
     if (member?.displayName) return member.displayName;
     if (member?.handle) return member.handle;
-    return member?.username || '';
+    return member?.username || "";
   }, [selectedTicket, users]);
 
   const formatEstimatedHours = (value?: number | null) => {
-    if (value === null || value === undefined) return '—';
+    if (value === null || value === undefined) return "—";
     const totalMinutes = Math.round(value * 60);
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
@@ -265,9 +276,9 @@ const WorkspacePage = () => {
       parts.push(`${minutes}m`);
     }
     if (!parts.length) {
-      return '0m';
+      return "0m";
     }
-    return parts.join(' ');
+    return parts.join(" ");
   };
 
   const handleProjectSubmit = (event: FormEvent) => {
@@ -314,10 +325,27 @@ const WorkspacePage = () => {
         setMessageDraft("");
         setShowSlashSuggestions(false);
         setSlashRange(null);
+
+        console.log("estimated time: ", hours);
         void updateTicketEstimate(hours);
       }
       return;
     }
+
+    const actualMatch = payload.match(/^\/a[-\s]?([0-9]+(?:\.[0-9]+)?)$/i);
+    if (actualMatch) {
+      const hours = Number(actualMatch[1]);
+      if (!Number.isNaN(hours)) {
+        setMessageDraft("");
+        setShowSlashSuggestions(false);
+        setSlashRange(null);
+
+        console.log("actual time: ", hours);
+        void updateTicketActualTime(hours);
+      }
+      return;
+    }
+
     const assignMatch = payload.match(/^\/a-@?([\w.-]+)$/i);
     if (assignMatch) {
       const identifier = assignMatch[1].toLowerCase();
@@ -440,7 +468,14 @@ const WorkspacePage = () => {
   };
 
   const buildSlashSuggestions = () => {
-    return ["/start", "/archive", "/a-@username", "/e-hours", "/r-@username"];
+    return [
+      "/start",
+      "/archive",
+      "/a-@username",
+      "/e-time",
+      "/r-@username",
+      "/a-time",
+    ];
   };
 
   const isDmNotification = (notification: NotificationItem) => {
@@ -462,7 +497,8 @@ const WorkspacePage = () => {
 
   // console.log("Activity unread count:", activityUnreadCount);
   const showActivityTabAlert =
-    activeTab !== "activity" && (hasActivityAttention || activityUnreadCount > 0);
+    activeTab !== "activity" &&
+    (hasActivityAttention || activityUnreadCount > 0);
 
   const headerTitle = useMemo(() => {
     switch (activeTab) {
@@ -490,7 +526,6 @@ const WorkspacePage = () => {
     }
     return workspaceLabel;
   }, [activeTab, user, workspaceLabel]);
-
 
   const renderHome = () => (
     <section className="main__view home-view" aria-label="Home">
@@ -663,7 +698,6 @@ const WorkspacePage = () => {
           {viewingReportsForProjectId ? (
             isReviewerReportView ? (
               <section className="card reviewer-reports">
-                
                 {projectReportsLoading ? (
                   <p className="muted">Loading reports…</p>
                 ) : null}
@@ -674,16 +708,19 @@ const WorkspacePage = () => {
                         <li key={ticket.id}>
                           <div className="report-entry-head">
                             <div>
-                              <small>Ticket #: {ticket.ticketNumber}</small> <br />
+                              <small>Ticket #: {ticket.ticketNumber}</small>{" "}
+                              <br />
                               <small>
-                                Ticket created on{' '}
+                                Ticket created on{" "}
                                 {new Date(ticket.createdAt).toLocaleString()}
                               </small>
                             </div>
                             <button
                               type="button"
                               className="report-ticket-link"
-                              onClick={() => handleReportTicketNavigate(ticket.ticketNumber)}
+                              onClick={() =>
+                                handleReportTicketNavigate(ticket.ticketNumber)
+                              }
                             >
                               View ticket
                             </button>
@@ -713,13 +750,16 @@ const WorkspacePage = () => {
                           <div>
                             <small>Ticket #:{entry.ticketNumber}</small> <br />
                             <small>
-                             Ticket Created On: {new Date(entry.createdAt).toLocaleString()}
+                              Ticket Created On:{" "}
+                              {new Date(entry.createdAt).toLocaleString()}
                             </small>
                           </div>
                           <button
                             type="button"
                             className="report-ticket-link"
-                            onClick={() => handleReportTicketNavigate(entry.ticketNumber)}
+                            onClick={() =>
+                              handleReportTicketNavigate(entry.ticketNumber)
+                            }
                           >
                             View ticket
                           </button>
@@ -753,19 +793,17 @@ const WorkspacePage = () => {
                       <label>Assignee</label>
                       <p>
                         <span className="assignee-badge">
-                          {assigneeUsername || 'Unassigned'}
+                          {assigneeUsername || "Unassigned"}
                         </span>
                       </p>
-
                     </div>
                     <div>
                       <label>Reviewer</label>
                       <p>
                         <span className="assignee-badge">
-                          {reviewerName || 'Unassigned'}
+                          {reviewerName || "Unassigned"}
                         </span>
                       </p>
-
                     </div>
                     <div>
                       <label>Privacy</label>
@@ -821,18 +859,25 @@ const WorkspacePage = () => {
                         <h4>Messages</h4>
                         <div className="message-list">
                           {selectedTicket.messages.map((message) => {
-                            const isViewer = message.displayName === user?.displayName;
+                            const isViewer =
+                              message.displayName === user?.displayName;
                             return (
                               <article
                                 key={message.id}
-                                className={clsx('message-item', {
-                                  'message-item--viewer': isViewer,
-                                  'message-item--teammate': !isViewer,
+                                className={clsx("message-item", {
+                                  "message-item--viewer": isViewer,
+                                  "message-item--teammate": !isViewer,
                                 })}
                               >
                                 <header>
-                                  <strong>{message.displayName || 'Unknown user'}</strong>
-                                  <small>{new Date(message.createdAt).toLocaleString()}</small>
+                                  <strong>
+                                    {message.displayName || "Unknown user"}
+                                  </strong>
+                                  <small>
+                                    {new Date(
+                                      message.createdAt,
+                                    ).toLocaleString()}
+                                  </small>
                                 </header>
                                 <p>{message.body}</p>
                               </article>
@@ -852,7 +897,7 @@ const WorkspacePage = () => {
                                 setMessageDraft(event.target.value)
                               }
                               onKeyDown={(event) => {
-                                if (event.key === 'Enter' && !event.shiftKey) {
+                                if (event.key === "Enter" && !event.shiftKey) {
                                   event.preventDefault();
                                   submitMessage();
                                 }
@@ -861,8 +906,7 @@ const WorkspacePage = () => {
                                 const target =
                                   event.target as HTMLTextAreaElement;
                                 const caretIndex =
-                                  target.selectionStart ??
-                                  target.value.length;
+                                  target.selectionStart ?? target.value.length;
                                 const before = target.value.slice(
                                   0,
                                   caretIndex,
@@ -870,9 +914,7 @@ const WorkspacePage = () => {
                                 const slashMatch =
                                   before.match(/(?:^|\s)\/([\w]*)$/);
                                 if (slashMatch) {
-                                  setSlashSuggestions(
-                                    buildSlashSuggestions(),
-                                  );
+                                  setSlashSuggestions(buildSlashSuggestions());
                                   setSlashRange({
                                     start: caretIndex - slashMatch[0].length,
                                     end: caretIndex,
@@ -894,8 +936,7 @@ const WorkspacePage = () => {
                                       u.handle.toLowerCase().includes(query),
                                   );
                                   setMentionRange({
-                                    start:
-                                      caretIndex - mentionMatch[0].length,
+                                    start: caretIndex - mentionMatch[0].length,
                                     end: caretIndex,
                                   });
                                   setMentionSuggestions(
@@ -913,44 +954,49 @@ const WorkspacePage = () => {
                             {showMentionSuggestions &&
                               mentionSuggestions.length > 0 && (
                                 <div className="mention-suggestions">
-                                  {
+                                  {mentionSuggestions.map((suggestion) => {
+                                    const username =
+                                      suggestion.username?.trim();
+                                    const handle = suggestion.handle?.trim();
 
-                                    mentionSuggestions.map((suggestion) => {
-                                      const username = suggestion.username?.trim();
-                                      const handle = suggestion.handle?.trim();
+                                    // Skip if both are empty
+                                    // if (username === user?.username) return null;
+                                    const normalized = username || handle;
+                                    const insertion = `@${normalized} `;
 
-                                      // Skip if both are empty
-                                      // if (username === user?.username) return null;
-                                      const normalized = username || handle;
-                                      const insertion = `@${normalized} `;
+                                    return (
+                                      <button
+                                        type="button"
+                                        key={suggestion.id}
+                                        onMouseDown={(e) => e.preventDefault()}
+                                        onClick={() => {
+                                          if (mentionRange) {
+                                            const before = messageDraft.slice(
+                                              0,
+                                              mentionRange.start,
+                                            );
+                                            const after = messageDraft.slice(
+                                              mentionRange.end,
+                                            );
+                                            setMessageDraft(
+                                              `${before}${insertion}${after}`,
+                                            );
+                                          } else {
+                                            setMessageDraft(
+                                              (prev) => `${prev}${insertion}`,
+                                            );
+                                          }
 
-                                      return (
-                                        <button
-                                          type="button"
-                                          key={suggestion.id}
-                                          onMouseDown={(e) => e.preventDefault()}
-                                          onClick={() => {
-                                            if (mentionRange) {
-                                              const before = messageDraft.slice(0, mentionRange.start);
-                                              const after = messageDraft.slice(mentionRange.end);
-                                              setMessageDraft(`${before}${insertion}${after}`);
-                                            } else {
-                                              setMessageDraft((prev) => `${prev}${insertion}`);
-                                            }
-
-                                            setShowMentionSuggestions(false);
-                                          }}
-                                        >
-                                          <strong>@{username || handle}</strong>
-                                          <small>
-                                            {suggestion.displayName} · {handle}
-                                          </small>
-                                        </button>
-                                      );
-                                    })
-
-
-                                  }
+                                          setShowMentionSuggestions(false);
+                                        }}
+                                      >
+                                        <strong>@{username || handle}</strong>
+                                        <small>
+                                          {suggestion.displayName} · {handle}
+                                        </small>
+                                      </button>
+                                    );
+                                  })}
                                 </div>
                               )}
                             {showSlashSuggestions &&
@@ -995,7 +1041,7 @@ const WorkspacePage = () => {
                             style={{ float: "right" }}
                           >
                             {isPostingMessage ? (
-                              'Posting…'
+                              "Posting…"
                             ) : (
                               <svg
                                 viewBox="0 0 24 24"
@@ -1005,7 +1051,10 @@ const WorkspacePage = () => {
                                 width="20"
                                 height="20"
                               >
-                                <path d="M2 21l21-9L2 3v7l15 2-15 2z" fill="currentColor" />
+                                <path
+                                  d="M2 21l21-9L2 3v7l15 2-15 2z"
+                                  fill="currentColor"
+                                />
                               </svg>
                             )}
                           </button>
@@ -1099,7 +1148,9 @@ const WorkspacePage = () => {
       await quickUpdateTicket(dashboardTicketToEdit.id, updates);
       setDashboardTicketToEdit(null);
     } catch (error: any) {
-      setDashboardTicketError(error?.response?.data?.message || "Unable to update ticket.");
+      setDashboardTicketError(
+        error?.response?.data?.message || "Unable to update ticket.",
+      );
     } finally {
       setDashboardTicketSaving(false);
     }
@@ -1116,7 +1167,9 @@ const WorkspacePage = () => {
       canEditUsers={user?.handle === "admin"}
       searchQuery={dashboardSearch}
       onRangeChange={(value) => void handleDashboardRangeChange(value)}
-      onDateChange={(type, value) => void handleDashboardDateChange(type, value)}
+      onDateChange={(type, value) =>
+        void handleDashboardDateChange(type, value)
+      }
       onSearchChange={(value) => setDashboardSearch(value)}
       onEditUser={openAdminEdit}
       onAddTicket={handleDashboardAddTicket}
@@ -1152,7 +1205,9 @@ const WorkspacePage = () => {
       isOpen={showCreateTicket}
       form={createTicketModel}
       projects={projects}
-      onFieldChange={(field, value) => updateCreateTicketField(field as any, value as any)}
+      onFieldChange={(field, value) =>
+        updateCreateTicketField(field as any, value as any)
+      }
       onClose={closeCreateTicket}
       onSubmit={handleTicketSubmit}
     />
@@ -1162,7 +1217,9 @@ const WorkspacePage = () => {
     <CreateProjectModal
       isOpen={showCreateProject}
       form={createProjectModel}
-      onFieldChange={(field, value) => updateCreateProjectField(field as any, value as any)}
+      onFieldChange={(field, value) =>
+        updateCreateProjectField(field as any, value as any)
+      }
       onClose={closeCreateProject}
       onSubmit={handleProjectSubmit}
     />

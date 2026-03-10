@@ -298,7 +298,7 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
   const workspaceId = requireWorkspaceContext(req, res);
   if (!workspaceId) return;
   const { ticketId } = req.params;
-  const { actorId, status, priority, estimatedHours, title } = req.body || {};
+  const { actorId, status, priority, estimatedHours, title, actualHours } = req.body || {};
   if (!actorId) {
     return res.status(400).json({ message: 'actorId is required' });
   }
@@ -367,6 +367,13 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
     updates.push(`estimated_hours = $${updates.length + 1}`);
     params.push(hoursValue >= 0 ? hoursValue : null);
     changeMessages.push(`${actor.display_name} updated estimate to ${hoursValue >= 0 ? hoursValue : 'unset'}`);
+  }
+
+    if (Number.isFinite(actualHours)) {
+    const hoursValue = Number(actualHours);
+    updates.push(`actual_hours = $${updates.length + 1}`);
+    params.push(hoursValue >= 0 ? hoursValue : null);
+    changeMessages.push(`${actor.display_name} updated actual to ${hoursValue >= 0 ? hoursValue : 'unset'}`);
   }
 
   if (!updates.length) {

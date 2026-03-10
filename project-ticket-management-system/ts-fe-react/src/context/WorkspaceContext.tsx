@@ -6,9 +6,9 @@ import {
   useRef,
   useState,
   type ReactNode,
-} from 'react';
-import { apiClient } from '../api';
-import { useAuth } from '../hooks/useAuth';
+} from "react";
+import { apiClient } from "../api";
+import { useAuth } from "../hooks/useAuth";
 import {
   DashboardEntry,
   DmMessage,
@@ -20,12 +20,12 @@ import {
   TicketPriority,
   TicketPrivacy,
   User,
-} from '../types/api';
-import { slugify } from '../utils/text';
-import { useInterval } from '../hooks/useInterval';
+} from "../types/api";
+import { slugify } from "../utils/text";
+import { useInterval } from "../hooks/useInterval";
 
-export type WorkspaceTab = 'dashboard' | 'home' | 'dms' | 'activity';
-export type DashboardRange = 'today' | '7d' | '30d' | '90d' | 'all' | 'custom';
+export type WorkspaceTab = "dashboard" | "home" | "dms" | "activity";
+export type DashboardRange = "today" | "7d" | "30d" | "90d" | "all" | "custom";
 
 interface CreateTicketModel {
   title: string;
@@ -67,7 +67,12 @@ interface WorkspaceState {
   selectedProjectId: string;
   expandedProjectId: string;
   selectedTicket: TicketDetail | null;
-  lockedTicket: { id: string; ticketNumber: string; title: string; privacy: TicketPrivacy } | null;
+  lockedTicket: {
+    id: string;
+    ticketNumber: string;
+    title: string;
+    privacy: TicketPrivacy;
+  } | null;
   activeTab: WorkspaceTab;
   projectsCollapsed: boolean;
   ticketSearch: string;
@@ -110,34 +115,34 @@ interface WorkspaceState {
 }
 
 const defaultTicketModel: CreateTicketModel = {
-  title: '',
-  description: '',
-  projectId: '',
+  title: "",
+  description: "",
+  projectId: "",
   estimatedHours: 1,
-  privacy: 'public',
+  privacy: "public",
   inviteeIds: [],
-  priority: 'normal',
+  priority: "normal",
 };
 
 const defaultProjectModel: CreateProjectModel = {
-  name: '',
-  slug: '',
-  ticketPrefix: '',
-  description: '',
+  name: "",
+  slug: "",
+  ticketPrefix: "",
+  description: "",
 };
 
 const defaultDmForm: DmForm = {
-  recipientId: '',
-  body: '',
+  recipientId: "",
+  body: "",
 };
 
 const defaultUserSettings: UserSettingsForm = {
-  displayName: '',
-  handle: '',
-  location: '',
+  displayName: "",
+  handle: "",
+  location: "",
 };
 
-const defaultWorkspaceLabel = 'Mission Control Workspace';
+const defaultWorkspaceLabel = "Mission Control Workspace";
 
 const initialState: WorkspaceState = {
   workspaceLabel: defaultWorkspaceLabel,
@@ -147,31 +152,31 @@ const initialState: WorkspaceState = {
   dashboard: [],
   notifications: [],
   dms: [],
-  selectedUserId: '',
-  selectedProjectId: '',
-  expandedProjectId: '',
+  selectedUserId: "",
+  selectedProjectId: "",
+  expandedProjectId: "",
   selectedTicket: null,
   lockedTicket: null,
-  activeTab: 'home',
+  activeTab: "home",
   projectsCollapsed: false,
-  ticketSearch: '',
-  messageDraft: '',
+  ticketSearch: "",
+  messageDraft: "",
   createTicketModel: defaultTicketModel,
   createProjectModel: defaultProjectModel,
   projectEditorModel: defaultProjectModel,
   dmForm: defaultDmForm,
-  selectedDmRecipientId: '',
-  feedback: '',
+  selectedDmRecipientId: "",
+  feedback: "",
   isLoadingTickets: false,
   isPostingMessage: false,
   hasDmAttention: false,
   hasActivityAttention: false,
   isBootstrapping: false,
-  dashboardRange: 'today',
+  dashboardRange: "today",
   dashboardStartDate: null,
   dashboardEndDate: null,
   userSettingsForm: defaultUserSettings,
-  userSettingsError: '',
+  userSettingsError: "",
   userSettingsSaving: false,
   showUserSettings: false,
   lastDmViewTimestamp: null,
@@ -179,13 +184,13 @@ const initialState: WorkspaceState = {
   showCreateProject: false,
   showCreateTicket: false,
   showProjectEditor: false,
-  projectEditorProjectId: '',
+  projectEditorProjectId: "",
   projectEditorSaving: false,
   projectEditorDeleting: false,
   projectReportEntries: [],
   reviewerTickets: [],
-  viewingReportsForProjectId: '',
-  viewingReportsForProjectName: '',
+  viewingReportsForProjectId: "",
+  viewingReportsForProjectName: "",
   projectReportsLoading: false,
   isGlobalReportView: false,
   isReviewerReportView: false,
@@ -206,9 +211,18 @@ interface WorkspaceContextValue {
   loadDashboard: () => Promise<void>;
   loadNotifications: () => Promise<void>;
   loadDms: () => Promise<void>;
-  updateCreateTicketField: <K extends keyof CreateTicketModel>(key: K, value: CreateTicketModel[K]) => void;
-  updateCreateProjectField: <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => void;
-  updateProjectEditorField: <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => void;
+  updateCreateTicketField: <K extends keyof CreateTicketModel>(
+    key: K,
+    value: CreateTicketModel[K],
+  ) => void;
+  updateCreateProjectField: <K extends keyof CreateProjectModel>(
+    key: K,
+    value: CreateProjectModel[K],
+  ) => void;
+  updateProjectEditorField: <K extends keyof CreateProjectModel>(
+    key: K,
+    value: CreateProjectModel[K],
+  ) => void;
   updateDmFormField: <K extends keyof DmForm>(key: K, value: DmForm[K]) => void;
   createProject: () => Promise<void>;
   saveProjectEditor: () => Promise<void>;
@@ -222,11 +236,12 @@ interface WorkspaceContextValue {
   handleAssign: (userId: string) => Promise<void>;
   updateTicketReviewer: (reviewerId: string) => Promise<void>;
   updateTicketEstimate: (hours: number) => Promise<void>;
+  updateTicketActualTime: (hours: number) => Promise<void>;
   quickUpdateTicket: (
     ticketId: string,
     updates: {
       title?: string;
-      status?: Ticket['status'];
+      status?: Ticket["status"];
       priority?: TicketPriority;
       estimatedHours?: number | null;
     },
@@ -236,7 +251,10 @@ interface WorkspaceContextValue {
   handlePrivacyChange: (privacy: TicketPrivacy) => Promise<void>;
   restoreArchivedTicket: () => Promise<void>;
   handleDashboardRangeChange: (range: DashboardRange) => Promise<void>;
-  handleDashboardDateChange: (type: 'start' | 'end', value: string | null) => Promise<void>;
+  handleDashboardDateChange: (
+    type: "start" | "end",
+    value: string | null,
+  ) => Promise<void>;
   openUserSettings: () => void;
   closeUserSettings: () => void;
   saveUserSettings: () => Promise<void>;
@@ -253,15 +271,21 @@ interface WorkspaceContextValue {
   navigateToNotification: (notification: NotificationItem) => Promise<void>;
   updateUserInfo: (
     userId: string,
-    payload: { displayName?: string; handle?: string; location?: string | null },
+    payload: {
+      displayName?: string;
+      handle?: string;
+      location?: string | null;
+    },
   ) => Promise<void>;
 }
 
 const DM_VIEW_KEY = (userId: string) => `tsfe:dms:lastViewed:${userId}`;
-const GLOBAL_REPORT_PROJECT_ID = 'global-reports';
-const REVIEWER_REPORT_PROJECT_ID = 'reviewer-reports';
+const GLOBAL_REPORT_PROJECT_ID = "global-reports";
+const REVIEWER_REPORT_PROJECT_ID = "reviewer-reports";
 
-export const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(undefined);
+export const WorkspaceContext = createContext<
+  WorkspaceContextValue | undefined
+>(undefined);
 
 export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const { user, isAuthenticated, updateProfile } = useAuth();
@@ -277,8 +301,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     setState((prev) => ({
       ...initialState,
       workspaceLabel: defaultWorkspaceLabel,
-      selectedUserId: user?.id || '',
-      createTicketModel: { ...defaultTicketModel, projectId: '' },
+      selectedUserId: user?.id || "",
+      createTicketModel: { ...defaultTicketModel, projectId: "" },
     }));
   }, [user?.id]);
 
@@ -287,14 +311,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       resetWorkspaceState();
       return;
     }
-    mergeState({ isBootstrapping: true, feedback: '' });
+    mergeState({ isBootstrapping: true, feedback: "" });
     try {
-      const [users, projects] = await Promise.all([apiClient.getUsers(), apiClient.getProjects()]);
+      const [users, projects] = await Promise.all([
+        apiClient.getUsers(),
+        apiClient.getProjects(),
+      ]);
       const retainedProjectId = stateRef.current.selectedProjectId;
       const selectedProjectId =
-        retainedProjectId && projects.some((project) => project.id === retainedProjectId)
+        retainedProjectId &&
+        projects.some((project) => project.id === retainedProjectId)
           ? retainedProjectId
-          : '';
+          : "";
       mergeState({
         workspaceLabel: user.workspaceName?.trim() || defaultWorkspaceLabel,
         selectedUserId: user.id,
@@ -306,12 +334,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         },
         selectedProjectId,
         expandedProjectId: selectedProjectId,
-        activeTab: (user.handle || '').toLowerCase() === 'admin' ? 'dashboard' : 'home',
+        activeTab:
+          (user.handle || "").toLowerCase() === "admin" ? "dashboard" : "home",
       });
       await loadTickets();
       await Promise.all([loadDashboard(), loadNotifications(), loadDms()]);
     } catch (error) {
-      console.error('Failed to bootstrap workspace', error);
+      console.error("Failed to bootstrap workspace", error);
     } finally {
       mergeState({ isBootstrapping: false });
     }
@@ -325,21 +354,24 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [bootstrap, isAuthenticated, resetWorkspaceState]);
 
-  useInterval(() => {
-    if (!isAuthenticated) return;
-    apiClient
-      .sendHeartbeat()
-      .then(() => loadUsers())
-      .catch((error) => console.error('Heartbeat failed', error));
-  }, isAuthenticated ? 60000 : null);
+  useInterval(
+    () => {
+      if (!isAuthenticated) return;
+      apiClient
+        .sendHeartbeat()
+        .then(() => loadUsers())
+        .catch((error) => console.error("Heartbeat failed", error));
+    },
+    isAuthenticated ? 60000 : null,
+  );
 
   const loadUsers = useCallback(async () => {
     try {
       const users = await apiClient.getUsers();
-      console.log('Loaded users', users);
+      console.log("Loaded users", users);
       mergeState({ users });
     } catch (error) {
-      console.error('Unable to load users', error);
+      console.error("Unable to load users", error);
     }
   }, [mergeState]);
 
@@ -348,7 +380,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const projects = await apiClient.getProjects();
       mergeState({ projects });
     } catch (error) {
-      console.error('Unable to load projects', error);
+      console.error("Unable to load projects", error);
     }
   }, [mergeState]);
 
@@ -362,16 +394,17 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         await refreshTicketDetail();
       }
     } catch (error) {
-      console.error('Unable to load tickets', error);
+      console.error("Unable to load tickets", error);
     } finally {
       mergeState({ isLoadingTickets: false });
     }
   }, [mergeState]);
 
   const getDashboardFilters = useCallback(() => {
-    const { dashboardRange, dashboardStartDate, dashboardEndDate } = stateRef.current;
-    if (dashboardRange === 'all') return undefined;
-    if (dashboardRange === 'today') {
+    const { dashboardRange, dashboardStartDate, dashboardEndDate } =
+      stateRef.current;
+    if (dashboardRange === "all") return undefined;
+    if (dashboardRange === "today") {
       const now = new Date();
       const start = new Date(now);
       start.setHours(0, 0, 0, 0);
@@ -379,7 +412,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       end.setHours(23, 59, 59, 999);
       return { startDate: start.toISOString(), endDate: end.toISOString() };
     }
-    if (dashboardRange === 'custom') {
+    if (dashboardRange === "custom") {
       if (dashboardStartDate && dashboardEndDate) {
         const start = new Date(`${dashboardStartDate}T00:00:00`).toISOString();
         const end = new Date(`${dashboardEndDate}T23:59:59`).toISOString();
@@ -387,12 +420,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
       return undefined;
     }
-    const dayMap: Record<'7d' | '30d' | '90d', number> = { '7d': 7, '30d': 30, '90d': 90 };
+    const dayMap: Record<"7d" | "30d" | "90d", number> = {
+      "7d": 7,
+      "30d": 30,
+      "90d": 90,
+    };
     const days = dayMap[dashboardRange];
     if (!days) return undefined;
     const now = new Date();
     const end = now.toISOString();
-    const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000).toISOString();
+    const start = new Date(
+      now.getTime() - days * 24 * 60 * 60 * 1000,
+    ).toISOString();
     return { startDate: start, endDate: end };
   }, []);
 
@@ -402,7 +441,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const dashboard = await apiClient.getDashboard(filters);
       mergeState({ dashboard });
     } catch (error) {
-      console.error('Unable to load dashboard', error);
+      console.error("Unable to load dashboard", error);
     }
   }, [getDashboardFilters, mergeState]);
 
@@ -410,7 +449,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     try {
       return localStorage.getItem(key);
     } catch (error) {
-      console.warn('Unable to read timestamp key', key, error);
+      console.warn("Unable to read timestamp key", key, error);
       return null;
     }
   };
@@ -423,17 +462,20 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem(key);
       }
     } catch (error) {
-      console.warn('Unable to persist timestamp key', key, error);
+      console.warn("Unable to persist timestamp key", key, error);
     }
   };
 
   const markGlobalReportsSeen = async (timestamp: string | null) => {
     const seenAt = timestamp ?? new Date().toISOString();
-    mergeState({ hasUnseenGlobalReports: false, latestGlobalReportTimestamp: timestamp });
+    mergeState({
+      hasUnseenGlobalReports: false,
+      latestGlobalReportTimestamp: timestamp,
+    });
     try {
       await apiClient.markGlobalReportsSeen(seenAt);
     } catch (error) {
-      console.error('Unable to persist report-of-work acknowledgement', error);
+      console.error("Unable to persist report-of-work acknowledgement", error);
     }
   };
 
@@ -442,7 +484,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const { hasNew } = await apiClient.getNotificationStatus();
       mergeState({ hasActivityAttention: hasNew });
     } catch (error) {
-      console.error('Unable to check ticket notifications', error);
+      console.error("Unable to check ticket notifications", error);
     }
   }, [mergeState]);
 
@@ -451,19 +493,23 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       await apiClient.markTicketNotificationsSeen();
       mergeState({
         notifications: stateRef.current.notifications.map((notification) =>
-          notification.ticketId ? { ...notification, isRead: true } : notification,
+          notification.ticketId
+            ? { ...notification, isRead: true }
+            : notification,
         ),
         hasActivityAttention: false,
       });
     } catch (error) {
-      console.error('Unable to mark notifications read', error);
+      console.error("Unable to mark notifications read", error);
     }
   }, [mergeState]);
 
   const updateDmAttention = useCallback(() => {
     const userId = stateRef.current.selectedUserId;
     if (!userId) return;
-    const lastViewed = stateRef.current.lastDmViewTimestamp ?? restoreTimestamp(DM_VIEW_KEY(userId));
+    const lastViewed =
+      stateRef.current.lastDmViewTimestamp ??
+      restoreTimestamp(DM_VIEW_KEY(userId));
     const latestIncoming = stateRef.current.dms
       .filter((dm) => dm.senderId !== userId)
       .map((dm) => dm.createdAt)
@@ -474,7 +520,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       return;
     }
     const hasAttention =
-      !lastViewed || new Date(latestIncoming).getTime() > new Date(lastViewed).getTime();
+      !lastViewed ||
+      new Date(latestIncoming).getTime() > new Date(lastViewed).getTime();
     mergeState({
       hasDmAttention: hasAttention,
       lastDmViewTimestamp: lastViewed,
@@ -485,8 +532,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({
       projectReportEntries: [],
       reviewerTickets: [],
-      viewingReportsForProjectId: '',
-      viewingReportsForProjectName: '',
+      viewingReportsForProjectId: "",
+      viewingReportsForProjectName: "",
       projectReportsLoading: false,
       isGlobalReportView: false,
       isReviewerReportView: false,
@@ -500,7 +547,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const latest = entries[0]?.createdAt || null;
       mergeState({
         viewingReportsForProjectId: GLOBAL_REPORT_PROJECT_ID,
-        viewingReportsForProjectName: 'All projects',
+        viewingReportsForProjectName: "All projects",
         projectReportEntries: entries,
         reviewerTickets: [],
         projectReportsLoading: false,
@@ -511,7 +558,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       });
       void markGlobalReportsSeen(latest);
     } catch (error) {
-      console.error('Unable to load report-of-work', error);
+      console.error("Unable to load report-of-work", error);
       mergeState({ projectReportsLoading: false });
       closeProjectReports();
     }
@@ -527,14 +574,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         apiClient.getTickets({ reviewerId }),
       ]);
       const inProgressReviewerTickets = reviewerTickets.filter(
-        (ticket) => ticket.status === 'in_progress'
+        (ticket) => ticket.status === "in_progress",
       );
-      const reviewer = stateRef.current.users.find((user) => user.id === reviewerId);
+      const reviewer = stateRef.current.users.find(
+        (user) => user.id === reviewerId,
+      );
       mergeState({
         viewingReportsForProjectId: `${REVIEWER_REPORT_PROJECT_ID}:${reviewerId}`,
         viewingReportsForProjectName: reviewer
           ? `Reviewer: ${reviewer.displayName}`
-          : 'Reviewer reports',
+          : "Reviewer reports",
         projectReportEntries: entries,
         reviewerTickets: inProgressReviewerTickets,
         projectReportsLoading: false,
@@ -544,7 +593,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         lockedTicket: null,
       });
     } catch (error) {
-      console.error('Unable to load reviewer report-of-work', error);
+      console.error("Unable to load reviewer report-of-work", error);
       mergeState({ projectReportsLoading: false });
       closeProjectReports();
     }
@@ -556,7 +605,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const dms = await apiClient.getDms();
       mergeState({ dms });
       if (!stateRef.current.selectedDmRecipientId && dms.length) {
-        const firstConversation = dms.find((dm) => dm.senderId !== stateRef.current.selectedUserId);
+        const firstConversation = dms.find(
+          (dm) => dm.senderId !== stateRef.current.selectedUserId,
+        );
         const partnerId = firstConversation
           ? firstConversation.senderId === stateRef.current.selectedUserId
             ? firstConversation.recipientId
@@ -571,7 +622,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
       updateDmAttention();
     } catch (error) {
-      console.error('Unable to load DMs', error);
+      console.error("Unable to load DMs", error);
     }
   }, [mergeState, updateDmAttention]);
 
@@ -580,16 +631,24 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     try {
       const { latest, lastSeen } = await apiClient.getGlobalReportsStatus();
       if (!latest) {
-        mergeState({ latestGlobalReportTimestamp: null, hasUnseenGlobalReports: false });
+        mergeState({
+          latestGlobalReportTimestamp: null,
+          hasUnseenGlobalReports: false,
+        });
         return;
       }
       const latestTime = new Date(latest).getTime();
       const lastSeenTime = lastSeen ? new Date(lastSeen).getTime() : NaN;
       const hasUnseen =
-        !lastSeen || !Number.isFinite(lastSeenTime) || (Number.isFinite(latestTime) && latestTime > lastSeenTime);
-      mergeState({ latestGlobalReportTimestamp: latest, hasUnseenGlobalReports: hasUnseen });
+        !lastSeen ||
+        !Number.isFinite(lastSeenTime) ||
+        (Number.isFinite(latestTime) && latestTime > lastSeenTime);
+      mergeState({
+        latestGlobalReportTimestamp: latest,
+        hasUnseenGlobalReports: hasUnseen,
+      });
     } catch (error) {
-      console.error('Unable to check report-of-work updates', error);
+      console.error("Unable to check report-of-work updates", error);
     }
   }, [mergeState]);
 
@@ -601,7 +660,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       await updateActivityAttention();
       await checkGlobalReports();
     } catch (error) {
-      console.error('Unable to load notifications', error);
+      console.error("Unable to load notifications", error);
     }
   }, [checkGlobalReports, mergeState, updateActivityAttention]);
 
@@ -612,7 +671,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const selectProject = (projectId: string) => {
     if (stateRef.current.expandedProjectId === projectId) {
-      mergeState({ expandedProjectId: '' });
+      mergeState({ expandedProjectId: "" });
       return;
     }
     mergeState({
@@ -621,8 +680,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       createTicketModel: { ...stateRef.current.createTicketModel, projectId },
       selectedTicket: null,
       lockedTicket: null,
-      viewingReportsForProjectId: '',
-      viewingReportsForProjectName: '',
+      viewingReportsForProjectId: "",
+      viewingReportsForProjectName: "",
       projectReportEntries: [],
       reviewerTickets: [],
       projectReportsLoading: false,
@@ -639,8 +698,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const selectTicket = async (ticketId: string) => {
     mergeState({
       lockedTicket: null,
-      viewingReportsForProjectId: '',
-      viewingReportsForProjectName: '',
+      viewingReportsForProjectId: "",
+      viewingReportsForProjectName: "",
       projectReportEntries: [],
       reviewerTickets: [],
       projectReportsLoading: false,
@@ -649,7 +708,11 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     });
     try {
       const ticket = await apiClient.getTicket(ticketId);
-      mergeState({ selectedTicket: ticket, messageDraft: '', lockedTicket: null });
+      mergeState({
+        selectedTicket: ticket,
+        messageDraft: "",
+        lockedTicket: null,
+      });
     } catch (error: any) {
       if (error?.response?.status === 403 && error?.response?.data?.ticket) {
         mergeState({
@@ -657,13 +720,16 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           lockedTicket: error.response.data.ticket,
         });
       } else {
-        console.error('Unable to select ticket', error);
+        console.error("Unable to select ticket", error);
       }
     }
   };
 
   const refreshTicketDetail = async (ticketId?: string) => {
-    const target = ticketId || stateRef.current.selectedTicket?.id || stateRef.current.lockedTicket?.id;
+    const target =
+      ticketId ||
+      stateRef.current.selectedTicket?.id ||
+      stateRef.current.lockedTicket?.id;
     if (!target) return;
     await selectTicket(target);
   };
@@ -672,22 +738,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     key: K,
     value: CreateTicketModel[K],
   ) => {
-    mergeState({ createTicketModel: { ...stateRef.current.createTicketModel, [key]: value } });
+    mergeState({
+      createTicketModel: {
+        ...stateRef.current.createTicketModel,
+        [key]: value,
+      },
+    });
   };
 
   const updateCreateProjectField = <K extends keyof CreateProjectModel>(
     key: K,
     value: CreateProjectModel[K],
   ) => {
-    mergeState({ createProjectModel: { ...stateRef.current.createProjectModel, [key]: value } });
+    mergeState({
+      createProjectModel: {
+        ...stateRef.current.createProjectModel,
+        [key]: value,
+      },
+    });
   };
 
-  const updateDmFormField = <K extends keyof DmForm>(key: K, value: DmForm[K]) => {
+  const updateDmFormField = <K extends keyof DmForm>(
+    key: K,
+    value: DmForm[K],
+  ) => {
     mergeState({ dmForm: { ...stateRef.current.dmForm, [key]: value } });
   };
 
   const openProjectEditor = (projectId: string) => {
-    const project = stateRef.current.projects.find((item) => item.id === projectId);
+    const project = stateRef.current.projects.find(
+      (item) => item.id === projectId,
+    );
     if (!project) return;
     mergeState({
       showProjectEditor: true,
@@ -696,7 +777,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         name: project.name,
         slug: project.slug,
         ticketPrefix: project.ticketPrefix,
-        description: project.description || '',
+        description: project.description || "",
       },
     });
   };
@@ -704,23 +785,32 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const closeProjectEditor = () => {
     mergeState({
       showProjectEditor: false,
-      projectEditorProjectId: '',
+      projectEditorProjectId: "",
       projectEditorModel: defaultProjectModel,
       projectEditorSaving: false,
       projectEditorDeleting: false,
     });
   };
 
-  const updateProjectEditorField = <K extends keyof CreateProjectModel>(key: K, value: CreateProjectModel[K]) => {
-    mergeState({ projectEditorModel: { ...stateRef.current.projectEditorModel, [key]: value } });
+  const updateProjectEditorField = <K extends keyof CreateProjectModel>(
+    key: K,
+    value: CreateProjectModel[K],
+  ) => {
+    mergeState({
+      projectEditorModel: {
+        ...stateRef.current.projectEditorModel,
+        [key]: value,
+      },
+    });
   };
 
   const saveProjectEditor = async () => {
     const projectId = stateRef.current.projectEditorProjectId;
     if (!projectId) return;
-    const { name, ticketPrefix, slug, description } = stateRef.current.projectEditorModel;
+    const { name, ticketPrefix, slug, description } =
+      stateRef.current.projectEditorModel;
     if (!name.trim() || !ticketPrefix.trim()) {
-      mergeState({ feedback: 'Project name and prefix are required.' });
+      mergeState({ feedback: "Project name and prefix are required." });
       return;
     }
     mergeState({ projectEditorSaving: true });
@@ -731,16 +821,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         ticketPrefix: ticketPrefix.trim(),
         description: description.trim() || undefined,
       };
-      console.log('Updating project', { projectId, payload });
+      console.log("Updating project", { projectId, payload });
       await apiClient.updateProject(projectId, {
         ...payload,
       });
-      mergeState({ feedback: 'Project updated.' });
+      mergeState({ feedback: "Project updated." });
       closeProjectEditor();
       await loadProjects();
     } catch (error: any) {
-      console.error('Unable to update project', error);
-      mergeState({ feedback: error?.response?.data?.message || 'Project update failed.' });
+      console.error("Unable to update project", error);
+      mergeState({
+        feedback: error?.response?.data?.message || "Project update failed.",
+      });
     } finally {
       mergeState({ projectEditorSaving: false });
     }
@@ -752,24 +844,29 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ projectEditorDeleting: true });
     try {
       await apiClient.deleteProject(targetId);
-      mergeState({ feedback: 'Project deleted.' });
+      mergeState({ feedback: "Project deleted." });
       if (stateRef.current.selectedProjectId === targetId) {
         mergeState({
-          selectedProjectId: '',
-          expandedProjectId: '',
+          selectedProjectId: "",
+          expandedProjectId: "",
           selectedTicket: null,
           lockedTicket: null,
-          createTicketModel: { ...stateRef.current.createTicketModel, projectId: '' },
+          createTicketModel: {
+            ...stateRef.current.createTicketModel,
+            projectId: "",
+          },
         });
       } else if (stateRef.current.expandedProjectId === targetId) {
-        mergeState({ expandedProjectId: '' });
+        mergeState({ expandedProjectId: "" });
       }
       closeProjectEditor();
       await loadProjects();
       await loadTickets();
     } catch (error: any) {
-      console.error('Unable to delete project', error);
-      mergeState({ feedback: error?.response?.data?.message || 'Unable to delete project.' });
+      console.error("Unable to delete project", error);
+      mergeState({
+        feedback: error?.response?.data?.message || "Unable to delete project.",
+      });
     } finally {
       mergeState({ projectEditorDeleting: false });
     }
@@ -779,14 +876,15 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const createProject = async () => {
     const { name, ticketPrefix } = stateRef.current.createProjectModel;
     if (!name.trim() || !ticketPrefix.trim()) {
-      mergeState({ feedback: 'Project name and prefix are required.' });
+      mergeState({ feedback: "Project name and prefix are required." });
       return;
     }
     const slug = slugify(
-      stateRef.current.createProjectModel.slug || stateRef.current.createProjectModel.name,
+      stateRef.current.createProjectModel.slug ||
+        stateRef.current.createProjectModel.name,
     );
     if (!slug) {
-      mergeState({ feedback: 'Unable to generate a valid project slug.' });
+      mergeState({ feedback: "Unable to generate a valid project slug." });
       return;
     }
     try {
@@ -794,32 +892,37 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         name: name.trim(),
         slug,
         ticketPrefix: ticketPrefix.trim(),
-        description: stateRef.current.createProjectModel.description.trim() || undefined,
+        description:
+          stateRef.current.createProjectModel.description.trim() || undefined,
       };
-      console.log('Creating project', payload);
+      console.log("Creating project", payload);
       const response = await apiClient.createProject(payload);
       mergeState({
-        feedback: 'Project created.',
+        feedback: "Project created.",
         createProjectModel: defaultProjectModel,
         selectedProjectId: response.id,
         expandedProjectId: response.id,
-        createTicketModel: { ...stateRef.current.createTicketModel, projectId: response.id },
+        createTicketModel: {
+          ...stateRef.current.createTicketModel,
+          projectId: response.id,
+        },
         showCreateProject: false,
       });
       await loadProjects();
       await loadTickets();
     } catch (error: any) {
-      console.error('Unable to create project', error);
-      mergeState({ feedback: error?.response?.data?.message || 'Project creation failed.' });
+      console.error("Unable to create project", error);
+      mergeState({
+        feedback: error?.response?.data?.message || "Project creation failed.",
+      });
     }
   };
 
   const createTicket = async () => {
-
     const { title, projectId } = stateRef.current.createTicketModel;
     const creatorId = stateRef.current.selectedUserId;
     if (!title.trim() || !projectId || !creatorId) {
-      mergeState({ feedback: 'Please complete the ticket form.' });
+      mergeState({ feedback: "Please complete the ticket form." });
       return;
     }
     try {
@@ -830,8 +933,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       mergeState({
         createTicketModel: {
           ...stateRef.current.createTicketModel,
-          title: '',
-          description: '',
+          title: "",
+          description: "",
           inviteeIds: [],
         },
         feedback: `${ticket.ticketNumber} created.`,
@@ -840,8 +943,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       await loadTickets();
       await selectTicket(ticket.id);
     } catch (error) {
-      console.error('Unable to create ticket', error);
-      mergeState({ feedback: 'Ticket creation failed.' });
+      console.error("Unable to create ticket", error);
+      mergeState({ feedback: "Ticket creation failed." });
     }
   };
 
@@ -853,19 +956,19 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     mergeState({ isPostingMessage: true });
     try {
       await apiClient.postTicketMessage(ticketId, { userId, body: payload });
-      mergeState({ messageDraft: '' });
+      mergeState({ messageDraft: "" });
       await refreshTicketDetail(ticketId);
       await loadTickets();
       await loadNotifications();
     } catch (error) {
-      console.error('Unable to post message', error);
+      console.error("Unable to post message", error);
     } finally {
       mergeState({ isPostingMessage: false });
     }
   };
 
   const startTicket = async () => {
-    await postTicketMessage('start ticket');
+    await postTicketMessage("start ticket");
   };
 
   const sendDm = async () => {
@@ -874,7 +977,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     if (!recipientId || !senderId || !body.trim()) return;
     await apiClient.sendDm({ senderId, recipientId, body });
     mergeState({
-      dmForm: { ...stateRef.current.dmForm, body: '' },
+      dmForm: { ...stateRef.current.dmForm, body: "" },
       selectedDmRecipientId: recipientId,
     });
     await loadDms();
@@ -882,13 +985,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleAssign = async (assigneeId: string) => {
-    if (!stateRef.current.selectedTicket || !assigneeId || !stateRef.current.selectedUserId) return;
-    await apiClient.assignTicket(stateRef.current.selectedTicket.id, assigneeId, stateRef.current.selectedUserId);
+    if (
+      !stateRef.current.selectedTicket ||
+      !assigneeId ||
+      !stateRef.current.selectedUserId
+    )
+      return;
+    await apiClient.assignTicket(
+      stateRef.current.selectedTicket.id,
+      assigneeId,
+      stateRef.current.selectedUserId,
+    );
     await refreshTicketDetail();
   };
 
   const updateTicketReviewer = async (reviewerId: string) => {
-    if (!stateRef.current.selectedTicket || !reviewerId || !stateRef.current.selectedUserId) return;
+    if (
+      !stateRef.current.selectedTicket ||
+      !reviewerId ||
+      !stateRef.current.selectedUserId
+    )
+      return;
     await apiClient.updateTicketReviewer(stateRef.current.selectedTicket.id, {
       reviewerId,
       actorId: stateRef.current.selectedUserId,
@@ -898,19 +1015,35 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleJoinTicket = async (targetUserId?: string) => {
-    const ticketId = stateRef.current.selectedTicket?.id || stateRef.current.lockedTicket?.id;
+    const ticketId =
+      stateRef.current.selectedTicket?.id || stateRef.current.lockedTicket?.id;
     const actorId = stateRef.current.selectedUserId;
     if (!ticketId || !actorId) return;
-    await apiClient.joinTicket(ticketId, { userId: targetUserId || actorId, actorId });
+    await apiClient.joinTicket(ticketId, {
+      userId: targetUserId || actorId,
+      actorId,
+    });
     await loadTickets();
     await refreshTicketDetail(ticketId);
   };
 
   const updateTicketEstimate = async (hours: number) => {
-    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
+    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId)
+      return;
     await apiClient.updateTicketSettings(stateRef.current.selectedTicket.id, {
       actorId: stateRef.current.selectedUserId,
       estimatedHours: hours,
+    });
+    await refreshTicketDetail(stateRef.current.selectedTicket.id);
+    await loadTickets();
+  };
+
+  const updateTicketActualTime = async (hours: number) => {
+    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId)
+      return;
+    await apiClient.updateTicketSettings(stateRef.current.selectedTicket.id, {
+      actorId: stateRef.current.selectedUserId,
+      actualHours: hours,
     });
     await refreshTicketDetail(stateRef.current.selectedTicket.id);
     await loadTickets();
@@ -920,7 +1053,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     ticketId: string,
     updates: {
       title?: string;
-      status?: Ticket['status'];
+      status?: Ticket["status"];
       priority?: TicketPriority;
       estimatedHours?: number | null;
     },
@@ -930,7 +1063,10 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       actorId: stateRef.current.selectedUserId,
       ...updates,
     };
-    const updatedTicket = await apiClient.updateTicketSettings(ticketId, payload);
+    const updatedTicket = await apiClient.updateTicketSettings(
+      ticketId,
+      payload,
+    );
     mergeState({
       tickets: stateRef.current.tickets.map((ticket) =>
         ticket.id === updatedTicket.id ? updatedTicket : ticket,
@@ -941,7 +1077,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleArchiveTicket = async () => {
-    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
+    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId)
+      return;
     const ticketId = stateRef.current.selectedTicket.id;
     await apiClient.archiveTicket(ticketId, stateRef.current.selectedUserId);
     mergeState({ selectedTicket: null });
@@ -949,19 +1086,24 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const restoreArchivedTicket = async () => {
-    if (!stateRef.current.selectedTicket || stateRef.current.selectedTicket.status !== 'archived') return;
+    if (
+      !stateRef.current.selectedTicket ||
+      stateRef.current.selectedTicket.status !== "archived"
+    )
+      return;
     if (!stateRef.current.selectedUserId) return;
     await apiClient.updateTicketSettings(stateRef.current.selectedTicket.id, {
       actorId: stateRef.current.selectedUserId,
-      status: 'in_progress',
+      status: "in_progress",
     });
-    mergeState({ feedback: 'Ticket restarted and moved to In progress.' });
+    mergeState({ feedback: "Ticket restarted and moved to In progress." });
     await refreshTicketDetail(stateRef.current.selectedTicket.id);
     await loadTickets();
   };
 
   const handlePrivacyChange = async (privacy: TicketPrivacy) => {
-    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId) return;
+    if (!stateRef.current.selectedTicket || !stateRef.current.selectedUserId)
+      return;
     if (stateRef.current.selectedTicket.privacy === privacy) return;
     await apiClient.updateTicketPrivacy(stateRef.current.selectedTicket.id, {
       actorId: stateRef.current.selectedUserId,
@@ -973,17 +1115,21 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const handleDashboardRangeChange = async (range: DashboardRange) => {
     mergeState({ dashboardRange: range });
-    if (range !== 'custom') {
+    if (range !== "custom") {
       mergeState({ dashboardStartDate: null, dashboardEndDate: null });
       await loadDashboard();
     }
   };
 
-  const handleDashboardDateChange = async (type: 'start' | 'end', value: string | null) => {
-    const nextStart = type === 'start' ? value : stateRef.current.dashboardStartDate;
-    const nextEnd = type === 'end' ? value : stateRef.current.dashboardEndDate;
+  const handleDashboardDateChange = async (
+    type: "start" | "end",
+    value: string | null,
+  ) => {
+    const nextStart =
+      type === "start" ? value : stateRef.current.dashboardStartDate;
+    const nextEnd = type === "end" ? value : stateRef.current.dashboardEndDate;
     mergeState({ dashboardStartDate: nextStart, dashboardEndDate: nextEnd });
-    if (stateRef.current.dashboardRange === 'custom' && nextStart && nextEnd) {
+    if (stateRef.current.dashboardRange === "custom" && nextStart && nextEnd) {
       await loadDashboard();
     }
   };
@@ -995,14 +1141,18 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       userSettingsForm: {
         displayName: user.displayName,
         handle: user.handle,
-        location: user.location || '',
+        location: user.location || "",
       },
-      userSettingsError: '',
+      userSettingsError: "",
     });
   };
 
   const closeUserSettings = () => {
-    mergeState({ showUserSettings: false, userSettingsForm: defaultUserSettings, userSettingsError: '' });
+    mergeState({
+      showUserSettings: false,
+      userSettingsForm: defaultUserSettings,
+      userSettingsError: "",
+    });
   };
 
   const openCreateProject = () => {
@@ -1024,36 +1174,45 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   const saveUserSettings = async () => {
     if (!user) return;
     const { displayName, handle, location } = stateRef.current.userSettingsForm;
-    const updates: Partial<Pick<User, 'displayName' | 'handle' | 'location'>> = {};
+    const updates: Partial<Pick<User, "displayName" | "handle" | "location">> =
+      {};
     if (displayName.trim() && displayName.trim() !== user.displayName) {
       updates.displayName = displayName.trim();
     }
     if (handle.trim() && handle.trim() !== user.handle) {
       updates.handle = handle.trim();
     }
-    if (location.trim() !== (user.location || '')) {
+    if (location.trim() !== (user.location || "")) {
       updates.location = location.trim() || null;
     }
     if (!Object.keys(updates).length) {
-      mergeState({ userSettingsError: 'No changes to save.' });
+      mergeState({ userSettingsError: "No changes to save." });
       return;
     }
-    mergeState({ userSettingsSaving: true, userSettingsError: '' });
+    mergeState({ userSettingsSaving: true, userSettingsError: "" });
     try {
       await updateProfile(updates);
-      mergeState({ feedback: 'Profile updated.' });
+      mergeState({ feedback: "Profile updated." });
       closeUserSettings();
       await loadUsers();
     } catch (error: any) {
-      console.error('Unable to update profile', error);
-      mergeState({ userSettingsError: error?.response?.data?.message || 'Unable to update profile.' });
+      console.error("Unable to update profile", error);
+      mergeState({
+        userSettingsError:
+          error?.response?.data?.message || "Unable to update profile.",
+      });
     } finally {
       mergeState({ userSettingsSaving: false });
     }
   };
 
-  const updateUserSettingsField = (key: keyof UserSettingsForm, value: string) => {
-    mergeState({ userSettingsForm: { ...stateRef.current.userSettingsForm, [key]: value } });
+  const updateUserSettingsField = (
+    key: keyof UserSettingsForm,
+    value: string,
+  ) => {
+    mergeState({
+      userSettingsForm: { ...stateRef.current.userSettingsForm, [key]: value },
+    });
   };
 
   const setTicketSearch = (value: string) => {
@@ -1066,13 +1225,13 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const setActiveTab = (tab: WorkspaceTab) => {
     mergeState({ activeTab: tab });
-    if (tab === 'activity') {
+    if (tab === "activity") {
       mergeState({ hasActivityAttention: false });
       void (async () => {
         await markAllTicketNotificationsRead();
         await loadNotifications();
       })();
-    } else if (tab === 'dms') {
+    } else if (tab === "dms") {
       const timestamp = new Date().toISOString();
       const userId = stateRef.current.selectedUserId;
       if (userId) {
@@ -1080,30 +1239,45 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
       mergeState({ hasDmAttention: false, lastDmViewTimestamp: timestamp });
       void loadDms();
-    } else if (tab === 'dashboard') {
+    } else if (tab === "dashboard") {
       void loadDashboard();
-    } else if (tab === 'home') {
+    } else if (tab === "home") {
       void loadTickets();
     }
   };
 
   const handleDmRecipientChange = (userId: string) => {
-    mergeState({ selectedDmRecipientId: userId, dmForm: { ...stateRef.current.dmForm, recipientId: userId } });
+    mergeState({
+      selectedDmRecipientId: userId,
+      dmForm: { ...stateRef.current.dmForm, recipientId: userId },
+    });
   };
 
   const updateUserInfo = async (
     userId: string,
-    payload: { displayName?: string; handle?: string; location?: string | null },
+    payload: {
+      displayName?: string;
+      handle?: string;
+      location?: string | null;
+    },
   ) => {
     const updatedUser = await apiClient.updateUser(userId, payload);
     mergeState({
-      users: stateRef.current.users.map((u) => (u.id === userId ? { ...u, ...updatedUser } : u)),
+      users: stateRef.current.users.map((u) =>
+        u.id === userId ? { ...u, ...updatedUser } : u,
+      ),
     });
     if (stateRef.current.selectedTicket) {
       const updatedTicket = {
         ...stateRef.current.selectedTicket,
         members: stateRef.current.selectedTicket.members.map((member) =>
-          member.userId === userId ? { ...member, displayName: updatedUser.displayName, handle: updatedUser.handle } : member,
+          member.userId === userId
+            ? {
+                ...member,
+                displayName: updatedUser.displayName,
+                handle: updatedUser.handle,
+              }
+            : member,
         ),
       };
       mergeState({ selectedTicket: updatedTicket });
@@ -1117,7 +1291,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
 
   const navigateToNotification = async (notification: NotificationItem) => {
     if (!notification.ticketId) return;
-    setActiveTab('home');
+    setActiveTab("home");
     await selectTicket(notification.ticketId);
     if (!notification.isRead) {
       await markNotification(notification.id);
@@ -1154,6 +1328,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       handleAssign,
       updateTicketReviewer,
       updateTicketEstimate,
+      updateTicketActualTime,
       quickUpdateTicket,
       handleJoinTicket,
       handleArchiveTicket,
@@ -1180,5 +1355,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     [state],
   );
 
-  return <WorkspaceContext.Provider value={value}>{children}</WorkspaceContext.Provider>;
+  return (
+    <WorkspaceContext.Provider value={value}>
+      {children}
+    </WorkspaceContext.Provider>
+  );
 };

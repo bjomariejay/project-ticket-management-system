@@ -175,6 +175,7 @@ export interface UpdateTicketSettingsPayload {
   priority?: TicketPriority;
   estimatedHours?: number | null;
   title?: string;
+  actualHours?: number | null;
 }
 
 export interface SendDmPayload {

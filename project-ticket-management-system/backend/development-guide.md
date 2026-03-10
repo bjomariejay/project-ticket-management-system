@@ -146,9 +146,25 @@ User Login:
    If not, the dashboard is hidden.
 -- Users can create projects and tickets.
    The user who creates a ticket is assigned as the default reviewer.
+   Users can also assign tasks to themselves.
 
 Ticket
 -- Each ticket has: Assignee, Reviewer, Privacy setting and Estimated hours
 
 Project
 -- Each project includes:  Project name and Ticket prefix
+
+Command
+-- @ = Typing @ shows all users within the workspace for mentioning.
+-- / = Typing / shows available commands:
+       - /start – Start the ticket
+       - /archive – Archive or close the ticket
+       - /a-@username – Assign the ticket to a user
+       - /e-hours  = Add estimated hours for the ticket
+       - /r-@username = Add a reviewer
+       - /a-time = Actual time or spend time for the ticket
+
+Dashboard
+-- Has user overview and Task overview
+
+-- User overview = can see each users progross with all tickets assign to them like fixed ticket, In progress, Open, TOtal Estimated hrs of each ticket
