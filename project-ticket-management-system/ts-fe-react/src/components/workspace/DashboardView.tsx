@@ -34,7 +34,6 @@ interface DashboardViewProps {
     type: "start" | "end",
     value: string | null,
   ) => void;
-  onRefreshUserWorkLogs: () => void;
   onEditUser: (userId: string) => void;
   onAddTicket: () => void;
   onOpenTicket: (ticket: Ticket) => void;
@@ -61,7 +60,6 @@ const DashboardView = ({
   onUserWorkLogSearchChange,
   onUserWorkLogRangeChange,
   onUserWorkLogDateChange,
-  onRefreshUserWorkLogs,
   onEditUser,
   onAddTicket,
   onOpenTicket,
@@ -565,15 +563,6 @@ const DashboardView = ({
                 </label>
               </div>
             )}
-            <div>
-              <button
-                type="button"
-                className="link-button outline small"
-                onClick={onRefreshUserWorkLogs}
-              >
-                Refresh
-              </button>
-            </div>
           </>
         )}
         {isTasksTab && (

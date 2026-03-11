@@ -1196,7 +1196,6 @@ const WorkspacePage = () => {
       onUserWorkLogDateChange={(type, value) =>
         void handleUserWorkLogDateChange(type, value)
       }
-      onRefreshUserWorkLogs={() => void refreshUserWorkLogs()}
       onEditUser={openAdminEdit}
       onAddTicket={handleDashboardAddTicket}
       onOpenTicket={handleDashboardOpenTicket}
