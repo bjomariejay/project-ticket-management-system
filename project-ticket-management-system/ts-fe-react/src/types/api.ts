@@ -119,7 +119,7 @@ export interface UserWorkLogEntry {
   userId?: string | null;
   spendTime?: number | null;
   displayName?: string | null;
-  loggedAt?: string;
+  createdAt?: string;
 }
 
 export interface WorkspaceSummary {

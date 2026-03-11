@@ -73,11 +73,11 @@ const getUserWorkLog = asyncHandler(async (req, res) => {
   }
   if (start) {
     params.push(start);
-    conditions.push(`DATE(t.updated_at) >= $${params.length}::date`);
+    conditions.push(`DATE(twl.created_at) >= $${params.length}::date`);
   }
   if (end) {
     params.push(end);
-    conditions.push(`DATE(t.updated_at) <= $${params.length}::date`);
+    conditions.push(`DATE(twl.created_at) <= $${params.length}::date`);
   }
   if (search && search.trim()) {
     params.push(`%${search.trim()}%`);
@@ -91,13 +91,13 @@ const getUserWorkLog = asyncHandler(async (req, res) => {
         twl.ticket_number AS "ticketNumber",
         twl.user_id AS "userId",
         twl.spend_time::float AS "spendTime",
-        u.display_name AS "displayName",
-        t.updated_at AS "loggedAt"
+        twl.created_at AS "createdAt",
+        u.display_name AS "displayName"
       FROM ticket_work_logs twl
       JOIN tickets t ON twl.ticket_number = t.ticket_number
       LEFT JOIN users u ON twl.user_id = u.id
       WHERE ${conditions.join(' AND ')}
-      ORDER BY t.updated_at DESC
+      ORDER BY twl.created_at DESC
       LIMIT 1000`;
 
   const { rows } = await query(queryText, params);

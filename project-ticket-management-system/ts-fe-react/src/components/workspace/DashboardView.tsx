@@ -19,6 +19,7 @@ interface DashboardViewProps {
   endDate: string | null;
   userWorkLogs: UserWorkLogEntry[];
   userWorkLogSearch: string;
+  userWorkLogRange: DashboardRange;
   userWorkLogStartDate: string | null;
   userWorkLogEndDate: string | null;
   userWorkLogLoading: boolean;
@@ -28,6 +29,7 @@ interface DashboardViewProps {
   onDateChange: (type: "start" | "end", value: string | null) => void;
   onSearchChange: (value: string) => void;
   onUserWorkLogSearchChange: (value: string) => void;
+  onUserWorkLogRangeChange: (value: DashboardRange) => void;
   onUserWorkLogDateChange: (
     type: "start" | "end",
     value: string | null,
@@ -47,6 +49,7 @@ const DashboardView = ({
   endDate,
   userWorkLogs,
   userWorkLogSearch,
+  userWorkLogRange,
   userWorkLogStartDate,
   userWorkLogEndDate,
   userWorkLogLoading,
@@ -56,6 +59,7 @@ const DashboardView = ({
   onDateChange,
   onSearchChange,
   onUserWorkLogSearchChange,
+  onUserWorkLogRangeChange,
   onUserWorkLogDateChange,
   onRefreshUserWorkLogs,
   onEditUser,
@@ -442,7 +446,7 @@ const DashboardView = ({
             <tbody>
               {userWorkLogs.map((log) => (
                 <tr key={log.id}>
-                  <td>{formatLogDate(log.loggedAt)}</td>
+                  <td>{formatLogDate(log.createdAt)}</td>
                   <td>
                     <strong>{log.ticketNumber}</strong>
                   </td>
@@ -485,10 +489,6 @@ const DashboardView = ({
                 onChange={(event) => onRangeChange(event.target.value as DashboardRange)}
               >
                 <option value="today">Today</option>
-                <option value="7d">Last 7 days</option>
-                <option value="30d">Last 30 days</option>
-                <option value="90d">Last 90 days</option>
-                <option value="all">All time</option>
                 <option value="custom">Custom range</option>
               </select>
             </label>
@@ -510,6 +510,20 @@ const DashboardView = ({
           <>
             <div>
               <label>
+                Range
+                <select
+                  value={userWorkLogRange}
+                  onChange={(event) =>
+                    onUserWorkLogRangeChange(event.target.value as DashboardRange)
+                  }
+                >
+                  <option value="today">Today</option>
+                  <option value="custom">Custom range</option>
+                </select>
+              </label>
+            </div>
+            <div>
+              <label>
                 Search name
                 <input
                   type="search"
@@ -521,31 +535,36 @@ const DashboardView = ({
                 />
               </label>
             </div>
-            <div className="custom-range">
-              <label>
-                Start
-                <input
-                  type="date"
-                  value={userWorkLogStartDate || ""}
-                  onChange={(event) =>
-                    onUserWorkLogDateChange(
-                      "start",
-                      event.target.value || null,
-                    )
-                  }
-                />
-              </label>
-              <label>
-                End
-                <input
-                  type="date"
-                  value={userWorkLogEndDate || ""}
-                  onChange={(event) =>
-                    onUserWorkLogDateChange("end", event.target.value || null)
-                  }
-                />
-              </label>
-            </div>
+            {userWorkLogRange === "custom" && (
+              <div className="custom-range">
+                <label>
+                  Start
+                  <input
+                    type="date"
+                    value={userWorkLogStartDate || ""}
+                    onChange={(event) =>
+                      onUserWorkLogDateChange(
+                        "start",
+                        event.target.value || null,
+                      )
+                    }
+                  />
+                </label>
+                <label>
+                  End
+                  <input
+                    type="date"
+                    value={userWorkLogEndDate || ""}
+                    onChange={(event) =>
+                      onUserWorkLogDateChange(
+                        "end",
+                        event.target.value || null,
+                      )
+                    }
+                  />
+                </label>
+              </div>
+            )}
             <div>
               <button
                 type="button"

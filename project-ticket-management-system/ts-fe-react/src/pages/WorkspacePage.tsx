@@ -53,6 +53,7 @@ const WorkspacePage = () => {
     handleDashboardRangeChange,
     handleDashboardDateChange,
     handleUserWorkLogSearchChange,
+    handleUserWorkLogRangeChange,
     handleUserWorkLogDateChange,
     refreshUserWorkLogs,
     handleDmRecipientChange,
@@ -104,6 +105,7 @@ const WorkspacePage = () => {
     dashboardRange,
     dashboardStartDate,
     dashboardEndDate,
+    userWorkLogRange,
     userWorkLogSearch,
     userWorkLogStartDate,
     userWorkLogEndDate,
@@ -1174,6 +1176,7 @@ const WorkspacePage = () => {
       endDate={dashboardEndDate}
       userWorkLogs={userWorkLogs}
       userWorkLogSearch={userWorkLogSearch}
+      userWorkLogRange={userWorkLogRange}
       userWorkLogStartDate={userWorkLogStartDate}
       userWorkLogEndDate={userWorkLogEndDate}
       userWorkLogLoading={userWorkLogLoading}
@@ -1186,6 +1189,9 @@ const WorkspacePage = () => {
       onSearchChange={(value) => setDashboardSearch(value)}
       onUserWorkLogSearchChange={(value) =>
         void handleUserWorkLogSearchChange(value)
+      }
+      onUserWorkLogRangeChange={(value) =>
+        void handleUserWorkLogRangeChange(value)
       }
       onUserWorkLogDateChange={(type, value) =>
         void handleUserWorkLogDateChange(type, value)

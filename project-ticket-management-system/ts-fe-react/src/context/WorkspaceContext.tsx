@@ -65,6 +65,7 @@ interface WorkspaceState {
   tickets: Ticket[];
   dashboard: DashboardEntry[];
   userWorkLogs: UserWorkLogEntry[];
+  userWorkLogRange: DashboardRange;
   notifications: NotificationItem[];
   dms: DmMessage[];
   selectedUserId: string;
@@ -159,6 +160,7 @@ const initialState: WorkspaceState = {
   tickets: [],
   dashboard: [],
   userWorkLogs: [],
+  userWorkLogRange: "today",
   notifications: [],
   dms: [],
   selectedUserId: "",
@@ -269,6 +271,7 @@ interface WorkspaceContextValue {
     value: string | null,
   ) => Promise<void>;
   handleUserWorkLogSearchChange: (value: string) => Promise<void>;
+  handleUserWorkLogRangeChange: (range: DashboardRange) => Promise<void>;
   handleUserWorkLogDateChange: (
     type: "start" | "end",
     value: string | null,
@@ -478,10 +481,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       startDate?: string | null;
       endDate?: string | null;
       search?: string;
+      range?: DashboardRange;
     }): UserWorkLogFilter | undefined => {
       const hasOverride = (key: 'startDate' | 'endDate' | 'search') =>
         overrides && Object.prototype.hasOwnProperty.call(overrides, key);
 
+      const range = overrides?.range ?? stateRef.current.userWorkLogRange;
       const nextStart = hasOverride('startDate')
         ? overrides?.startDate ?? null
         : stateRef.current.userWorkLogStartDate;
@@ -491,16 +496,27 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       const nextSearch = hasOverride('search')
         ? overrides?.search ?? ''
         : stateRef.current.userWorkLogSearch;
+
       const filters: UserWorkLogFilter = {};
-      if (nextStart) {
-        filters.startDate = nextStart;
+
+      if (range === 'today') {
+        const today = new Date();
+        const day = today.toISOString().slice(0, 10);
+        filters.startDate = day;
+        filters.endDate = day;
+      } else if (range === 'custom') {
+        if (nextStart) {
+          filters.startDate = nextStart;
+        }
+        if (nextEnd) {
+          filters.endDate = nextEnd;
+        }
       }
-      if (nextEnd) {
-        filters.endDate = nextEnd;
-      }
+
       if (nextSearch?.trim()) {
         filters.search = nextSearch.trim();
       }
+
       return Object.keys(filters).length ? filters : undefined;
     },
     [],
@@ -1237,6 +1253,14 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleUserWorkLogRangeChange = async (range: DashboardRange) => {
+    mergeState({ userWorkLogRange: range });
+    if (range !== "custom") {
+      mergeState({ userWorkLogStartDate: null, userWorkLogEndDate: null });
+      await loadUserWorkLogs({ range });
+    }
+  };
+
   const handleUserWorkLogSearchChange = async (value: string) => {
     mergeState({ userWorkLogSearch: value });
     await loadUserWorkLogs({ search: value });
@@ -1252,7 +1276,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     const nextEnd =
       type === "end" ? normalizedValue : stateRef.current.userWorkLogEndDate;
     mergeState({ userWorkLogStartDate: nextStart, userWorkLogEndDate: nextEnd });
-    await loadUserWorkLogs({ startDate: nextStart, endDate: nextEnd });
+    if (stateRef.current.userWorkLogRange === "custom" && nextStart && nextEnd) {
+      await loadUserWorkLogs({ startDate: nextStart, endDate: nextEnd });
+    }
   };
 
   const refreshUserWorkLogs = async () => {
@@ -1463,6 +1489,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       handleDashboardRangeChange,
       handleDashboardDateChange,
       handleUserWorkLogSearchChange,
+      handleUserWorkLogRangeChange,
       handleUserWorkLogDateChange,
       refreshUserWorkLogs,
       openUserSettings,
