@@ -16,7 +16,7 @@ import { useWorkspace } from "../hooks/useWorkspace";
 import { NotificationItem, Ticket, User } from "../types/api";
 
 const ticketCategoryConfig = [
-  { key: "open", label: "Available" },
+  { key: "open", label: "New" },
   { key: "in_progress", label: "In progress" },
   { key: "archived", label: "Archived" },
 ] as const;

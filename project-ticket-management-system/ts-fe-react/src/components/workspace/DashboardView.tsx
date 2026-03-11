@@ -249,7 +249,7 @@ const DashboardView = ({
                 <strong>{entry.inProgressCount}</strong>
               </li>
               <li>
-                <span>Open</span>
+                <span>New Task</span>
                 <strong>{entry.openCount}</strong>
               </li>
               <li>
@@ -257,7 +257,7 @@ const DashboardView = ({
                 <strong>{entry.estimatedTotal.toFixed(1)}</strong>
               </li>
               <li>
-                <span>Actual hrs</span>
+                <span>Spend Time</span>
                 <strong>{entry.actualTotal.toFixed(1)}</strong>
               </li>
             </ul>
