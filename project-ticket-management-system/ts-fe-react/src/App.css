@@ -701,6 +701,41 @@ textarea {
   gap: 1rem;
 }
 
+.user-work-logs .table-wrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
+}
+
+.user-work-logs table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.user-work-logs th,
+.user-work-logs td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #eceff7;
+  vertical-align: top;
+}
+
+.user-work-logs th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8c93ad;
+}
+
+.user-work-logs td strong {
+  display: block;
+  color: #1c2241;
+}
+
+.user-work-logs td p {
+  margin: 0.15rem 0 0;
+}
+
 .task-overview {
   display: grid;
   gap: 1rem;

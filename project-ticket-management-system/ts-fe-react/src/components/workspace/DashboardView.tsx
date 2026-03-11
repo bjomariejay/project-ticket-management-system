@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
-import { DashboardEntry, Project, Ticket } from "../../types/api";
+import { DashboardEntry, Project, Ticket, UserWorkLogEntry } from "../../types/api";
 import type { DashboardRange } from "../../context/WorkspaceContext";
 
 const dashboardTabs = [
   { id: "users", label: "User overview" },
+  { id: "logs", label: "Work Overview" },
   { id: "tasks", label: "Task overview" },
 ] as const;
 
@@ -16,11 +17,22 @@ interface DashboardViewProps {
   range: DashboardRange;
   startDate: string | null;
   endDate: string | null;
+  userWorkLogs: UserWorkLogEntry[];
+  userWorkLogSearch: string;
+  userWorkLogStartDate: string | null;
+  userWorkLogEndDate: string | null;
+  userWorkLogLoading: boolean;
   canEditUsers: boolean;
   searchQuery: string;
   onRangeChange: (value: DashboardRange) => void;
   onDateChange: (type: "start" | "end", value: string | null) => void;
   onSearchChange: (value: string) => void;
+  onUserWorkLogSearchChange: (value: string) => void;
+  onUserWorkLogDateChange: (
+    type: "start" | "end",
+    value: string | null,
+  ) => void;
+  onRefreshUserWorkLogs: () => void;
   onEditUser: (userId: string) => void;
   onAddTicket: () => void;
   onOpenTicket: (ticket: Ticket) => void;
@@ -33,17 +45,28 @@ const DashboardView = ({
   range,
   startDate,
   endDate,
+  userWorkLogs,
+  userWorkLogSearch,
+  userWorkLogStartDate,
+  userWorkLogEndDate,
+  userWorkLogLoading,
   canEditUsers,
   searchQuery,
   onRangeChange,
   onDateChange,
   onSearchChange,
+  onUserWorkLogSearchChange,
+  onUserWorkLogDateChange,
+  onRefreshUserWorkLogs,
   onEditUser,
   onAddTicket,
   onOpenTicket,
 }: DashboardViewProps) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("users");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
+  const isUsersTab = activeTab === "users";
+  const isTasksTab = activeTab === "tasks";
+  const isLogsTab = activeTab === "logs";
 
   const filteredTickets = useMemo(() => {
     const projectFiltered =
@@ -147,8 +170,9 @@ const DashboardView = ({
       .slice(0, 8);
   }, [filteredTickets]);
 
-  const searchPlaceholder =
-    activeTab === "users" ? "Search name" : "Search ticket title or number";
+  const searchPlaceholder = isUsersTab
+    ? "Search name"
+    : "Search ticket title or number";
 
   const formatStatus = (status: Ticket["status"]) => {
     switch (status) {
@@ -165,6 +189,23 @@ const DashboardView = ({
 
   const formatPriority = (priority: Ticket["priority"]) =>
     priority === "priority" ? "High" : "Normal";
+
+  const formatLogDate = (value?: string | null) => {
+    if (!value) return '—';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "—";
+    return date.toLocaleString(undefined, {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+    });
+  };
+
+  const formatSpendTime = (value?: number | null) => {
+    if (value == null || Number.isNaN(value)) return "—";
+    return value % 1 === 0 ? `${value.toFixed(0)}h` : `${value.toFixed(1)}h`;
+  };
 
   const formatDate = (value: string) => {
     const date = new Date(value);
@@ -371,6 +412,53 @@ const DashboardView = ({
     </div>
   );
 
+  const renderUserWorkLogs = () => (
+    <section className="card user-work-logs">
+      <header>
+        <div>
+          <h3>User work logs</h3>
+          <p className="muted">
+            {userWorkLogLoading
+              ? "Refreshing work history…"
+              : `${userWorkLogs.length} entr${userWorkLogs.length === 1 ? "y" : "ies"} in view`}
+          </p>
+        </div>
+      </header>
+      {userWorkLogLoading ? (
+        <p className="muted" aria-live="polite">
+          Loading work log entries…
+        </p>
+      ) : userWorkLogs.length ? (
+        <div className="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Ticket</th>
+                <th>Name</th>
+                <th>Spend time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {userWorkLogs.map((log) => (
+                <tr key={log.id}>
+                  <td>{formatLogDate(log.loggedAt)}</td>
+                  <td>
+                    <strong>{log.ticketNumber}</strong>
+                  </td>
+                  <td>{log.displayName || log.userId || "Unknown"}</td>
+                  <td>{formatSpendTime(log.spendTime)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="muted">No work log entries for this filter.</p>
+      )}
+    </section>
+  );
+
   return (
     <section className="main__view" aria-label="Dashboard">
       <section className="card dashboard-controls">
@@ -388,7 +476,7 @@ const DashboardView = ({
             </button>
           ))}
         </div>
-        {activeTab === "users" && (
+        {isUsersTab && (
           <div>
             <label>
               Range
@@ -406,17 +494,70 @@ const DashboardView = ({
             </label>
           </div>
         )}
-        <div>
-          <label>
-            <input
-              type="search"
-              placeholder={searchPlaceholder}
-              value={searchQuery}
-              onChange={(event) => onSearchChange(event.target.value)}
-            />
-          </label>
-        </div>
-        {activeTab === "tasks" && (
+        {!isLogsTab && (
+          <div>
+            <label>
+              <input
+                type="search"
+                placeholder={searchPlaceholder}
+                value={searchQuery}
+                onChange={(event) => onSearchChange(event.target.value)}
+              />
+            </label>
+          </div>
+        )}
+        {isLogsTab && (
+          <>
+            <div>
+              <label>
+                Search name
+                <input
+                  type="search"
+                  placeholder="Search name"
+                  value={userWorkLogSearch}
+                  onChange={(event) =>
+                    onUserWorkLogSearchChange(event.target.value)
+                  }
+                />
+              </label>
+            </div>
+            <div className="custom-range">
+              <label>
+                Start
+                <input
+                  type="date"
+                  value={userWorkLogStartDate || ""}
+                  onChange={(event) =>
+                    onUserWorkLogDateChange(
+                      "start",
+                      event.target.value || null,
+                    )
+                  }
+                />
+              </label>
+              <label>
+                End
+                <input
+                  type="date"
+                  value={userWorkLogEndDate || ""}
+                  onChange={(event) =>
+                    onUserWorkLogDateChange("end", event.target.value || null)
+                  }
+                />
+              </label>
+            </div>
+            <div>
+              <button
+                type="button"
+                className="link-button outline small"
+                onClick={onRefreshUserWorkLogs}
+              >
+                Refresh
+              </button>
+            </div>
+          </>
+        )}
+        {isTasksTab && (
           <div>
             <label>
               Project
@@ -434,7 +575,7 @@ const DashboardView = ({
             </label>
           </div>
         )}
-        {activeTab === "users" && range === "custom" && (
+        {isUsersTab && range === "custom" && (
           <div className="custom-range">
             <label>
               Start
@@ -455,7 +596,11 @@ const DashboardView = ({
           </div>
         )}
       </section>
-      {activeTab === "users" ? renderUserOverview() : renderTaskOverview()}
+      {isUsersTab
+        ? renderUserOverview()
+        : isLogsTab
+        ? renderUserWorkLogs()
+        : renderTaskOverview()}
     </section>
   );
 };

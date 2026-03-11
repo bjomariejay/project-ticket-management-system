@@ -52,6 +52,9 @@ const WorkspacePage = () => {
     restoreArchivedTicket,
     handleDashboardRangeChange,
     handleDashboardDateChange,
+    handleUserWorkLogSearchChange,
+    handleUserWorkLogDateChange,
+    refreshUserWorkLogs,
     handleDmRecipientChange,
     markNotification,
     navigateToNotification,
@@ -78,6 +81,7 @@ const WorkspacePage = () => {
     projects,
     tickets,
     dashboard,
+    userWorkLogs,
     notifications,
     dms,
     selectedProjectId,
@@ -100,6 +104,10 @@ const WorkspacePage = () => {
     dashboardRange,
     dashboardStartDate,
     dashboardEndDate,
+    userWorkLogSearch,
+    userWorkLogStartDate,
+    userWorkLogEndDate,
+    userWorkLogLoading,
     projectsCollapsed,
     showUserSettings,
     showCreateProject,
@@ -1164,6 +1172,11 @@ const WorkspacePage = () => {
       range={dashboardRange}
       startDate={dashboardStartDate}
       endDate={dashboardEndDate}
+      userWorkLogs={userWorkLogs}
+      userWorkLogSearch={userWorkLogSearch}
+      userWorkLogStartDate={userWorkLogStartDate}
+      userWorkLogEndDate={userWorkLogEndDate}
+      userWorkLogLoading={userWorkLogLoading}
       canEditUsers={user?.handle === "admin"}
       searchQuery={dashboardSearch}
       onRangeChange={(value) => void handleDashboardRangeChange(value)}
@@ -1171,6 +1184,13 @@ const WorkspacePage = () => {
         void handleDashboardDateChange(type, value)
       }
       onSearchChange={(value) => setDashboardSearch(value)}
+      onUserWorkLogSearchChange={(value) =>
+        void handleUserWorkLogSearchChange(value)
+      }
+      onUserWorkLogDateChange={(type, value) =>
+        void handleUserWorkLogDateChange(type, value)
+      }
+      onRefreshUserWorkLogs={() => void refreshUserWorkLogs()}
       onEditUser={openAdminEdit}
       onAddTicket={handleDashboardAddTicket}
       onOpenTicket={handleDashboardOpenTicket}

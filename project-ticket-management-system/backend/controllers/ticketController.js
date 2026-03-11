@@ -4,6 +4,7 @@ const { createNotification } = require('../models/notificationModel');
 const { getProjectById } = require('../models/projectModel');
 const { getUserById } = require('../models/userModel');
 const { appendTicketLog, ensureTicketMember, getTicketForWorkspace, mapTicket } = require('../models/ticketModel');
+const { logTicketWork } = require('../models/ticketWorkLogModel');
 const { requireWorkspaceContext } = require('../middleware/context');
 const { asyncHandler } = require('../utils/asyncHandler');
 const { parseMentions, resolveMentionRecipients } = require('../utils/mentions');
@@ -320,6 +321,8 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
   const updates = [];
   const params = [];
   const changeMessages = [];
+  let shouldLogActualHours = false;
+  let actualHoursTotal = null;
   const allowedStatuses = ['open', 'in_progress', 'archived'];
   const allowedPriorities = ['normal', 'priority'];
 
@@ -369,13 +372,16 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
     changeMessages.push(`${actor.display_name} updated estimate to ${hoursValue >= 0 ? hoursValue : 'unset'}`);
   }
 
-    if (Number.isFinite(actualHours)) {
-    // console.log('ticket: ', ticket)
+  if (Number.isFinite(actualHours)) {
     const hoursValue = Number(actualHours);
-    const totalHrs = hoursValue + Number(ticket.actual_hours);
+    const existingActual = Number(ticket.actual_hours) || 0;
+    const totalHrs = hoursValue + existingActual;
     updates.push(`actual_hours = $${updates.length + 1}`);
     params.push(totalHrs >= 0 ? totalHrs : null);
-    changeMessages.push(`${actor.display_name} updated actual to ${totalHrs >= 0 ? totalHrs : 'unset'}`);
+    const hoursMessage = `${actor.display_name} updated actual to ${totalHrs >= 0 ? totalHrs : 'unset'}`;
+    changeMessages.push(hoursMessage);
+    shouldLogActualHours = true;
+    actualHoursTotal = totalHrs >= 0 ? totalHrs : null;
   }
 
   if (!updates.length) {
@@ -390,8 +396,17 @@ const updateTicketSettings = asyncHandler(async (req, res) => {
     const updateQuery = `UPDATE tickets SET ${setClause}, updated_at = now() WHERE id = $${ticketIdParamIndex} RETURNING *`;
     params.push(ticketId);
     const updatedTicket = await client.query(updateQuery, params);
+    const updatedRow = updatedTicket.rows[0];
     for (const message of changeMessages) {
       await appendTicketLog(client, ticketId, actorId, message);
+    }
+    if (shouldLogActualHours && updatedRow) {
+      await logTicketWork({
+        client,
+        ticketRow: updatedRow,
+        userId: actorId,
+        actualHours: actualHours,
+      });
     }
     await client.query('COMMIT');
     res.json(mapTicket(updatedTicket.rows[0], true));

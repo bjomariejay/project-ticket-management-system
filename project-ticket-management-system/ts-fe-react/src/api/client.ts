@@ -20,6 +20,8 @@ import {
   UpdateProjectPayload,
   UpdateTicketSettingsPayload,
   User,
+  UserWorkLogEntry,
+  UserWorkLogFilter,
   WorkspaceSummary,
 } from '../types/api';
 
@@ -169,6 +171,12 @@ export class ApiClient {
   getDashboard(filters?: DashboardFilter) {
     return this.client
       .get<DashboardEntry[]>('/dashboard/overview', { params: filters })
+      .then((res) => res.data);
+  }
+
+  getUserWorkLogs(filters?: UserWorkLogFilter) {
+    return this.client
+      .get<UserWorkLogEntry[]>('/dashboard/user-work-log', { params: filters })
       .then((res) => res.data);
   }
 

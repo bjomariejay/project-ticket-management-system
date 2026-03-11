@@ -2,18 +2,25 @@ const { query } = require('../config/database');
 const { requireWorkspaceContext } = require('../middleware/context');
 const { asyncHandler } = require('../utils/asyncHandler');
 
+const parseDate = (value) => {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeDateOnly = (value) => {
+  if (!value) return null;
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) return null;
+  return match[1];
+};
+
 const getOverview = asyncHandler(async (req, res) => {
   const workspaceId = requireWorkspaceContext(req, res);
   if (!workspaceId) return;
   const { startDate, endDate } = req.query;
   const params = [workspaceId];
   const conditions = [];
-
-  const parseDate = (value) => {
-    if (!value) return null;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? null : date;
-  };
 
   const start = parseDate(startDate);
   const end = parseDate(endDate);
@@ -52,4 +59,49 @@ const getOverview = asyncHandler(async (req, res) => {
   res.json(rows);
 });
 
-module.exports = { getOverview };
+const getUserWorkLog = asyncHandler(async (req, res) => {
+  const workspaceId = requireWorkspaceContext(req, res);
+  if (!workspaceId) return;
+  const { startDate, endDate, search } = req.query;
+  const params = [workspaceId];
+  const conditions = ['t.workspace_id = $1'];
+
+  const start = normalizeDateOnly(startDate);
+  const end = normalizeDateOnly(endDate);
+  if (start && end && start > end) {
+    return res.status(400).json({ message: 'startDate must be before endDate' });
+  }
+  if (start) {
+    params.push(start);
+    conditions.push(`DATE(t.updated_at) >= $${params.length}::date`);
+  }
+  if (end) {
+    params.push(end);
+    conditions.push(`DATE(t.updated_at) <= $${params.length}::date`);
+  }
+  if (search && search.trim()) {
+    params.push(`%${search.trim()}%`);
+    conditions.push(
+      `(u.display_name ILIKE $${params.length} OR u.username ILIKE $${params.length} OR twl.ticket_number ILIKE $${params.length})`
+    );
+  }
+
+  const queryText = `SELECT
+        twl.id,
+        twl.ticket_number AS "ticketNumber",
+        twl.user_id AS "userId",
+        twl.spend_time::float AS "spendTime",
+        u.display_name AS "displayName",
+        t.updated_at AS "loggedAt"
+      FROM ticket_work_logs twl
+      JOIN tickets t ON twl.ticket_number = t.ticket_number
+      LEFT JOIN users u ON twl.user_id = u.id
+      WHERE ${conditions.join(' AND ')}
+      ORDER BY t.updated_at DESC
+      LIMIT 1000`;
+
+  const { rows } = await query(queryText, params);
+  res.json(rows);
+});
+
+module.exports = { getOverview, getUserWorkLog };

@@ -21,6 +21,8 @@ import {
   TicketPriority,
   TicketPrivacy,
   User,
+  UserWorkLogEntry,
+  UserWorkLogFilter,
 } from "../types/api";
 import { slugify } from "../utils/text";
 import { useInterval } from "../hooks/useInterval";
@@ -62,6 +64,7 @@ interface WorkspaceState {
   projects: Project[];
   tickets: Ticket[];
   dashboard: DashboardEntry[];
+  userWorkLogs: UserWorkLogEntry[];
   notifications: NotificationItem[];
   dms: DmMessage[];
   selectedUserId: string;
@@ -92,6 +95,10 @@ interface WorkspaceState {
   dashboardRange: DashboardRange;
   dashboardStartDate: string | null;
   dashboardEndDate: string | null;
+  userWorkLogSearch: string;
+  userWorkLogStartDate: string | null;
+  userWorkLogEndDate: string | null;
+  userWorkLogLoading: boolean;
   userSettingsForm: UserSettingsForm;
   userSettingsError: string;
   userSettingsSaving: boolean;
@@ -151,6 +158,7 @@ const initialState: WorkspaceState = {
   projects: [],
   tickets: [],
   dashboard: [],
+  userWorkLogs: [],
   notifications: [],
   dms: [],
   selectedUserId: "",
@@ -176,6 +184,10 @@ const initialState: WorkspaceState = {
   dashboardRange: "today",
   dashboardStartDate: null,
   dashboardEndDate: null,
+  userWorkLogSearch: "",
+  userWorkLogStartDate: null,
+  userWorkLogEndDate: null,
+  userWorkLogLoading: false,
   userSettingsForm: defaultUserSettings,
   userSettingsError: "",
   userSettingsSaving: false,
@@ -256,6 +268,12 @@ interface WorkspaceContextValue {
     type: "start" | "end",
     value: string | null,
   ) => Promise<void>;
+  handleUserWorkLogSearchChange: (value: string) => Promise<void>;
+  handleUserWorkLogDateChange: (
+    type: "start" | "end",
+    value: string | null,
+  ) => Promise<void>;
+  refreshUserWorkLogs: () => Promise<void>;
   openUserSettings: () => void;
   closeUserSettings: () => void;
   saveUserSettings: () => Promise<void>;
@@ -339,7 +357,12 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
           (user.handle || "").toLowerCase() === "admin" ? "dashboard" : "home",
       });
       await loadTickets();
-      await Promise.all([loadDashboard(), loadNotifications(), loadDms()]);
+      await Promise.all([
+        loadDashboard(),
+        loadUserWorkLogs(),
+        loadNotifications(),
+        loadDms(),
+      ]);
     } catch (error) {
       console.error("Failed to bootstrap workspace", error);
     } finally {
@@ -450,6 +473,39 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     [],
   );
 
+  const buildUserWorkLogFilters = useCallback(
+    (overrides?: {
+      startDate?: string | null;
+      endDate?: string | null;
+      search?: string;
+    }): UserWorkLogFilter | undefined => {
+      const hasOverride = (key: 'startDate' | 'endDate' | 'search') =>
+        overrides && Object.prototype.hasOwnProperty.call(overrides, key);
+
+      const nextStart = hasOverride('startDate')
+        ? overrides?.startDate ?? null
+        : stateRef.current.userWorkLogStartDate;
+      const nextEnd = hasOverride('endDate')
+        ? overrides?.endDate ?? null
+        : stateRef.current.userWorkLogEndDate;
+      const nextSearch = hasOverride('search')
+        ? overrides?.search ?? ''
+        : stateRef.current.userWorkLogSearch;
+      const filters: UserWorkLogFilter = {};
+      if (nextStart) {
+        filters.startDate = nextStart;
+      }
+      if (nextEnd) {
+        filters.endDate = nextEnd;
+      }
+      if (nextSearch?.trim()) {
+        filters.search = nextSearch.trim();
+      }
+      return Object.keys(filters).length ? filters : undefined;
+    },
+    [],
+  );
+
   const loadDashboard = useCallback(
     async (filtersOverride?: DashboardFilter) => {
       try {
@@ -461,6 +517,28 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       }
     },
     [buildDashboardFilters, mergeState],
+  );
+
+  const loadUserWorkLogs = useCallback(
+    async (
+      overrides?: {
+        startDate?: string | null;
+        endDate?: string | null;
+        search?: string;
+      },
+    ) => {
+      mergeState({ userWorkLogLoading: true });
+      try {
+        const filters = buildUserWorkLogFilters(overrides);
+        const userWorkLogs = await apiClient.getUserWorkLogs(filters);
+        mergeState({ userWorkLogs });
+      } catch (error) {
+        console.error("Unable to load user work logs", error);
+      } finally {
+        mergeState({ userWorkLogLoading: false });
+      }
+    },
+    [buildUserWorkLogFilters, mergeState],
   );
 
   const restoreTimestamp = (key: string) => {
@@ -1159,6 +1237,28 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const handleUserWorkLogSearchChange = async (value: string) => {
+    mergeState({ userWorkLogSearch: value });
+    await loadUserWorkLogs({ search: value });
+  };
+
+  const handleUserWorkLogDateChange = async (
+    type: "start" | "end",
+    value: string | null,
+  ) => {
+    const normalizedValue = value || null;
+    const nextStart =
+      type === "start" ? normalizedValue : stateRef.current.userWorkLogStartDate;
+    const nextEnd =
+      type === "end" ? normalizedValue : stateRef.current.userWorkLogEndDate;
+    mergeState({ userWorkLogStartDate: nextStart, userWorkLogEndDate: nextEnd });
+    await loadUserWorkLogs({ startDate: nextStart, endDate: nextEnd });
+  };
+
+  const refreshUserWorkLogs = async () => {
+    await loadUserWorkLogs();
+  };
+
   const openUserSettings = () => {
     if (!user) return;
     mergeState({
@@ -1266,6 +1366,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       void loadDms();
     } else if (tab === "dashboard") {
       void loadDashboard();
+      void loadUserWorkLogs();
     } else if (tab === "home") {
       void loadTickets();
     }
@@ -1361,6 +1462,9 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
       restoreArchivedTicket,
       handleDashboardRangeChange,
       handleDashboardDateChange,
+      handleUserWorkLogSearchChange,
+      handleUserWorkLogDateChange,
+      refreshUserWorkLogs,
       openUserSettings,
       closeUserSettings,
       saveUserSettings,

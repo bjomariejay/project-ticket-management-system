@@ -113,6 +113,15 @@ export interface DashboardEntry {
   actualTotal: number;
 }
 
+export interface UserWorkLogEntry {
+  id: string;
+  ticketNumber: string;
+  userId?: string | null;
+  spendTime?: number | null;
+  displayName?: string | null;
+  loggedAt?: string;
+}
+
 export interface WorkspaceSummary {
   id: string;
   name: string;
@@ -187,4 +196,10 @@ export interface SendDmPayload {
 export interface DashboardFilter {
   startDate?: string;
   endDate?: string;
+}
+
+export interface UserWorkLogFilter {
+  startDate?: string;
+  endDate?: string;
+  search?: string;
 }
