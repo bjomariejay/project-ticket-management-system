@@ -206,7 +206,21 @@ const DashboardView = ({
 
   const formatSpendTime = (value?: number | null) => {
     if (value == null || Number.isNaN(value)) return "—";
-    return value % 1 === 0 ? `${value.toFixed(0)}h` : `${value.toFixed(1)}h`;
+    const totalMinutes = Math.round(value * 60);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours && minutes) {
+      const hourLabel = hours === 1 ? "hr" : "hrs";
+      const minuteLabel = minutes === 1 ? "minute" : "minutes";
+      return `${hours}${hourLabel} and ${minutes} ${minuteLabel}`;
+    }
+    if (hours) {
+      return `${hours}${hours === 1 ? "hr" : "hrs"}`;
+    }
+    if (minutes) {
+      return `${minutes} ${minutes === 1 ? "minute" : "minutes"}`;
+    }
+    return "0 minutes";
   };
 
   const formatDate = (value: string) => {
