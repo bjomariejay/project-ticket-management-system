@@ -575,6 +575,17 @@ const updateReviewer = asyncHandler(async (req, res) => {
       reviewerId,
       ticketId,
     ]);
+    const memberCheck = await client.query(
+      'SELECT 1 FROM ticket_members WHERE ticket_id = $1 AND user_id = $2',
+      [ticketId, reviewerId]
+    );
+    if (!memberCheck.rowCount) {
+      await client.query('INSERT INTO ticket_members (ticket_id, user_id, role) VALUES ($1, $2, $3)', [
+        ticketId,
+        reviewerId,
+        'participant',
+      ]);
+    }
     await appendTicketLog(
       client,
       ticketId,
