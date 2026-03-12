@@ -1375,7 +1375,8 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const setActiveTab = (tab: WorkspaceTab) => {
-    mergeState({ activeTab: tab });
+    // Clear transient feedback each time user switches tabs so the inline banner hides.
+    mergeState({ activeTab: tab, feedback: "" });
     if (tab === "activity") {
       mergeState({ hasActivityAttention: false });
       void (async () => {
