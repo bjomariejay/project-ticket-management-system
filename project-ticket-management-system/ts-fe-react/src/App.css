@@ -720,6 +720,10 @@ textarea {
   vertical-align: top;
 }
 
+.user-work-logs td:last-child {
+  text-align: right;
+}
+
 .user-work-logs th {
   font-size: 0.75rem;
   text-transform: uppercase;

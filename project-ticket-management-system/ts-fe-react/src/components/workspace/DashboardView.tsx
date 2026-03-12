@@ -37,6 +37,7 @@ interface DashboardViewProps {
   onEditUser: (userId: string) => void;
   onAddTicket: () => void;
   onOpenTicket: (ticket: Ticket) => void;
+  onViewTicket: (ticketNumber: string) => void;
 }
 
 const DashboardView = ({
@@ -63,6 +64,7 @@ const DashboardView = ({
   onEditUser,
   onAddTicket,
   onOpenTicket,
+  onViewTicket,
 }: DashboardViewProps) => {
   const [activeTab, setActiveTab] = useState<DashboardTab>("users");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("all");
@@ -204,7 +206,7 @@ const DashboardView = ({
     });
   };
 
-  const formatSpendTime = (value?: number | null) => {
+  const formatDuration = (value?: number | null) => {
     if (value == null || Number.isNaN(value)) return "—";
     const totalMinutes = Math.round(value * 60);
     const hours = Math.floor(totalMinutes / 60);
@@ -452,7 +454,9 @@ const DashboardView = ({
                 <th>Date</th>
                 <th>Ticket</th>
                 <th>Name</th>
+                <th>Estimated time</th>
                 <th>Spend time</th>
+                <th>Action</th>
               </tr>
             </thead>
             <tbody>
@@ -463,7 +467,17 @@ const DashboardView = ({
                     <strong>{log.ticketNumber}</strong>
                   </td>
                   <td>{log.displayName || log.userId || "Unknown"}</td>
-                  <td>{formatSpendTime(log.spendTime)}</td>
+                  <td>{formatDuration(log.estimatedHours)}</td>
+                  <td>{formatDuration(log.spendTime)}</td>
+                  <td>
+                    <button
+                      type="button"
+                      className="report-ticket-link"
+                      onClick={() => onViewTicket(log.ticketNumber)}
+                    >
+                      View ticket
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>

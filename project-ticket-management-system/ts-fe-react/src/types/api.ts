@@ -117,6 +117,7 @@ export interface UserWorkLogEntry {
   id: string;
   ticketNumber: string;
   userId?: string | null;
+  estimatedHours?: number | null;
   spendTime?: number | null;
   displayName?: string | null;
   createdAt?: string;

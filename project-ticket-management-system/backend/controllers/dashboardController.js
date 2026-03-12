@@ -91,6 +91,7 @@ const getUserWorkLog = asyncHandler(async (req, res) => {
         twl.ticket_number AS "ticketNumber",
         twl.user_id AS "userId",
         twl.spend_time::float AS "spendTime",
+        t.estimated_hours::float AS "estimatedHours",
         twl.created_at AS "createdAt",
         u.display_name AS "displayName"
       FROM ticket_work_logs twl

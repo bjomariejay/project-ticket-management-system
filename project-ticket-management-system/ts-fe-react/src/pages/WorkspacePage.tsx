@@ -1219,6 +1219,7 @@ const WorkspacePage = () => {
       onEditUser={openAdminEdit}
       onAddTicket={handleDashboardAddTicket}
       onOpenTicket={handleDashboardOpenTicket}
+      onViewTicket={handleReportTicketNavigate}
     />
   );
 
