@@ -389,7 +389,7 @@ export const WorkspaceProvider = ({ children }: { children: ReactNode }) => {
         .then(() => loadUsers())
         .catch((error) => console.error("Heartbeat failed", error));
     },
-    isAuthenticated ? 60000 : null,
+    isAuthenticated ? 30000 : null,
   );
 
   const loadUsers = useCallback(async () => {
