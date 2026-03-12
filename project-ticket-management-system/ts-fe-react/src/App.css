@@ -1446,29 +1446,39 @@ textarea {
   cursor: pointer;
 }
 
-.project-reports ul,
-.reviewer-reports ul {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+.project-reports .table-wrapper,
+.reviewer-reports .table-wrapper {
+  margin-top: 1rem;
+  overflow-x: auto;
 }
 
-.project-reports li,
-.reviewer-reports li {
-  border: 1px solid rgba(97, 31, 105, 0.15);
-  border-radius: 0.75rem;
-  padding: 0.6rem 0.8rem;
-  background: #fdfbff;
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 560px;
 }
 
-.report-entry-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  align-items: flex-start;
+.report-table th,
+.report-table td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid #eceff7;
+  vertical-align: top;
+}
+
+.report-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #8c93ad;
+}
+
+.report-table td strong {
+  color: #1c2241;
+}
+
+.report-table td:last-child {
+  text-align: right;
 }
 
 .report-ticket-link {

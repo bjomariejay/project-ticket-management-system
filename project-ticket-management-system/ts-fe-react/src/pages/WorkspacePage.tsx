@@ -713,35 +713,43 @@ const WorkspacePage = () => {
                   <p className="muted">Loading reports…</p>
                 ) : null}
                 {reviewerTickets.length > 0 ? (
-                  <div className="reviewer-ticket-summary">
-                    <ul>
-                      {reviewerTickets.map((ticket) => (
-                        <li key={ticket.id}>
-                          <div className="report-entry-head">
-                            <div>
-                              <small>Ticket #: {ticket.ticketNumber}</small>{" "}
-                              <br />
-                              <small>
-                                Ticket created on{" "}
+                  <div className="table-wrapper">
+                    <table className="report-table">
+                      <thead>
+                        <tr>
+                          <th>Ticket</th>
+                          <th>Created</th>
+                          <th>Handled by</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reviewerTickets.map((ticket) => (
+                          <tr key={ticket.id}>
+                            <td>
+                              <strong>{ticket.ticketNumber}</strong>
+                            </td>
+                            <td>
+                              <span className="muted">
                                 {new Date(ticket.createdAt).toLocaleString()}
-                              </small>
-                            </div>
-                            <button
-                              type="button"
-                              className="report-ticket-link"
-                              onClick={() =>
-                                handleReportTicketNavigate(ticket.ticketNumber)
-                              }
-                            >
-                              View ticket
-                            </button>
-                          </div>
-                          <small>
-                            Ticket handled by {getUserName(ticket.assigneeId)}
-                          </small>
-                        </li>
-                      ))}
-                    </ul>
+                              </span>
+                            </td>
+                            <td>{getUserName(ticket.assigneeId)}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="report-ticket-link"
+                                onClick={() =>
+                                  handleReportTicketNavigate(ticket.ticketNumber)
+                                }
+                              >
+                                View ticket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 ) : (
                   <p className="muted">No reviewer tickets available.</p>
@@ -754,33 +762,44 @@ const WorkspacePage = () => {
                 ) : projectReportEntries.length === 0 ? (
                   <p className="muted">No ticket starts recorded yet.</p>
                 ) : (
-                  <ul>
-                    {projectReportEntries.map((entry) => (
-                      <li key={entry.id}>
-                        <div className="report-entry-head">
-                          <div>
-                            <small>Ticket #:{entry.ticketNumber}</small> <br />
-                            <small>
-                              Ticket Created On:{" "}
-                              {new Date(entry.createdAt).toLocaleString()}
-                            </small>
-                          </div>
-                          <button
-                            type="button"
-                            className="report-ticket-link"
-                            onClick={() =>
-                              handleReportTicketNavigate(entry.ticketNumber)
-                            }
-                          >
-                            View ticket
-                          </button>
-                        </div>
-                        {entry.actorName && (
-                          <small>Ticket Handled By: {entry.actorName}</small>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="table-wrapper">
+                    <table className="report-table">
+                      <thead>
+                        <tr>
+                          <th>Ticket</th>
+                          <th>Created</th>
+                          <th>Handled by</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {projectReportEntries.map((entry) => (
+                          <tr key={entry.id}>
+                            <td>
+                              <strong>{entry.ticketNumber}</strong>
+                            </td>
+                            <td>
+                              <span className="muted">
+                                {new Date(entry.createdAt).toLocaleString()}
+                              </span>
+                            </td>
+                            <td>{entry.actorName || "—"}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="report-ticket-link"
+                                onClick={() =>
+                                  handleReportTicketNavigate(entry.ticketNumber)
+                                }
+                              >
+                                View ticket
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 )}
               </section>
             )
