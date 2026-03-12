@@ -653,7 +653,8 @@ const WorkspacePage = () => {
                                             ticket.status,
                                           )}
                                         >
-                                          {ticket.status.replace("_", " ")}
+                                          {ticket.status.replace("_", " ") === 'open' ? <>new</> : ticket.status.replace("_", " ")
+                                          }
                                         </span>
                                       </button>
                                     </li>
